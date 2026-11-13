@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Dados grandes
+data/raw/
+data/temporary/
+
+# Ferramentas
+.vscode/
+.DS_Store
