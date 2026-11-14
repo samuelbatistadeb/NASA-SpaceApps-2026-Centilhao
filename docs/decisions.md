@@ -196,7 +196,7 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 **Consequências:**
 
 - A escala de tempo (UTC × TT, ~69 s) não é convertida; isso é irrelevante para ordenar exposições, mas deve ser revisto se houver cálculo de efemérides.
-- Pendente: `em_min`/`em_max` vêm em **metros** no SIA, mas o schema os chama de `wavelength_*_nm` sem conversão. O teste sintético atual (`0.9` com `band_units = "um"`) também não converte. A correção será feita em etapa própria.
+- Pendente: `em_min`/`em_max` vêm em **metros** no SIA, mas o schema os chama de `wavelength_*_nm` sem conversão. O teste sintético atual (`0.9` com `band_units = "um"`) também não converte. Resolvido na DECISÃO 010.
 
 **Responsável:** Liderança técnica.
 
@@ -218,5 +218,27 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 - O quadro de tarefas deixa de depender de infraestrutura externa não disponível.
 - As decisões do quadro que afetarem escopo, arquitetura ou critérios científicos continuam registradas neste documento e em `docs/progress.md`.
+
+**Responsável:** Liderança técnica.
+---
+
+## DECISÃO 010 — Conversão de `em_min`/`em_max` para nanômetros
+
+**Data:** 14/11/2026
+
+**Assunto:** Unidade de `wavelength_min_nm`/`wavelength_max_nm` publicada pela API.
+
+**Contexto:** Na resposta real do IRSA SIA v2 (`tests/backend/fixtures/sia_spherex_dr1_wise0855.xml`), `em_min`/`em_max` são declarados com `unit="m"` (ex.: `1.63010e-06`), como define o padrão IVOA ObsCore. O serviço copiava o valor sem conversão, rotulando metros como nanômetros.
+
+**Decisão tomada:** `wavelength_to_nm` (`src/backend/app/services/observation_service.py`) aplica a regra:
+
+1. Com `band_units` (ou alias) reconhecido — `m`, `um`/`µm`/`micron`, `nm`, `angstrom`/`Å` — converte a partir dessa unidade.
+2. Unidade presente mas desconhecida → `null` (o valor não é adivinhado).
+3. Sem unidade, valor lido de alias cujo nome já indica nm (`em_min_nm`, `wavelength_min_nm`, ...) é mantido.
+4. Sem unidade nos demais casos → assume metros (IVOA ObsCore).
+
+**Justificativa:** Verificação na resposta real; o contrato da API (nomes `*_nm`) é mantido.
+
+**Consequências:** A primeira observação real passa a mostrar 1630,1–2434,6 nm. O teste sintético com `band_units = "um"` passou a esperar 900 nm.
 
 **Responsável:** Liderança técnica.

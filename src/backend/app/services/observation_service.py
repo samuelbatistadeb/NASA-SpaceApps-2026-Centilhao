@@ -42,6 +42,7 @@ from app.services.cache import (
 from app.services.cutout_service import CutoutRequest, CutoutService
 from app.services.fits_processor import VISUAL_NORMALIZATION_DESCRIPTION
 from app.services.irsa_client import (
+    FIELD_ALIASES,
     IrsaClient,
     _to_float,
     _to_str,
@@ -288,8 +289,8 @@ class ObservationService:
                 timing_status=timing_status,
                 instrument=_to_str(pick(record, "instrument")),
                 exposure_time_s=_to_float(pick(record, "exposure")),
-                wavelength_min_nm=_to_float(pick(record, "em_min")),
-                wavelength_max_nm=_to_float(pick(record, "em_max")),
+                wavelength_min_nm=wavelength_to_nm(record, "em_min"),
+                wavelength_max_nm=wavelength_to_nm(record, "em_max"),
                 wcs=self._extract_wcs(record),
                 contamination_flags=self._extract_flags(record),
                 source=_to_str(pick(record, "provenance")),
@@ -508,6 +509,63 @@ def _mjd_to_datetime(mjd: float) -> datetime:
     which is negligible for ordering exposures separated by minutes or days.
     """
     return _EPOCH + timedelta(days=mjd - _MJD_UNIX_EPOCH)
+
+
+#: Factor that converts one unit of the record into nanometres.
+_WAVELENGTH_UNIT_TO_NM: dict[str, float] = {
+    "m": 1e9,
+    "um": 1e3,
+    "µm": 1e3,  # micro sign U+00B5
+    "μm": 1e3,  # greek mu U+03BC
+    "micron": 1e3,
+    "microns": 1e3,
+    "nm": 1.0,
+    "angstrom": 0.1,
+    "angstroms": 0.1,
+    "å": 0.1,
+}
+
+#: Aliases of ``em_min``/``em_max`` whose name already states nanometres.
+_NM_ALIASES = frozenset({"em_min_nm", "em_max_nm", "wavelength_min_nm", "wavelength_max_nm"})
+
+
+def wavelength_to_nm(record: Mapping[str, Any], key: str) -> float | None:
+    """Return the wavelength bound ``key`` (``em_min``/``em_max``) in nanometres.
+
+    Rule (``docs/decisions.md``):
+
+    1. If the record publishes ``band_units`` (any alias), convert from that
+       unit (m, um/µm/micron, nm, angstrom). An unknown unit gives ``None``:
+       the value is not guessed.
+    2. Without a unit, a value read from an alias whose name ends in ``_nm``
+       is already in nanometres.
+    3. Otherwise assume metres, the unit of ``em_min``/``em_max`` in the IVOA
+       ObsCore standard (verified on the real IRSA SIA v2 answer:
+       ``FIELD name="em_min" unit="m"``).
+    """
+    value = _to_float(pick(record, key))
+    if value is None:
+        return None
+
+    unit = _to_str(pick(record, "band_units"))
+    if unit is not None:
+        factor = _WAVELENGTH_UNIT_TO_NM.get(unit.lower())
+        if factor is None:
+            logger.warning("Unknown wavelength unit %r; %s left empty", unit, key)
+            return None
+        return value * factor
+
+    source_alias = next(
+        (
+            alias
+            for alias in FIELD_ALIASES.get(key, (key,))
+            if alias in record and record[alias] not in (None, "")
+        ),
+        None,
+    )
+    if source_alias in _NM_ALIASES:
+        return value
+    return value * _WAVELENGTH_UNIT_TO_NM["m"]
 
 
 def _parse_datetime(text: str) -> datetime | None:

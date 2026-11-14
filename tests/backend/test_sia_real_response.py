@@ -105,6 +105,15 @@ def test_access_url_belongs_to_the_same_product(service_factory, real_sia_respon
         assert f"/{detector[1:]}/" in url
 
 
+def test_wavelength_is_published_in_nm(service_factory, real_sia_response) -> None:
+    # em_min/em_max come in metres (FIELD unit="m"): 1.63010e-06 m, 2.43460e-06 m.
+    response = _search(service_factory, real_sia_response)
+    first = response.observations[0]
+
+    assert first.metadata.wavelength_min_nm == pytest.approx(1630.1)
+    assert first.metadata.wavelength_max_nm == pytest.approx(2434.6)
+
+
 @pytest.mark.parametrize(
     ("record", "expected"),
     [
