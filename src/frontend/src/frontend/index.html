@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SPHEREx Explorer — o céu em infravermelho ao longo do tempo</title>
+  <meta name="description" content="Explore imagens reais da missão SPHEREx da NASA e veja como uma região do céu muda entre observações.">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#busca">Ir para a pesquisa</a>
+
+  <div class="layout">
+  <aside class="sidebar">
+    <nav aria-label="Menu principal">
+      <p class="brand">SPHEREx Explorer</p>
+      <ul>
+        <li><a href="#busca">Pesquisa</a></li>
+        <li><a href="#observacoes">Observações</a></li>
+        <li><a href="#galeria">Galeria de imagens</a></li>
+        <li><a href="#ajuda">Entenda os termos</a></li>
+      </ul>
+    </nav>
+    <p class="side-note">Dados: missão SPHEREx / NASA (IRSA/IPAC)</p>
+  </aside>
+
+  <div class="content">
+  <header class="top">
+    <h1>SPHEREx Explorer</h1>
+    <p>Escolha um ponto do céu e veja como ele foi fotografado, em infravermelho, em datas diferentes.</p>
+  </header>
+
+  <main>
+    <section id="busca" class="panel" aria-labelledby="t-busca">
+      <h2 id="t-busca">Onde você quer olhar?</h2>
+
+      <div class="presets" role="group" aria-label="Alvos de exemplo">
+        <span>Alvos de exemplo:</span>
+        <button type="button" class="chip" data-ra="133.7951" data-dec="-7.2451" data-fov="3">WISE 0855</button>
+        <button type="button" class="chip" data-ra="269.452" data-dec="4.693" data-fov="3">Estrela de Barnard</button>
+      </div>
+
+      <form id="form" novalidate>
+        <div class="field">
+          <label for="ra">Ascensão reta (RA), em graus</label>
+          <input id="ra" name="ra" inputmode="decimal" required aria-describedby="ra-ajuda ra-erro">
+          <small id="ra-ajuda">Como a “longitude” do céu. Valor entre 0 e 360.</small>
+          <small id="ra-erro" class="erro" role="alert"></small>
+        </div>
+        <div class="field">
+          <label for="dec">Declinação (Dec), em graus</label>
+          <input id="dec" name="dec" inputmode="decimal" required aria-describedby="dec-ajuda dec-erro">
+          <small id="dec-ajuda">Como a “latitude” do céu. Valor entre −90 e 90.</small>
+          <small id="dec-erro" class="erro" role="alert"></small>
+        </div>
+        <div class="field">
+          <label for="fov">Tamanho da área (FOV), em minutos de arco</label>
+          <input id="fov" name="fov" inputmode="decimal" value="3" required aria-describedby="fov-ajuda fov-erro">
+          <small id="fov-ajuda">Quanto maior, mais céu aparece. Entre 0,5 e 30.</small>
+          <small id="fov-erro" class="erro" role="alert"></small>
+        </div>
+        <div class="actions">
+          <button type="submit" id="buscar" class="primary">Buscar observações</button>
+          <label class="check">
+            <input type="checkbox" id="mock"> Usar dados fictícios (só para testar a interface)
+          </label>
+        </div>
+      </form>
+    </section>
+
+    <section id="observacoes" class="panel viewer" aria-labelledby="t-viz">
+      <h2 id="t-viz">Observações</h2>
+
+      <div id="status" class="status" role="status" aria-live="polite">
+        Preencha as coordenadas ou escolha um alvo de exemplo para começar.
+      </div>
+
+      <div id="player" hidden>
+        <p id="aviso-mock" class="mock" hidden>Dados fictícios: não representam observações científicas.</p>
+
+        <figure class="frame">
+          <img id="imagem" alt="">
+          <figcaption id="legenda"></figcaption>
+        </figure>
+
+        <div class="controls" role="group" aria-label="Controles da sequência">
+          <button type="button" id="prev" aria-label="Observação anterior">◀</button>
+          <button type="button" id="play" aria-pressed="false">Reproduzir</button>
+          <button type="button" id="next" aria-label="Próxima observação">▶</button>
+          <label class="speed">Velocidade
+            <select id="speed">
+              <option value="1500">Lenta</option>
+              <option value="800" selected>Normal</option>
+              <option value="350">Rápida</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="timeline">
+          <label for="slider">Linha do tempo</label>
+          <input type="range" id="slider" min="0" max="0" value="0">
+          <div class="ends"><span id="t-ini"></span><span id="t-fim"></span></div>
+        </div>
+
+        <dl id="meta" class="meta"></dl>
+        <p class="note">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
+      </div>
+    </section>
+
+    <section id="galeria" class="panel" aria-labelledby="t-gal">
+      <h2 id="t-gal">Galeria de imagens</h2>
+      <p id="galeria-vazio" class="placeholder">
+        As imagens da sua busca aparecerão aqui, uma miniatura por data de observação.
+      </p>
+      <ul id="galeria-lista" class="gallery" aria-label="Miniaturas das observações"></ul>
+    </section>
+
+    <section id="ajuda" class="panel" aria-labelledby="t-ajuda">
+      <h2 id="t-ajuda">Entenda os termos</h2>
+      <details>
+        <summary>O que é a missão SPHEREx?</summary>
+        <p>Um telescópio espacial da NASA que mapeia todo o céu em infravermelho. Ele observa a mesma região várias vezes, o que permite comparar datas.</p>
+      </details>
+      <details>
+        <summary>Por que um objeto pode “andar” entre os quadros?</summary>
+        <p>Algumas estrelas e objetos têm movimento próprio: mudam de posição no céu com o passar dos anos. Em poucos meses o deslocamento é pequeno, mas pode aparecer.</p>
+      </details>
+      <details>
+        <summary>Posso comparar o brilho entre quadros?</summary>
+        <p>Não a olho nu. A comparação de brilho exige análise científica própria e está fora deste protótipo.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    Dados: missão SPHEREx / NASA, arquivo IRSA/IPAC. Protótipo criado para o NASA Space Apps Challenge 2026.
+  </footer>
+  </div>
+  </div>
+</body>
+</html>
