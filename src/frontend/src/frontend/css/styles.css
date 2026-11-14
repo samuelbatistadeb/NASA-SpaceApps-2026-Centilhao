@@ -114,8 +114,9 @@ input[type="range"] { width: 100%; accent-color: var(--cool); height: 2rem; }
 .ends { display: flex; justify-content: space-between; color: var(--muted); font-size: .9rem; }
 
 .meta {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: .75rem 1.5rem; margin: 1.25rem 0 0;
+  /* pares rótulo/valor (dt/dd) sempre na mesma linha */
+  display: grid; grid-template-columns: minmax(8rem, max-content) 1fr;
+  gap: .5rem 1.5rem; margin: 1.25rem 0 0;
 }
 .meta dt { color: var(--muted); font-size: .875rem; }
 .meta dd { margin: 0; overflow-wrap: anywhere; }
@@ -153,6 +154,7 @@ html { scroll-behavior: smooth; }
 section[id] { scroll-margin-top: 1rem; }
 
 /* Galeria */
+.placeholder[hidden] { display: none; }
 .placeholder {
   display: grid; place-items: center; text-align: center;
   min-height: 9rem; padding: 1rem; margin: 0;

@@ -45,7 +45,7 @@
         <div class="field">
           <label for="ra">Ascensão reta (RA), em graus</label>
           <input id="ra" name="ra" inputmode="decimal" required aria-describedby="ra-ajuda ra-erro">
-          <small id="ra-ajuda">Como a “longitude” do céu. Valor entre 0 e 360.</small>
+          <small id="ra-ajuda">Como a “longitude” do céu. Valor de 0 até menos de 360.</small>
           <small id="ra-erro" class="erro" role="alert"></small>
         </div>
         <div class="field">
@@ -57,7 +57,7 @@
         <div class="field">
           <label for="fov">Tamanho da área (FOV), em minutos de arco</label>
           <input id="fov" name="fov" inputmode="decimal" value="3" required aria-describedby="fov-ajuda fov-erro">
-          <small id="fov-ajuda">Quanto maior, mais céu aparece. Entre 0,5 e 30.</small>
+          <small id="fov-ajuda">Quanto maior, mais céu aparece. Entre 0,1 e 120.</small>
           <small id="fov-erro" class="erro" role="alert"></small>
         </div>
         <div class="actions">
@@ -95,6 +95,11 @@
               <option value="350">Rápida</option>
             </select>
           </label>
+          <label class="speed">Detector
+            <select id="detector">
+              <option value="">Todos</option>
+            </select>
+          </label>
         </div>
 
         <div class="timeline">
@@ -104,15 +109,16 @@
         </div>
 
         <dl id="meta" class="meta"></dl>
-        <p class="note">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
+        <p class="note">Os quadros seguem a <strong>data de observação</strong>. Vários detectores (D1 a D6) podem observar a região no mesmo instante, em bandas diferentes: escolha um <strong>detector</strong> para ver uma sequência temporal sem misturar bandas.</p>
       </div>
     </section>
 
     <section id="galeria" class="panel" aria-labelledby="t-gal">
       <h2 id="t-gal">Galeria de imagens</h2>
       <p id="galeria-vazio" class="placeholder">
-        As imagens da sua busca aparecerão aqui, uma miniatura por data de observação.
+        As imagens da sua busca aparecerão aqui, uma miniatura por observação.
       </p>
+      <p id="galeria-aviso" class="note" hidden></p>
       <ul id="galeria-lista" class="gallery" aria-label="Miniaturas das observações"></ul>
     </section>
 
