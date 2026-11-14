@@ -8,7 +8,9 @@
 const CONFIG = {
   API_BASE: "http://localhost:8000",
   OBSERVATIONS_PATH: "/api/observations", // ASSUMIDO: GET ?ra=&dec=&fov=
+  TARGETS_PATH: "/api/targets", // ASSUMIDO: lista de alvos com coordenadas, fornecida pelo backend
   TIMEOUT_MS: 30000,
+  EXTRA_PARAMS: {}, // ex.: { release: "qr3" } para trocar a versão dos dados sem mudar o código
   FOV_MIN: 0.5,
   FOV_MAX: 30, // minutos de arco (confirmar unidade com o backend)
 };
@@ -20,13 +22,35 @@ const el = {
   player: $("player"), avisoMock: $("aviso-mock"),
   img: $("imagem"), legenda: $("legenda"),
   prev: $("prev"), play: $("play"), next: $("next"), speed: $("speed"),
-  slider: $("slider"), galeria: $("galeria-lista"), galeriaVazio: $("galeria-vazio"), tIni: $("t-ini"), tFim: $("t-fim"), meta: $("meta"),
+  slider: $("slider"),
+  detBox: $("detectores"), faixa: $("faixa-wl"), wlMin: $("wl-min"), wlMax: $("wl-max"),
+  wlMinOut: $("wl-min-out"), wlMaxOut: $("wl-max-out"), contagem: $("contagem"),
+  visor: $("visor"), filtroVazio: $("filtro-vazio"), reset: $("filtro-reset"), galeria: $("galeria-lista"), galeriaVazio: $("galeria-vazio"), tIni: $("t-ini"), tFim: $("t-fim"), meta: $("meta"),
 };
 
-const state = { frames: [], index: 0, timer: null, isMock: false, controller: null };
+const state = { all: [], wls: [], detectors: new Set(), frames: [], index: 0, timer: null, isMock: false, controller: null };
 
 /* ---------- Utilitários ---------- */
 const parseNum = (v) => Number(String(v).trim().replace(",", "."));
+
+// Aceita graus decimais ("133.795") ou sexagesimal ("08h55m10.831s", "-7d14m42.53s",
+// "8 55 10.8", "-07:14:42.5"). Retorna graus, ou NaN se o texto for inválido.
+function parseCoord(raw, kind) {
+  const s = String(raw).trim().replace(",", ".").replace(/[−–]/g, "-");
+  if (!s || /[^\d\s.+\-hmsd°'’"′″:]/i.test(s)) return NaN;
+  const nums = s.match(/\d+(?:\.\d+)?/g);
+  if (!nums || nums.length > 3) return NaN;
+  const neg = s.startsWith("-");
+  const [a, b = 0, c = 0] = nums.map(Number);
+  const hasUnit = /[hdms°'’"′″:]/i.test(s) || nums.length > 1;
+  if (!hasUnit) return neg ? -a : a;
+  if (b >= 60 || c >= 60) return NaN;
+  let v = a + b / 60 + c / 3600;
+  if (kind === "ra" && !/[d°]/i.test(s)) v *= 15; // RA sexagesimal está em horas
+  return neg ? -v : v;
+}
+
+const fmtWl = (w) => `${w.toFixed(2).replace(".", ",")} µm`;
 
 const fmtDate = (iso) =>
   new Date(iso).toLocaleDateString("pt-BR", { dateStyle: "long", timeZone: "UTC" });
@@ -38,8 +62,8 @@ function setStatus(msg, kind = "") {
 
 /* ---------- Validação ---------- */
 const RULES = {
-  ra:  { min: 0,   max: 360, msg: "Informe um número entre 0 e 360." },
-  dec: { min: -90, max: 90,  msg: "Informe um número entre −90 e 90." },
+  ra:  { min: 0,   max: 360, msg: "Informe graus (0 a 360) ou h/m/s, ex.: 08h55m10.831s." },
+  dec: { min: -90, max: 90,  msg: "Informe graus (−90 a 90) ou °/′/″, ex.: -7d14m42.53s." },
   fov: { min: CONFIG.FOV_MIN, max: CONFIG.FOV_MAX,
          msg: `Informe um número entre ${CONFIG.FOV_MIN} e ${CONFIG.FOV_MAX}.` },
 };
@@ -49,12 +73,12 @@ function validate() {
   let firstInvalid = null;
   for (const [name, rule] of Object.entries(RULES)) {
     const input = el[name];
-    const n = parseNum(input.value);
+    const n = name === "fov" ? parseNum(input.value) : parseCoord(input.value, name);
     const ok = input.value.trim() !== "" && Number.isFinite(n) && n >= rule.min && n <= rule.max;
     input.setAttribute("aria-invalid", String(!ok));
     $(name + "-erro").textContent = ok ? "" : rule.msg;
     if (!ok && !firstInvalid) firstInvalid = input;
-    values[name] = n;
+    values[name] = Number(n.toFixed(6));
   }
   if (firstInvalid) { firstInvalid.focus(); return null; }
   return values;
@@ -64,12 +88,18 @@ function validate() {
 // Converte a resposta do backend para o formato interno.
 function normalizeObservation(o) {
   const img = o.image_url ?? o.imageUrl ?? o.image ?? "";
+  const wlRaw = o.wavelength_um ?? o.wavelength ?? o.lambda ?? null;
+  const wl = wlRaw === null || wlRaw === "" ? NaN : Number(wlRaw);
+  const det = parseInt(String(o.detector ?? o.detector_id ?? "").replace(/\D/g, ""), 10);
+  const detOk = det >= 1 && det <= 6; // SPHEREx: seis conjuntos de detectores
   return {
     id: o.product_id ?? o.id ?? "—",
     date: o.obs_date ?? o.date ?? o.epoch ?? null, // ISO 8601
     imageUrl: /^(https?:|data:)/.test(img) ? img : CONFIG.API_BASE + img,
-    detector: o.detector ?? "—",
-    band: o.band ?? o.wavelength ?? "—",
+    detector: detOk ? det : null,
+    detectorLabel: detOk ? "D" + det : String(o.detector ?? "—"),
+    wavelength: Number.isFinite(wl) ? wl : null, // micrômetros
+    band: o.band_index ?? o.band ?? "—",
     product: o.product_type ?? o.product ?? "—",
   };
 }
@@ -79,7 +109,7 @@ async function fetchObservations({ ra, dec, fov }) {
   const controller = (state.controller = new AbortController());
   const timeout = setTimeout(() => controller.abort("timeout"), CONFIG.TIMEOUT_MS);
   const url = new URL(CONFIG.OBSERVATIONS_PATH, CONFIG.API_BASE);
-  url.search = new URLSearchParams({ ra, dec, fov }).toString();
+  url.search = new URLSearchParams({ ra, dec, fov, ...CONFIG.EXTRA_PARAMS }).toString();
 
   try {
     const res = await fetch(url, { signal: controller.signal });
@@ -120,7 +150,8 @@ function mockObservations() {
       id: "FICTICIO-" + String(i + 1).padStart(2, "0"),
       date: new Date(start + i * 30 * 864e5).toISOString(),
       imageUrl: c.toDataURL("image/png"),
-      detector: "fictício", band: "fictícia", product: "teste de interface",
+      detector: (i % 6) + 1, detectorLabel: "D" + ((i % 6) + 1), wavelength: 0.75 + i * 0.35,
+      band: String(i + 1), product: "teste de interface",
     });
   }
   return frames;
@@ -142,8 +173,9 @@ function showFrame(i) {
   const rows = [
     ["Data da observação", f.date.slice(0, 10)],
     ["Identificador do produto", f.id],
-    ["Detector", f.detector],
+    ["Detector", f.detectorLabel],
     ["Banda", f.band],
+    ["Comprimento de onda", f.wavelength === null ? "—" : fmtWl(f.wavelength)],
     ["Tipo de produto", f.product],
     ["Fonte dos dados", state.isMock ? "Fictícia (teste)" : "SPHEREx / IRSA-IPAC"],
   ];
@@ -207,25 +239,106 @@ function step(delta) {
   showFrame((state.index + delta + n) % n);
 }
 
-function loadFrames(frames, isMock) {
+/* ---------- Filtros (detector e comprimento de onda) ---------- */
+const DET_COLORS = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"]; // paleta Okabe-Ito
+
+function setupFilters(frames) {
+  const present = new Set(frames.map((f) => f.detector).filter(Boolean));
+  state.detectors = new Set(present);
+  el.detBox.hidden = present.size === 0;
+  el.detBox.replaceChildren(
+    ...[1, 2, 3, 4, 5, 6].map((d) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "det";
+      const sw = document.createElement("span");
+      sw.className = "sw";
+      sw.style.background = DET_COLORS[d - 1];
+      sw.setAttribute("aria-hidden", "true");
+      b.append(sw, document.createTextNode("Detector " + d));
+      b.disabled = !present.has(d);
+      b.setAttribute("aria-pressed", String(present.has(d)));
+      if (!present.has(d)) b.title = "Sem observações deste detector nesta busca";
+      b.addEventListener("click", () => {
+        state.detectors.has(d) ? state.detectors.delete(d) : state.detectors.add(d);
+        b.setAttribute("aria-pressed", String(state.detectors.has(d)));
+        applyFilters();
+      });
+      return b;
+    })
+  );
+
+  state.wls = [...new Set(frames.map((f) => f.wavelength).filter((w) => w !== null))].sort((a, b) => a - b);
+  const last = Math.max(state.wls.length - 1, 0);
+  el.faixa.hidden = state.wls.length < 2;
+  el.wlMin.max = el.wlMax.max = last;
+  el.wlMin.value = 0;
+  el.wlMax.value = last;
+}
+
+function isVisible(f) {
+  if (f.detector && !state.detectors.has(f.detector)) return false;
+  if (f.wavelength !== null && state.wls.length > 1) {
+    const lo = state.wls[Number(el.wlMin.value)];
+    const hi = state.wls[Number(el.wlMax.value)];
+    if (f.wavelength < lo || f.wavelength > hi) return false;
+  }
+  return true;
+}
+
+function applyFilters() {
+  const keepId = state.frames[state.index]?.id;
+  const frames = state.all.filter(isVisible);
+  if (state.wls.length > 1) {
+    el.wlMinOut.textContent = fmtWl(state.wls[Number(el.wlMin.value)]);
+    el.wlMaxOut.textContent = fmtWl(state.wls[Number(el.wlMax.value)]);
+  }
+  el.contagem.textContent = `Mostrando ${frames.length} de ${state.all.length} observações.`;
+
   stop();
   state.frames = frames;
-  state.isMock = isMock;
-  el.avisoMock.hidden = !isMock;
+  el.visor.hidden = !frames.length;
+  el.filtroVazio.hidden = !!frames.length;
+  if (!frames.length) { clearGallery(); return; }
+
   el.slider.max = frames.length - 1;
   el.tIni.textContent = fmtDate(frames[0].date);
   el.tFim.textContent = fmtDate(frames.at(-1).date);
-  el.player.hidden = false;
   renderGallery(frames);
-  showFrame(0);
-  setStatus(`${frames.length} observações em ordem cronológica.`);
+  const idx = frames.findIndex((f) => f.id === keepId);
+  showFrame(idx >= 0 ? idx : 0);
+}
+
+el.wlMin.addEventListener("input", () => {
+  if (Number(el.wlMin.value) > Number(el.wlMax.value)) el.wlMax.value = el.wlMin.value;
+  applyFilters();
+});
+el.wlMax.addEventListener("input", () => {
+  if (Number(el.wlMax.value) < Number(el.wlMin.value)) el.wlMin.value = el.wlMax.value;
+  applyFilters();
+});
+el.reset.addEventListener("click", () => { setupFilters(state.all); applyFilters(); });
+
+function loadFrames(frames, isMock) {
+  stop();
+  state.all = frames;
+  state.isMock = isMock;
+  el.avisoMock.hidden = !isMock;
+  setupFilters(frames);
+  el.player.hidden = false;
+  applyFilters();
 }
 
 /* ---------- Fluxo de busca ---------- */
 async function onSubmit(e) {
   e.preventDefault();
   const values = validate();
-  if (!values) return;
+  if (!values) {
+    if (document.body.classList.contains("embed")) setStatus("Coordenadas inválidas na URL.", "erro");
+    return;
+  }
+  state.values = values;
+  if (!el.mock.checked) updateUrl(values);
 
   stop();
   el.player.hidden = true;
@@ -240,6 +353,7 @@ async function onSubmit(e) {
       return;
     }
     loadFrames(frames, el.mock.checked);
+    setStatus(`${frames.length} observações em ordem cronológica · RA ${values.ra}°, Dec ${values.dec}°, FOV ${values.fov}′.`);
   } catch (err) {
     const timedOut = err === "timeout" || err?.name === "AbortError";
     if (timedOut && state.controller?.signal.reason !== "timeout") return; // busca substituída
@@ -264,24 +378,95 @@ el.slider.addEventListener("input", () => { stop(); showFrame(Number(el.slider.v
 el.img.addEventListener("error", () =>
   setStatus("Não foi possível carregar esta imagem. Tente outro quadro.", "erro"));
 
-document.querySelectorAll(".chip").forEach((chip) =>
-  chip.addEventListener("click", () => {
-    el.ra.value = chip.dataset.ra;
-    el.dec.value = chip.dataset.dec;
-    el.fov.value = chip.dataset.fov;
+// Alvos de exemplo: nomes e coordenadas vêm do backend (o frontend não guarda coordenadas).
+// Formato esperado: [{ name, ra, dec, fov?, note? }] ou { targets: [...] }, RA/Dec em graus.
+function normalizeTarget(t) {
+  return {
+    name: String(t.name ?? t.id ?? ""),
+    ra: Number(t.ra), dec: Number(t.dec),
+    fov: Number(t.fov ?? t.default_fov ?? 3),
+    note: t.note ?? t.description ?? "",
+  };
+}
+
+async function loadTargets() {
+  const box = $("presets");
+  try {
+    const res = await fetch(new URL(CONFIG.TARGETS_PATH, CONFIG.API_BASE), { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) throw new Error("http-" + res.status);
+    const data = await res.json();
+    const list = (Array.isArray(data) ? data : data.targets ?? [])
+      .map(normalizeTarget)
+      .filter((t) => t.name && Number.isFinite(t.ra) && Number.isFinite(t.dec));
+    if (!list.length) throw new Error("vazio");
+    for (const t of list) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = t.name;
+      if (t.note) b.title = t.note;
+      b.addEventListener("click", () => {
+        el.ra.value = t.ra;
+        el.dec.value = t.dec;
+        el.fov.value = t.fov;
+        el.form.requestSubmit();
+      });
+      box.append(b);
+    }
+  } catch {
+    box.querySelector("span").textContent = "Alvos de exemplo indisponíveis no momento. Informe as coordenadas manualmente.";
+  }
+}
+loadTargets();
+
+/* ---------- URL, compartilhamento e modo incorporado ---------- */
+function updateUrl({ ra, dec, fov }) {
+  const q = new URLSearchParams(location.search);
+  q.set("ra", ra); q.set("dec", dec); q.set("fov", fov);
+  try { history.replaceState(null, "", "?" + q); } catch { /* ex.: file:// */ }
+}
+
+function shareUrl(embed) {
+  const { ra, dec, fov } = state.values;
+  const u = new URL(location.href);
+  u.hash = "";
+  u.search = new URLSearchParams({ ra, dec, fov, ...(embed ? { embed: 1 } : {}) });
+  return u.toString();
+}
+
+async function copy(text, okMsg) {
+  try {
+    await navigator.clipboard.writeText(text);
+    $("copiado").textContent = okMsg;
+  } catch {
+    $("copiado").textContent = "Não foi possível copiar automaticamente.";
+  }
+}
+$("copiar-link").addEventListener("click", () => copy(shareUrl(false), "Link copiado."));
+$("copiar-embed").addEventListener("click", () =>
+  copy(`<iframe src="${shareUrl(true)}" width="100%" height="640" style="border:0" title="SPHEREx Explorer" loading="lazy"></iframe>`,
+       "Código copiado."));
+
+(function initFromUrl() {
+  const q = new URLSearchParams(location.search);
+  if (q.get("embed") === "1") document.body.classList.add("embed");
+  if (q.has("ra") && q.has("dec")) {
+    el.ra.value = q.get("ra");
+    el.dec.value = q.get("dec");
+    if (q.has("fov")) el.fov.value = q.get("fov");
     el.form.requestSubmit();
-  })
-);
+  }
+})();
 
 // Atalhos de teclado no visualizador (fora de campos de texto)
 document.addEventListener("keydown", (e) => {
-  if (el.player.hidden || e.target.matches("input[inputmode], select")) return;
+  if (el.player.hidden || e.target.matches("input, select, textarea")) return;
   if (e.key === "ArrowLeft") step(-1);
   else if (e.key === "ArrowRight") step(1);
 });
 
 // Destaca no menu lateral a seção visível
-const navLinks = [...document.querySelectorAll(".sidebar a")];
+const navLinks = [...document.querySelectorAll('.sidebar a[href^="#"]')];
 const sections = navLinks.map((a) => document.querySelector(a.hash)).filter(Boolean);
 const spy = new IntersectionObserver(
   (entries) => entries.forEach((en) => {

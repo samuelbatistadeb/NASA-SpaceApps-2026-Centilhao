@@ -19,7 +19,7 @@
         <li><a href="#busca">Pesquisa</a></li>
         <li><a href="#observacoes">Observações</a></li>
         <li><a href="#galeria">Galeria de imagens</a></li>
-        <li><a href="#ajuda">Entenda os termos</a></li>
+        <li><a href="termos.html">Aprenda os termos</a></li>
       </ul>
     </nav>
     <p class="side-note">Dados: missão SPHEREx / NASA (IRSA/IPAC)</p>
@@ -35,29 +35,27 @@
     <section id="busca" class="panel" aria-labelledby="t-busca">
       <h2 id="t-busca">Onde você quer olhar?</h2>
 
-      <div class="presets" role="group" aria-label="Alvos de exemplo">
+      <div class="presets" id="presets" role="group" aria-label="Alvos de exemplo">
         <span>Alvos de exemplo:</span>
-        <button type="button" class="chip" data-ra="133.7951" data-dec="-7.2451" data-fov="3">WISE 0855</button>
-        <button type="button" class="chip" data-ra="269.452" data-dec="4.693" data-fov="3">Estrela de Barnard</button>
       </div>
 
       <form id="form" novalidate>
         <div class="field">
           <label for="ra">Ascensão reta (RA), em graus</label>
-          <input id="ra" name="ra" inputmode="decimal" required aria-describedby="ra-ajuda ra-erro">
-          <small id="ra-ajuda">Como a “longitude” do céu. Valor entre 0 e 360.</small>
+          <input id="ra" name="ra" inputmode="text" autocomplete="off" required aria-describedby="ra-ajuda ra-erro">
+          <small id="ra-ajuda">Como a “longitude” do céu. Graus (0 a 360) ou h/m/s, ex.: 08h55m10.831s.</small>
           <small id="ra-erro" class="erro" role="alert"></small>
         </div>
         <div class="field">
           <label for="dec">Declinação (Dec), em graus</label>
-          <input id="dec" name="dec" inputmode="decimal" required aria-describedby="dec-ajuda dec-erro">
-          <small id="dec-ajuda">Como a “latitude” do céu. Valor entre −90 e 90.</small>
+          <input id="dec" name="dec" inputmode="text" autocomplete="off" required aria-describedby="dec-ajuda dec-erro">
+          <small id="dec-ajuda">Como a “latitude” do céu. Graus (−90 a 90) ou °/′/″, ex.: -7d14m42.53s.</small>
           <small id="dec-erro" class="erro" role="alert"></small>
         </div>
         <div class="field">
           <label for="fov">Tamanho da área (FOV), em minutos de arco</label>
           <input id="fov" name="fov" inputmode="decimal" value="3" required aria-describedby="fov-ajuda fov-erro">
-          <small id="fov-ajuda">Quanto maior, mais céu aparece. Entre 0,5 e 30.</small>
+          <small id="fov-ajuda">Quanto maior, mais céu aparece (e objetos rápidos ficam no quadro), mas o carregamento é mais lento. Entre 0,5 e 30.</small>
           <small id="fov-erro" class="erro" role="alert"></small>
         </div>
         <div class="actions">
@@ -79,6 +77,27 @@
       <div id="player" hidden>
         <p id="aviso-mock" class="mock" hidden>Dados fictícios: não representam observações científicas.</p>
 
+        <fieldset class="filtros" id="filtros">
+          <legend>Filtrar por detector e comprimento de onda</legend>
+          <div id="detectores" class="detectores" role="group" aria-label="Detectores"></div>
+          <div id="faixa-wl" class="faixa" hidden>
+            <label for="wl-min">Mínimo: <output id="wl-min-out" for="wl-min"></output></label>
+            <input type="range" id="wl-min" min="0" max="0" value="0">
+            <label for="wl-max">Máximo: <output id="wl-max-out" for="wl-max"></output></label>
+            <input type="range" id="wl-max" min="0" max="0" value="0">
+          </div>
+          <p class="dica">Dica: para ver só a mudança ao longo do tempo, deixe um detector e uma faixa estreita de comprimento de onda.</p>
+          <div class="filtro-rodape">
+            <span id="contagem" role="status" aria-live="polite"></span>
+            <button type="button" id="filtro-reset" class="chip">Limpar filtros</button>
+          </div>
+        </fieldset>
+
+        <p id="filtro-vazio" class="placeholder" hidden>
+          Nenhuma observação com esses filtros. Amplie a faixa de comprimento de onda ou ative mais detectores.
+        </p>
+
+        <div id="visor">
         <figure class="frame">
           <img id="imagem" alt="">
           <figcaption id="legenda"></figcaption>
@@ -104,7 +123,13 @@
         </div>
 
         <dl id="meta" class="meta"></dl>
+        <div class="share">
+          <button type="button" id="copiar-link" class="chip">Copiar link desta busca</button>
+          <button type="button" id="copiar-embed" class="chip">Copiar código para incorporar</button>
+          <span id="copiado" role="status"></span>
+        </div>
         <p class="note">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
+        </div>
       </div>
     </section>
 
@@ -116,20 +141,10 @@
       <ul id="galeria-lista" class="gallery" aria-label="Miniaturas das observações"></ul>
     </section>
 
-    <section id="ajuda" class="panel" aria-labelledby="t-ajuda">
-      <h2 id="t-ajuda">Entenda os termos</h2>
-      <details>
-        <summary>O que é a missão SPHEREx?</summary>
-        <p>Um telescópio espacial da NASA que mapeia todo o céu em infravermelho. Ele observa a mesma região várias vezes, o que permite comparar datas.</p>
-      </details>
-      <details>
-        <summary>Por que um objeto pode “andar” entre os quadros?</summary>
-        <p>Algumas estrelas e objetos têm movimento próprio: mudam de posição no céu com o passar dos anos. Em poucos meses o deslocamento é pequeno, mas pode aparecer.</p>
-      </details>
-      <details>
-        <summary>Posso comparar o brilho entre quadros?</summary>
-        <p>Não a olho nu. A comparação de brilho exige análise científica própria e está fora deste protótipo.</p>
-      </details>
+    <section class="panel teaser" aria-labelledby="t-ajuda">
+      <h2 id="t-ajuda">Novo por aqui?</h2>
+      <p>RA, Dec, FOV, banda, movimento próprio: se algum termo parecer estranho, a página de termos explica tudo em linguagem simples.</p>
+      <p><a class="link-btn" href="termos.html">Aprenda os termos</a></p>
     </section>
   </main>
 
