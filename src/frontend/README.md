@@ -10,14 +10,27 @@ Interface web (HTML, CSS e JavaScript puro, sem dependências).
 - `assets/`: imagens e ícones estáticos
 
 ## Como executar
-1. Inicie o backend (FastAPI) em `http://localhost:8000` com CORS habilitado.
-2. Na pasta `src/frontend`, rode: `python -m http.server 5500`
-3. Abra `http://localhost:5500`.
+1. Na raiz do repositório, inicie o backend:
+   `.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --port 8000`
+2. Na pasta `src/frontend`, rode: `python -m http.server 5173`
+3. Abra `http://localhost:5173`.
+
+Use a porta **5173** (ou 3000): o CORS do backend só libera `localhost`/`127.0.0.1` nas portas
+5173, 3000 e 8000. Para outra porta, defina `SPHEREX_CORS_ORIGINS=http://localhost:<porta>` antes de
+subir o backend. Abrir `index.html` direto do disco (`file://`) não funciona.
 
 Sem backend, marque "Usar dados fictícios" para testar a interface.
 
-## Configuração
-Ajuste `CONFIG` e `normalizeObservation()` no topo de `js/app.js` conforme `docs/architecture/api-contract.md`.
+## Contrato com o backend
+`GET /api/observations?ra_deg=&dec_deg=&fov_arcmin=` devolve `{ observations: [...] }` em ordem
+cronológica. Cada observação é **uma exposição de um detector**: `id`, `observed_at` (UTC),
+`detector` ("D1".."D6"), `band`, `image_url` (`/api/images/{id}`, PNG) e `metadata`
+(`product_id`, `wavelength_min_nm`/`wavelength_max_nm`, `exposure_time_s`, `data_release`...).
+Erros chegam como `{ error: { code, message } }`. A conversão para o formato interno está em
+`normalizeObservation()` (`js/app.js`).
+
+Cada imagem é recortada no IRSA sob demanda (~10–15 s na primeira vez, depois fica em cache);
+por isso a galeria mostra só as `CONFIG.GALLERY_MAX` primeiras.
 
 ## Link por coordenadas e incorporação
 - `index.html?ra=133.79513&dec=-7.24515&fov=3`: abre e já executa a busca.
@@ -27,22 +40,28 @@ Ajuste `CONFIG` e `normalizeObservation()` no topo de `js/app.js` conforme `docs
 
 ## Alvos de exemplo (vindos do backend)
 O frontend não guarda coordenadas. Os botões de alvo são carregados de `GET /api/targets`
-(`CONFIG.TARGETS_PATH`), que deve retornar, por exemplo:
+(`CONFIG.TARGETS_PATH`, implementado em `src/backend/app/api/targets.py`), que retorna:
 
 ```json
-[{ "name": "WISE 0855", "ra": 133.79513, "dec": -7.24515, "fov": 3, "note": "opcional" }]
+{ "targets": [{ "name": "WISE 0855", "ra": 133.737467, "dec": -7.240406, "fov": 3,
+  "position_epoch": "2025.35", "note": "...", "source": "docs/science/target-catalog.md §3.3 ..." }] }
 ```
-RA/Dec em graus. Se o endpoint falhar, a página avisa e a busca manual continua funcionando.
+RA/Dec em graus. Para objetos de alto movimento próprio, a posição já vem propagada para as
+épocas SPHEREx (WISE 0855 se deslocou ~3,5′ desde a coordenada J2000 do desafio).
+Se o endpoint falhar, a página avisa e a busca manual continua funcionando.
 
 ## Filtros por detector e comprimento de onda
-Cada observação da API deve trazer (nomes aceitos entre parênteses):
-- `detector` (ou `detector_id`): 1 a 6, também aceita "D3"
-- `wavelength_um` (ou `wavelength`): comprimento de onda em micrômetros
-- `band_index` (ou `band`): número da banda (1 a 102)
-
-Sem `detector` ou sem `wavelength`, o filtro correspondente fica oculto e as observações nunca são descartadas por ele.
+- O filtro por detector usa `detector` ("D1".."D6"). Para comparar épocas, deixe um detector só:
+  cada detector vê outra faixa do infravermelho.
+- O filtro de comprimento de onda fica oculto com dados reais: cada imagem SPHEREx cobre uma
+  **faixa** (o comprimento de onda varia ao longo do detector), não um valor único. A faixa do
+  detector aparece nos detalhes do quadro.
 
 ## Espectro de um ponto
+> **Ainda não implementado no backend.** Com dados reais a página informa que o espectro não está
+> disponível; com "dados fictícios" a seção funciona. Atenção: os recortes reais vêm na orientação
+> do detector (não norte para cima), então a conversão clique → RA/Dec abaixo ainda não vale para eles.
+
 Clique na imagem (ou foque nela, use as setas e Enter) para marcar o ponto A (alvo) e o ponto B (fundo do céu).
 O frontend converte a posição clicada em RA/Dec, assumindo imagem quadrada com lado = FOV, centrada na busca,
 com norte para cima e leste à esquerda (`CONFIG.IMAGE_EAST_LEFT`). Depois chama:
@@ -59,8 +78,8 @@ Resposta esperada (lista direta ou objeto com `points`):
 círculos para A e losangos para B, e há uma tabela e um CSV com os mesmos dados.
 
 ## Mapa de observações (plano cartesiano)
-Gráfico gerado só com os dados já devolvidos pela busca: eixo X = data (`obs_date`), eixo Y = comprimento de onda
-(`wavelength_um`), cor = detector. Sem `wavelength_um`, o eixo Y passa a ser o detector. Clicar num ponto abre o quadro
+Gráfico gerado só com os dados já devolvidos pela busca: eixo X = data (`observed_at`), eixo Y = detector,
+cor = detector. Clicar num ponto abre o quadro
 correspondente, e o anel branco acompanha o quadro em exibição. Pontos escondidos pelos filtros ficam apagados.
 Não exige endpoint novo.
 

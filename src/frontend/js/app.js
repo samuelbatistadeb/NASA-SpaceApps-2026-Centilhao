@@ -7,7 +7,7 @@
  * ============================================================ */
 const CONFIG = {
   API_BASE: "http://localhost:8000",
-  OBSERVATIONS_PATH: "/api/observations", // ASSUMIDO: GET ?ra=&dec=&fov=
+  OBSERVATIONS_PATH: "/api/observations", // GET ?ra_deg=&dec_deg=&fov_arcmin= (src/backend/app/api/observations.py)
   SPHEREX_HIPS_BASE: "https://alasky.cds.unistra.fr/SPHEREx/D", // + número do detector (1 a 6). Mapas HiPS do CDS, versão QR2: atualizar quando houver HiPS do DR1
   // Fontes do Aladin Lite, tentadas em ordem até uma funcionar. Versão fixa primeiro (mais previsível que "latest").
   // "script" = <script> clássico (define window.A); "module" = pacote npm (ES module) via import().
@@ -19,12 +19,34 @@ const CONFIG = {
   SPECTRUM_PATH: "/api/spectrum", // ASSUMIDO: GET ?ra=&dec=&radius= (raio em segundos de arco)
   SPECTRUM_TIMEOUT_MS: 30000,
   IMAGE_EAST_LEFT: true, // ASSUMIDO: imagem com norte para cima e leste à esquerda (confirmar com o backend)
-  TARGETS_PATH: "/api/targets", // ASSUMIDO: lista de alvos com coordenadas, fornecida pelo backend
-  TIMEOUT_MS: 30000,
-  EXTRA_PARAMS: {}, // ex.: { release: "qr3" } para trocar a versão dos dados sem mudar o código
+  TARGETS_PATH: "/api/targets", // GET → { targets: [{ name, ra, dec, fov, note }] }
+  TIMEOUT_MS: 120000, // a primeira consulta ao IRSA pode levar dezenas de segundos
+  EXTRA_PARAMS: {}, // parâmetros extras repassados ao backend
   FOV_MIN: 0.5,
-  FOV_MAX: 30, // minutos de arco (confirmar unidade com o backend)
+  FOV_MAX: 30, // minutos de arco (o backend aceita 0,1 a 120)
+  // Cada miniatura gera um recorte no IRSA (~10–15 s, sem cache): limitar evita sobrecarga.
+  GALLERY_MAX: 24,
 };
+
+// Mensagens para os códigos de erro do backend (src/backend/app/api/errors.py).
+const API_ERRORS = {
+  NO_OBSERVATIONS_FOUND: "Nenhuma observação encontrada para essa região. Tente aumentar o tamanho da área (FOV) ou escolher outro ponto.",
+  SOURCE_UNAVAILABLE: "O arquivo SPHEREx (IRSA) está indisponível ou ocupado no momento. Tente novamente em instantes.",
+};
+
+class ApiError extends Error {
+  constructor(status, code, message) {
+    super(message || `HTTP ${status}`);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+// Lê o envelope { error: { code, message } } do backend.
+async function apiError(res) {
+  const body = await res.json().catch(() => null);
+  return new ApiError(res.status, body?.error?.code ?? null, body?.error?.message ?? null);
+}
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -44,7 +66,7 @@ const el = {
   espTabela: $("esp-tabela"), raio: $("raio"), espCentro: $("esp-centro"), espLimpar: $("esp-limpar"), espCsv: $("esp-csv"), filtroVazio: $("filtro-vazio"), reset: $("filtro-reset"), galeria: $("galeria-lista"), galeriaVazio: $("galeria-vazio"), tIni: $("t-ini"), tFim: $("t-fim"), meta: $("meta"),
 };
 
-const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, active: "A", specCtl: {}, rows: [], keys: [], values: null, all: [], wls: [], detectors: new Set(), frames: [], index: 0, timer: null, isMock: false, controller: null };
+const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, active: "A", specCtl: {}, rows: [], keys: [], values: null, all: [], wls: [], detectors: new Set(), frames: [], index: 0, timer: null, isMock: false, controller: null, omitted: 0 };
 
 /* ---------- Utilitários ---------- */
 const parseNum = (v) => Number(String(v).trim().replace(",", "."));
@@ -71,6 +93,10 @@ const fmtWl = (w) => `${w.toFixed(2).replace(".", ",")} µm`;
 const fmtDate = (iso) =>
   new Date(iso).toLocaleDateString("pt-BR", { dateStyle: "long", timeZone: "UTC" });
 
+// Data e hora UTC: vários quadros podem cair no mesmo dia (exposições de ~2 min).
+const fmtDateTime = (iso) =>
+  new Date(iso).toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }) + " UTC";
+
 function setStatus(msg, kind = "") {
   el.status.textContent = msg;
   el.status.className = "status " + kind;
@@ -78,7 +104,7 @@ function setStatus(msg, kind = "") {
 
 /* ---------- Validação ---------- */
 const RULES = {
-  ra:  { min: 0,   max: 360, msg: "Informe graus (0 a 360) ou h/m/s, ex.: 08h55m10.831s." },
+  ra:  { min: 0,   max: 360, exclusiveMax: true, msg: "Informe graus (0 até menos de 360) ou h/m/s, ex.: 08h55m10.831s." },
   dec: { min: -90, max: 90,  msg: "Informe graus (−90 a 90) ou °/′/″, ex.: -7d14m42.53s." },
   fov: { min: CONFIG.FOV_MIN, max: CONFIG.FOV_MAX,
          msg: `Informe um número entre ${CONFIG.FOV_MIN} e ${CONFIG.FOV_MAX}.` },
@@ -90,7 +116,8 @@ function validate() {
   for (const [name, rule] of Object.entries(RULES)) {
     const input = el[name];
     const n = name === "fov" ? parseNum(input.value) : parseCoord(input.value, name);
-    const ok = input.value.trim() !== "" && Number.isFinite(n) && n >= rule.min && n <= rule.max;
+    const ok = input.value.trim() !== "" && Number.isFinite(n) && n >= rule.min &&
+      (rule.exclusiveMax ? n < rule.max : n <= rule.max);
     input.setAttribute("aria-invalid", String(!ok));
     $(name + "-erro").textContent = ok ? "" : rule.msg;
     if (!ok && !firstInvalid) firstInvalid = input;
@@ -101,22 +128,30 @@ function validate() {
 }
 
 /* ---------- API ---------- */
-// Converte a resposta do backend para o formato interno.
+// Converte uma observação do backend (schemas/observation.py) para o formato interno.
+// Cada observação é UMA exposição de UM detector. O comprimento de onda varia dentro
+// da imagem (filtro linear variável), por isso guardamos a faixa, não um valor único.
 function normalizeObservation(o) {
-  const img = o.image_url ?? o.imageUrl ?? o.image ?? "";
-  const wlRaw = o.wavelength_um ?? o.wavelength ?? o.lambda ?? null;
-  const wl = wlRaw === null || wlRaw === "" ? NaN : Number(wlRaw);
-  const det = parseInt(String(o.detector ?? o.detector_id ?? "").replace(/\D/g, ""), 10);
-  const detOk = det >= 1 && det <= 6; // SPHEREx: seis conjuntos de detectores
+  const m = o.metadata ?? {};
+  const img = o.image_url ?? "";
+  const det = parseInt(String(o.detector ?? "").replace(/\D/g, ""), 10);
+  const detOk = det >= 1 && det <= 6; // SPHEREx: seis detectores (D1 a D6)
+  const nmToUm = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v) / 1000);
+  const wlMin = nmToUm(m.wavelength_min_nm);
+  const wlMax = nmToUm(m.wavelength_max_nm);
   return {
-    id: o.product_id ?? o.id ?? "—",
-    date: o.obs_date ?? o.date ?? o.epoch ?? null, // ISO 8601
-    imageUrl: /^(https?:|data:)/.test(img) ? img : CONFIG.API_BASE + img,
+    id: o.id, // identificador interno da observação (usado em /api/images/{id})
+    productId: m.product_id ?? "—",
+    date: o.observed_at ?? null, // ISO 8601 UTC, vindo de t_min (MJD) do IRSA
+    imageUrl: img ? (/^(https?:|data:)/.test(img) ? img : CONFIG.API_BASE + img) : "",
     detector: detOk ? det : null,
     detectorLabel: detOk ? "D" + det : String(o.detector ?? "—"),
-    wavelength: Number.isFinite(wl) ? wl : null, // micrômetros
-    band: o.band_index ?? o.band ?? "—",
-    product: o.product_type ?? o.product ?? "—",
+    wavelength: null, // não há um único comprimento de onda por imagem
+    wlRange: wlMin !== null && wlMax !== null ? [wlMin, wlMax] : null, // micrômetros
+    band: o.band ?? "—",
+    product: m.data_release ?? "—",
+    exposure: m.exposure_time_s ?? null,
+    cutout: m.cutout_strategy ?? null,
   };
 }
 
@@ -125,19 +160,21 @@ async function fetchObservations({ ra, dec, fov }) {
   const controller = (state.controller = new AbortController());
   const timeout = setTimeout(() => controller.abort("timeout"), CONFIG.TIMEOUT_MS);
   const url = new URL(CONFIG.OBSERVATIONS_PATH, CONFIG.API_BASE);
-  url.search = new URLSearchParams({ ra, dec, fov, ...CONFIG.EXTRA_PARAMS }).toString();
+  url.search = new URLSearchParams({
+    ra_deg: ra, dec_deg: dec, fov_arcmin: fov, ...CONFIG.EXTRA_PARAMS,
+  }).toString();
 
   try {
     const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) throw new Error("http-" + res.status);
+    if (!res.ok) throw await apiError(res);
     const data = await res.json();
-    const list = Array.isArray(data) ? data : data.observations ?? [];
-    return list
-      .map(normalizeObservation)
+    const all = (data.observations ?? []).map(normalizeObservation);
+    // Observações sem data resolvível ficam fora da sequência temporal (e são contadas).
+    const frames = all
       .filter((f) => f.date && !Number.isNaN(Date.parse(f.date)))
       .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-    // TODO: se a API devolver várias bandas na mesma época, agrupar por data
-    // para que bandas nunca sejam exibidas como quadros de tempo diferentes.
+    state.omitted = all.length - frames.length;
+    return frames;
   } finally {
     clearTimeout(timeout);
   }
@@ -164,6 +201,7 @@ function mockObservations() {
     g.fill();
     frames.push({
       id: "FICTICIO-" + String(i + 1).padStart(2, "0"),
+      productId: "FICTICIO-" + String(i + 1).padStart(2, "0"), wlRange: null, exposure: null, cutout: null,
       date: new Date(start + i * 30 * 864e5).toISOString(),
       imageUrl: c.toDataURL("image/png"),
       detector: (i % 6) + 1, detectorLabel: "D" + ((i % 6) + 1), wavelength: 0.75 + i * 0.35,
@@ -179,21 +217,25 @@ function showFrame(i) {
   if (!f) return;
   state.index = i;
   el.img.src = f.imageUrl;
-  el.img.alt = `Região do céu observada em ${fmtDate(f.date)}`;
-  el.legenda.textContent = `${fmtDate(f.date)} — quadro ${i + 1} de ${state.frames.length}`;
+  el.img.alt = `Região do céu observada em ${fmtDateTime(f.date)}, detector ${f.detectorLabel}`;
+  el.legenda.textContent =
+    `${fmtDateTime(f.date)} · detector ${f.detectorLabel} — quadro ${i + 1} de ${state.frames.length}`;
   el.slider.value = i;
   highlightMap(f.id);
-  el.slider.setAttribute("aria-valuetext", fmtDate(f.date));
+  el.slider.setAttribute("aria-valuetext", fmtDateTime(f.date));
   el.galeria.querySelectorAll("button").forEach((b, k) =>
     k === i ? b.setAttribute("aria-current", "true") : b.removeAttribute("aria-current"));
 
+  const wlText = f.wlRange
+    ? `${fmtWl(f.wlRange[0])} a ${fmtWl(f.wlRange[1])} (varia ao longo da imagem)`
+    : f.wavelength === null ? "—" : fmtWl(f.wavelength);
   const rows = [
-    ["Data da observação", f.date.slice(0, 10)],
-    ["Identificador do produto", f.id],
+    ["Data da observação", fmtDateTime(f.date)],
+    ["Identificador do produto", f.productId],
     ["Detector", f.detectorLabel],
-    ["Banda", f.band],
-    ["Comprimento de onda", f.wavelength === null ? "—" : fmtWl(f.wavelength)],
-    ["Tipo de produto", f.product],
+    ["Faixa espectral do detector", wlText],
+    ["Tempo de exposição", f.exposure === null ? "—" : `${Math.round(f.exposure)} s`],
+    ["Coleção", f.product],
     ["Fonte dos dados", state.isMock ? "Fictícia (teste)" : "SPHEREx / IRSA-IPAC"],
   ];
   el.meta.replaceChildren(
@@ -212,8 +254,9 @@ function clearGallery() {
 
 function renderGallery(frames) {
   el.galeriaVazio.hidden = true;
+  // Mantém os índices: o botão i mostra state.frames[i].
   el.galeria.replaceChildren(
-    ...frames.map((f, i) => {
+    ...frames.slice(0, CONFIG.GALLERY_MAX).map((f, i) => {
       const li = document.createElement("li");
       const btn = document.createElement("button");
       btn.type = "button";
@@ -222,8 +265,8 @@ function renderGallery(frames) {
       img.loading = "lazy";
       img.alt = "";
       const label = document.createElement("span");
-      label.textContent = fmtDate(f.date);
-      btn.setAttribute("aria-label", `Ver observação de ${fmtDate(f.date)}`);
+      label.textContent = `${fmtDate(f.date)} · ${f.detectorLabel}`;
+      btn.setAttribute("aria-label", `Ver observação de ${fmtDateTime(f.date)}, detector ${f.detectorLabel}`);
       btn.append(img, label);
       btn.addEventListener("click", () => { stop(); showFrame(i); });
       li.append(btn);
@@ -321,7 +364,15 @@ function applyFilters() {
     el.wlMinOut.textContent = fmtWl(state.wls[Number(el.wlMin.value)]);
     el.wlMaxOut.textContent = fmtWl(state.wls[Number(el.wlMax.value)]);
   }
-  el.contagem.textContent = `Mostrando ${frames.length} de ${state.all.length} observações.`;
+  const instants = new Set(frames.map((f) => f.date)).size;
+  const detsVisible = new Set(frames.map((f) => f.detector).filter(Boolean)).size;
+  el.contagem.textContent =
+    `Mostrando ${frames.length} de ${state.all.length} observações (${instants} instantes distintos).` +
+    (detsVisible > 1
+      ? " Atenção: há detectores diferentes intercalados; cada detector vê outra faixa do infravermelho. Para comparar épocas, deixe só um detector ativo."
+      : "") +
+    (frames.length > CONFIG.GALLERY_MAX ? ` A galeria mostra as ${CONFIG.GALLERY_MAX} primeiras.` : "") +
+    (state.omitted ? ` ${state.omitted} observação(ões) sem data foram omitidas.` : "");
 
   stop();
   state.frames = frames;
@@ -379,9 +430,10 @@ async function onSubmit(e) {
   setStatus("Buscando observações no arquivo SPHEREx… isso pode levar alguns segundos.", "carregando");
 
   try {
+    state.omitted = 0;
     const frames = el.mock.checked ? mockObservations() : await fetchObservations(values);
     if (!frames.length) {
-      setStatus("Nenhuma observação encontrada para essa região. Tente aumentar o tamanho da área (FOV) ou escolher outro ponto.");
+      setStatus(API_ERRORS.NO_OBSERVATIONS_FOUND);
       return;
     }
     loadFrames(frames, el.mock.checked);
@@ -389,6 +441,12 @@ async function onSubmit(e) {
   } catch (err) {
     const timedOut = err === "timeout" || err?.name === "AbortError";
     if (timedOut && state.controller?.signal.reason !== "timeout") return; // busca substituída
+    if (err instanceof ApiError) {
+      // NO_OBSERVATIONS_FOUND é um resultado válido, não uma falha.
+      const kind = err.code === "NO_OBSERVATIONS_FOUND" ? "" : "erro";
+      setStatus(API_ERRORS[err.code] ?? err.message, kind);
+      return;
+    }
     setStatus(
       timedOut
         ? "A busca demorou demais. Tente novamente em instantes."
@@ -609,7 +667,9 @@ async function loadSpectrum(key) {
     setEspStatus(
       err?.name === "AbortError"
         ? "O cálculo do espectro demorou demais. Tente novamente."
-        : "Não foi possível obter o espectro. Verifique se o backend está em execução.",
+        : err?.message === "http-404"
+          ? "O espectro de um ponto com dados reais ainda não está disponível no backend. Use os dados fictícios para testar esta seção."
+          : "Não foi possível obter o espectro. Verifique se o backend está em execução.",
       "erro"
     );
   }
