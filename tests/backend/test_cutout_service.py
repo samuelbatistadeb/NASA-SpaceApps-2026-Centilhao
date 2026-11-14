@@ -73,8 +73,8 @@ def test_local_cutout_extracts_the_plane(settings) -> None:
         CutoutRequest(
             product_id="synthetic-product-001",
             access_url="https://synthetic-irsa.invalid/files/synthetic-product-001.fits",
-            ra_deg=32.0,
-            dec_deg=32.0,
+            ra_deg=133.795129,
+            dec_deg=-7.245147,
             fov_arcmin=1.0,
         )
     )

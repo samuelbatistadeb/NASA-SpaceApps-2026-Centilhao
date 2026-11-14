@@ -82,7 +82,13 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "description": ("obs_description", "description"),
     "instrument": ("instrument_name", "instrument", "facility_name"),
     "detector": ("detector_name", "detector", "instrument_name"),
-    "band": ("band_name", "band", "band_pass", "filter_name"),
+    "band": (
+        "energy_bandpassname",
+        "band_name",
+        "band",
+        "band_pass",
+        "filter_name",
+    ),
     "band_units": ("band_units", "band_unit"),
     "em_min": ("em_min", "em_min_nm", "wavelength_min_nm", "spec_start"),
     "em_max": ("em_max", "em_max_nm", "wavelength_max_nm", "spec_end"),
@@ -339,7 +345,7 @@ class IrsaClient:
             start_date=start_date,
             end_date=end_date,
         )
-        url = self._join(self.sia2_base_url, "query")
+        url = self.sia2_base_url
         response = self._request_with_retry("GET", url, params=params)
         return self._parse_sia2_payload(response)
 
@@ -367,7 +373,7 @@ class IrsaClient:
         )
         if product_url:
             params["PRODUCT"] = product_url
-        url = self._join(self.cutout_base_url, "cutout")
+        url = self.cutout_base_url
         response = self._request_with_retry("GET", url, params=params)
         return response.content
 
@@ -397,24 +403,33 @@ class IrsaClient:
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> dict[str, Any]:
-        """Build the query parameters sent to the SIA2 service.
+        """Build parameters for the IRSA SIA v2 service."""
 
-        TODO(RESEARCHER-PENDING): the parameter names below follow the IVOA
-        SIA2 specification. They must be confirmed against the official
-        SPHEREx service documentation before the first real query.
-        """
-        radius_arcsec = max(radius_deg, 1e-6) * 3600.0
         params: dict[str, Any] = {
-            "POS": f"CIRCLE {ra_deg:.6f} {dec_deg:.6f} {radius_deg:.6f}",
-            "SIZE": f"{radius_arcsec:.3f} arcsec",
-            "FORMAT": "votable",
+            "POS": (
+                f"CIRCLE {ra_deg:.6f} "
+                f"{dec_deg:.6f} {radius_deg:.6f}"
+            ),
+            "COLLECTION": [
+                "spherex_dr1",
+                "spherex_qr3",
+                "spherex_dr1_deep",
+                "spherex_qr3_deep",
+            ],
+            "RESPONSEFORMAT": "votable",
+            "MAXREC": 1000,
         }
-        if band:
-            params["BAND"] = band
-        if start_date:
-            params["TIME"] = start_date
-        if end_date:
-            params["TIME"] = f"{start_date},{end_date}" if start_date else end_date
+
+        if band is not None:
+            raise ValueError(
+                "Band filtering is not enabled in this version."
+            )
+
+        if start_date is not None or end_date is not None:
+            raise ValueError(
+                "Temporal filtering is not enabled in this version."
+            )
+
         return params
 
     def _build_cutout_params(

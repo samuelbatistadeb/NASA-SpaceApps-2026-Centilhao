@@ -111,19 +111,35 @@ class CutoutResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def _select_data_hdu(hdulist: fits.HDUList) -> tuple[int, fits.HDUList]:
-    """Return the first HDU that carries 2D (or 3D) image data."""
+
+def _select_data_hdu(
+    hdulist: fits.HDUList,
+) -> tuple[int, fits.ImageHDU]:
+    """Prefer the SPHEREx IMAGE extension when available."""
+
+    if "IMAGE" in hdulist:
+        index = hdulist.index_of("IMAGE")
+        hdu = hdulist[index]
+
+        data = getattr(hdu, "data", None)
+
+        if data is not None and getattr(data, "ndim", 0) in (2, 3):
+            return index, hdu
+
     for index, hdu in enumerate(hdulist):
         data = getattr(hdu, "data", None)
+
         if data is None:
             continue
-        ndim = getattr(data, "ndim", 0)
-        if ndim in (2, 3):
+
+        if getattr(data, "ndim", 0) in (2, 3):
             return index, hdu
+
     raise ProcessingError(
         "O arquivo FITS não contém uma extensão de imagem utilizável.",
-        detail="no HDU with 2D or 3D data",
+        detail="no HDU with 2D or 3D image data",
     )
+
 
 
 def load_image(content: bytes) -> FitsImage:
@@ -249,29 +265,57 @@ def _parse_iso_datetime(text: str) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
+
 def extract_wcs(header: fits.Header) -> WCS | None:
-    """Build the celestial WCS of a header, when it is available."""
+    """Build the celestial WCS, preserving distortion information."""
+
     try:
-        wcs = WCS(header, naxis=2)
-    except Exception:  # noqa: BLE001 - a broken WCS must not break the cutout
-        logger.warning("The FITS header does not provide a usable WCS.")
+        wcs = WCS(header)
+
+        if not wcs.has_celestial:
+            return None
+
+        return wcs.celestial
+
+    except Exception:
+        logger.warning(
+            "The FITS header does not provide a usable WCS.",
+            exc_info=True,
+        )
         return None
-    if not wcs.has_celestial:
-        return None
-    return wcs.celestial
 
 
 def pixel_scale_arcsec(wcs: WCS | None) -> float | None:
-    """Return the pixel scale of a WCS, in arcseconds per pixel."""
+    """Estimate the mean projected pixel scale in arcsec/pixel."""
+
     if wcs is None:
         return None
+
     try:
-        cdelt = wcs.wcs.cdelt
-        if cdelt is None or len(cdelt) < 2:
+        from astropy.wcs.utils import proj_plane_pixel_scales
+
+        scales = np.asarray(
+            proj_plane_pixel_scales(wcs.celestial),
+            dtype=float,
+        )
+
+        if (
+            scales.size != 2
+            or not np.all(np.isfinite(scales))
+            or np.any(scales <= 0)
+        ):
             return None
-        return math.hypot(float(cdelt[0]), float(cdelt[1])) * 3600.0
-    except Exception:  # noqa: BLE001 - defensive
+
+        return float(np.mean(scales) * 3600.0)
+
+    except Exception:
+        logger.warning(
+            "Could not determine WCS pixel scale.",
+            exc_info=True,
+        )
         return None
+
+
 
 
 def cutout_image(
@@ -279,58 +323,118 @@ def cutout_image(
     ra_deg: float,
     dec_deg: float,
     size_pixels: int,
+    *,
+    allow_center_fallback: bool = False,
 ) -> CutoutResult:
-    """Produce a spatial cutout centred on the requested position.
+    """Generate a spatial cutout using celestial WCS."""
 
-    When the header provides a celestial WCS the position is converted to
-    pixels; otherwise the centre of the image is used and the metadata records
-    that the WCS was unavailable.
-    """
     if size_pixels <= 0:
         raise ProcessingError(
-            "O tamanho do recorte deve ser positivo.", detail=f"size={size_pixels}"
+            "O tamanho do recorte deve ser positivo.",
+            detail=f"size={size_pixels}",
         )
 
     wcs = extract_wcs(image.header)
-    metadata: dict[str, Any] = {
-        "cutout_size_pixels": int(size_pixels),
-        "wcs_available": wcs is not None,
-    }
 
-    if wcs is not None:
+    # 1. Determinar o centro do recorte.
+    if wcs is None:
+        if not allow_center_fallback:
+            raise ProcessingError(
+                "O produto FITS não possui WCS celestial utilizável.",
+                detail="celestial WCS unavailable",
+            )
+
+        height, width = image.data.shape
+
+        x = (width - 1) / 2.0
+        y = (height - 1) / 2.0
+
+        center_source = "image_center_no_wcs"
+
+    else:
         try:
-            x, y = wcs.wcs_world2pix(ra_deg, dec_deg, 0)
-        except Exception as exc:  # noqa: BLE001 - defensive
+            x, y = wcs.all_world2pix(
+                ra_deg,
+                dec_deg,
+                0,
+            )
+        except Exception as exc:
             raise ProcessingError(
                 "Não foi possível converter as coordenadas em pixels.",
                 detail=f"WCS error: {exc}",
             ) from exc
-        metadata["cutout_center_px"] = [float(x), float(y)]
-        metadata["cutout_center_source"] = "wcs"
-    else:
-        x = (image.data.shape[1] - 1) / 2.0
-        y = (image.data.shape[0] - 1) / 2.0
-        metadata["cutout_center_px"] = [float(x), float(y)]
-        metadata["cutout_center_source"] = "image_center_no_wcs"
 
+        center_source = "wcs"
+
+    # 2. Validar as coordenadas em pixels.
+    height, width = image.data.shape
+
+    if not (
+        math.isfinite(x)
+        and math.isfinite(y)
+        and 0 <= x < width
+        and 0 <= y < height
+    ):
+        raise ProcessingError(
+            "A posição solicitada está fora da imagem FITS.",
+            detail=f"x={x}, y={y}, shape={image.data.shape}",
+        )
+
+    # 3. Gerar o recorte.
     try:
-        cutout = Cutout2D(image.data, position=(y, x), size=size_pixels, wcs=wcs)
-    except Exception as exc:  # noqa: BLE001 - astropy raises several types
+        cutout = Cutout2D(
+            image.data,
+            position=(x, y),
+            size=size_pixels,
+            wcs=wcs,
+            mode="partial",
+            fill_value=np.nan,
+            copy=True,
+        )
+    except Exception as exc:
         raise ProcessingError(
             "Não foi possível gerar o recorte da imagem.",
             detail=f"Cutout2D error: {exc}",
         ) from exc
 
-    data = np.asarray(cutout.data, dtype=float)
-    if data.ndim != 2:
+    # 4. Validar os dados científicos.
+    data = np.asarray(
+        cutout.data,
+        dtype=float,
+    )
+
+    if not np.isfinite(data).any():
         raise ProcessingError(
-            "O recorte gerado não é bidimensional.", detail=f"ndim={data.ndim}"
+            "O recorte não contém pixels válidos.",
+            detail="all cutout pixels are non-finite",
         )
 
-    metadata["cutout_shape"] = [int(data.shape[0]), int(data.shape[1])]
-    metadata["pixel_scale_arcsec"] = pixel_scale_arcsec(wcs)
+    # 5. Registrar a origem do recorte.
+    metadata = {
+        "cutout_size_pixels": int(size_pixels),
+        "cutout_shape": [
+            int(data.shape[0]),
+            int(data.shape[1]),
+        ],
+        "wcs_available": wcs is not None,
+        "cutout_center_px": [
+            float(x),
+            float(y),
+        ],
+        "cutout_center_source": center_source,
+        "pixel_scale_arcsec": pixel_scale_arcsec(wcs),
+    }
 
-    return CutoutResult(data=data, header=cutout.wcs.to_header() if wcs else image.header, metadata=metadata)
+    # 6. Retornar dados e metadados.
+    return CutoutResult(
+        data=data,
+        header=(
+            cutout.wcs.to_header(relax=True)
+            if cutout.wcs is not None
+            else image.header
+        ),
+        metadata=metadata,
+    )
 
 
 def size_pixels_for_fov(
