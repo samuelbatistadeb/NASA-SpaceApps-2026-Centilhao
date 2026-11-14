@@ -173,6 +173,35 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 009 — Interpretação de época e detector na resposta real do SIA
+
+**Data:** 14/11/2026
+
+**Assunto:** Alinhar o parser do backend ao formato real da resposta SIA v2 do IRSA para SPHEREx.
+
+**Contexto:** Uma consulta real (`/SIA?COLLECTION=spherex_dr1&POS=circle 133.795129 -7.245147 0.01&RESPONSEFORMAT=votable`) devolveu HTTP 200, `application/x-votable+xml`, 51 colunas. A primeira linha corresponde exatamente ao FITS local `level2_2025W19_1B_0116_1D3_spx_l2b-v27-2026-197.fits` (`t_min = 60800.700028` ≡ `MJD-OBS`). Foram identificados dois defeitos no backend:
+
+1. `t_min` é publicado como **MJD numérico** (padrão ObsCore), mas o código o tratava como data ISO. A conversão falhava e a época passava a ser `obs_release_date` (data de publicação, 2026-09-27), contrariando a DECISÃO 007, item 4.
+2. Não existe coluna de detector. O alias `instrument_name` fazia o detector aparecer como "SPHEREx".
+
+**Decisão tomada:**
+
+- `t_min`/`t_max` numéricos são interpretados como MJD. Strings ISO continuam aceitas para outras fontes.
+- O fallback para `obs_release_date` foi **removido**: sem época resolvível, `observed_at = null` e `timing_status = "unresolved"`.
+- O detector é extraído do sufixo `/D<n>` de `obs_publisher_did` ou de `energy_bandpassname = SPHEREx-D<n>`, no formato `"D3"`. `instrument_name` deixou de ser alias de detector.
+- Uma resposta real e não editada foi salva em `tests/backend/fixtures/sia_spherex_dr1_wise0855.xml` para testes sem rede.
+
+**Justificativa:** Execução real do serviço e comparação com o cabeçalho do FITS correspondente.
+
+**Consequências:**
+
+- A escala de tempo (UTC × TT, ~69 s) não é convertida; isso é irrelevante para ordenar exposições, mas deve ser revisto se houver cálculo de efemérides.
+- Pendente: `em_min`/`em_max` vêm em **metros** no SIA, mas o schema os chama de `wavelength_*_nm` sem conversão. O teste sintético atual (`0.9` com `band_units = "um"`) também não converte. A correção será feita em etapa própria.
+
+**Responsável:** Liderança técnica.
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026

@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
 from app.api.errors import (
@@ -41,7 +41,14 @@ from app.services.cache import (
 )
 from app.services.cutout_service import CutoutRequest, CutoutService
 from app.services.fits_processor import VISUAL_NORMALIZATION_DESCRIPTION
-from app.services.irsa_client import IrsaClient, _to_float, _to_str, pick, radius_from_fov
+from app.services.irsa_client import (
+    IrsaClient,
+    _to_float,
+    _to_str,
+    extract_detector,
+    pick,
+    radius_from_fov,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -252,7 +259,7 @@ class ObservationService:
             "image",
             str(pick(record, "product_id") or ""),
             str(pick(record, "band") or ""),
-            str(pick(record, "detector") or ""),
+            str(extract_detector(record) or ""),
             f"{entry.ra_deg:.6f}",
             f"{entry.dec_deg:.6f}",
             f"{entry.fov_arcmin:.6f}",
@@ -271,7 +278,7 @@ class ObservationService:
         for record in records:
             product_id = _to_str(pick(record, "product_id"))
             band = _to_str(pick(record, "band"))
-            detector = _to_str(pick(record, "detector"))
+            detector = extract_detector(record)
             observed_at, timing_status, observed_at_source = self._extract_observed_at(record)
 
             metadata = ObservationMetadata(
@@ -339,25 +346,24 @@ class ObservationService:
         raw_mjd = pick(record, "mjd_obs")
         mjd = _to_float(raw_mjd)
         if mjd is not None:
-            from datetime import timedelta
+            return _mjd_to_datetime(mjd), "mjd_observation_date", str(raw_mjd)
 
-            instant = _EPOCH + timedelta(days=mjd - 40587.0)
-            return instant, "mjd_observation_date", str(raw_mjd)
-
+        # ObsCore / SIA v2 publishes ``t_min`` and ``t_max`` as MJD (unit "d").
+        # The IRSA SPHEREx answer follows it (``t_min = 60800.700028``, verified
+        # on 2026-11-14). An ISO string is still accepted for other sources.
         for alias, criterion in (("t_min", "observation_date"), ("t_max", "interval_start")):
-            raw = _to_str(pick(record, alias))
-            if not raw:
+            raw = pick(record, alias)
+            if raw in (None, ""):
                 continue
-            parsed = _parse_datetime(raw)
+            mjd = _to_float(raw)
+            if mjd is not None:
+                return _mjd_to_datetime(mjd), "mjd_observation_date", str(raw)
+            parsed = _parse_datetime(str(raw))
             if parsed is not None:
-                return parsed, criterion, raw
+                return parsed, criterion, str(raw)
 
-        release = _to_str(pick(record, "release_date"))
-        if release:
-            parsed = _parse_datetime(release)
-            if parsed is not None:
-                return parsed, "release_date_fallback", release
-
+        # ``obs_release_date`` is the publication date of the product, NOT the
+        # observation instant (DECISÃO 007, item 4). It is never used as epoch.
         return None, "unresolved", None
 
     @staticmethod
@@ -489,6 +495,19 @@ class ObservationService:
         if strategy:
             headers["X-SpherEx-Cutout-Strategy"] = str(strategy)
         return headers
+
+
+#: MJD of the Unix epoch (1970-01-01T00:00:00).
+_MJD_UNIX_EPOCH = 40587.0
+
+
+def _mjd_to_datetime(mjd: float) -> datetime:
+    """Convert a Modified Julian Date into a UTC ``datetime``.
+
+    The time scale of the source is not converted (UTC vs TT differ by ~69 s),
+    which is negligible for ordering exposures separated by minutes or days.
+    """
+    return _EPOCH + timedelta(days=mjd - _MJD_UNIX_EPOCH)
 
 
 def _parse_datetime(text: str) -> datetime | None:

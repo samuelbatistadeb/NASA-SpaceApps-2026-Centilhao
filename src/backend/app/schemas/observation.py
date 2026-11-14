@@ -74,8 +74,8 @@ class ObservationMetadata(BaseModel):
         None,
         description=(
             "How the observation time was resolved: 'observation_date', "
-            "'mjd_observation_date', 'interval_start', 'release_date_fallback' "
-            "or 'unresolved'."
+            "'mjd_observation_date', 'interval_start' or 'unresolved'. The "
+            "release date of the product is never used as observation time."
         ),
     )
     instrument: str | None = Field(

@@ -30,6 +30,7 @@ import io
 import json
 import logging
 import math
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Protocol, Sequence
@@ -81,7 +82,9 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "title": ("obs_title", "title"),
     "description": ("obs_description", "description"),
     "instrument": ("instrument_name", "instrument", "facility_name"),
-    "detector": ("detector_name", "detector", "instrument_name"),
+    # ``instrument_name`` is NOT an alias: on SPHEREx it is always "SPHEREx"
+    # and would be shown as if it were the detector. See ``extract_detector``.
+    "detector": ("detector_name", "detector"),
     "band": (
         "energy_bandpassname",
         "band_name",
@@ -263,6 +266,39 @@ def pick(record: Mapping[str, Any], key: str) -> Any:
             value = _to_python(record[alias])
             if value not in (None, ""):
                 return value
+    return None
+
+
+#: ``obs_publisher_did`` of SPHEREx ends with the detector, e.g.
+#: ``ivo://irsa.ipac/spherex_dr1?2025W19_1B_0116_1/D3``.
+_DID_DETECTOR_PATTERN = re.compile(r"/D(\d+)$")
+#: ``energy_bandpassname`` of SPHEREx names the detector, e.g. ``SPHEREx-D3``.
+_BANDPASS_DETECTOR_PATTERN = re.compile(r"^SPHEREx-D(\d+)$", re.IGNORECASE)
+
+
+def extract_detector(record: Mapping[str, Any]) -> str | None:
+    """Return the detector of a record (``"D1"`` .. ``"D6"``) or ``None``.
+
+    The IRSA SIA v2 answer for SPHEREx has no detector column (verified on
+    2026-11-14). The detector is published in ``obs_publisher_did`` (suffix
+    ``/D<n>``) and in ``energy_bandpassname`` (``SPHEREx-D<n>``). An explicit
+    detector column, when present, wins. Nothing is guessed.
+    """
+    explicit = pick(record, "detector")
+    if explicit not in (None, ""):
+        return str(explicit).strip()
+
+    did = _to_str(record.get("obs_publisher_did"))
+    if did:
+        match = _DID_DETECTOR_PATTERN.search(did)
+        if match:
+            return f"D{match.group(1)}"
+
+    bandpass = _to_str(record.get("energy_bandpassname"))
+    if bandpass:
+        match = _BANDPASS_DETECTOR_PATTERN.match(bandpass)
+        if match:
+            return f"D{match.group(1)}"
     return None
 
 
@@ -546,11 +582,17 @@ class IrsaClient:
         records: list[dict[str, Any]] = []
         for table in votable.iter_tables():
             array = table.array
-            names = array.dtype.names or ()
+            columns = array.dtype.names or ()
+            # astropy names the array columns after the FIELD ``ID`` when it
+            # exists. IRSA declares ``ID="col_N"``, so the public ``name`` must
+            # be used as key (verified on a real SIA answer, 2026-11-14).
+            field_names = [field.name or field.ID for field in table.fields]
+            if len(field_names) != len(columns):
+                field_names = list(columns)
             for row in array:
                 record: dict[str, Any] = {}
-                for name in names:
-                    record[str(name).strip().lower()] = _to_python(row[name])
+                for column, name in zip(columns, field_names):
+                    record[str(name).strip().lower()] = _to_python(row[column])
                 records.append(record)
         return records
 
