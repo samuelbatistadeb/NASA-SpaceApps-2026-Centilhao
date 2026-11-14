@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.api.errors import InvalidParametersError, NoObservationsFoundError
-from app.services.observation_service import ObservationService
+from app.services.observation_service import ObservationService, wavelength_to_nm
 
 from conftest import (
     SYNTHETIC_VOTABLE_ROWS,
@@ -68,7 +68,9 @@ def test_record_is_mapped_to_the_contract_schema(service_factory: object) -> Non
     assert observation.metadata.observed_at_source == "59000.250000"
     assert observation.metadata.instrument == "synthetic-instrument"
     assert observation.metadata.exposure_time_s == 280.0
-    assert observation.metadata.wavelength_min_nm == 0.9
+    # band_units="um": 0.9 um = 900 nm.
+    assert observation.metadata.wavelength_min_nm == pytest.approx(900.0)
+    assert observation.metadata.wavelength_max_nm == pytest.approx(1100.0)
     assert observation.metadata.source == "synthetic-archive"
     assert observation.metadata.original_file_url.endswith("synthetic-product-001.fits")
     assert "percentile stretch" in (observation.metadata.visual_normalization or "")
@@ -141,6 +143,39 @@ def test_field_of_view_outside_the_limits_is_refused(service_factory: object) ->
 
     with pytest.raises(InvalidParametersError):
         service.search(133.795129, -7.245147, 10_000.0)
+
+
+@pytest.mark.parametrize(
+    ("record", "expected"),
+    [
+        # Without unit: metres (IVOA ObsCore). Value of the real IRSA answer.
+        ({"em_min": 1.63010e-06}, 1630.1),
+        ({"em_min": "1.63010e-06", "band_units": ""}, 1630.1),
+        ({"em_min": 1.63010e-06, "band_units": "m"}, 1630.1),
+        ({"em_min": 1.6301, "band_units": "um"}, 1630.1),
+        ({"em_min": 1.6301, "band_units": "µm"}, 1630.1),
+        ({"em_min": 1630.1, "band_units": "nm"}, 1630.1),
+        ({"em_min": 16301.0, "band_units": "Angstrom"}, 1630.1),
+        # Alias that already states nanometres, without unit.
+        ({"wavelength_min_nm": 1630.1}, 1630.1),
+    ],
+)
+def test_wavelength_is_converted_to_nm(record, expected) -> None:
+    """``em_min``/``em_max`` must always be published in nanometres."""
+    assert wavelength_to_nm(record, "em_min") == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"em_min": 1.6301, "band_units": "furlong"},  # unknown unit
+        {"em_min": "", "band_units": "um"},  # no value
+        {},
+    ],
+)
+def test_wavelength_without_reliable_unit_or_value_is_none(record) -> None:
+    """An unknown unit or a missing value must not produce an invented number."""
+    assert wavelength_to_nm(record, "em_min") is None
 
 
 def test_coordinates_outside_the_limits_are_refused(service_factory: object) -> None:
