@@ -76,3 +76,21 @@ Ao concluir uma tarefa, informar:
 4. Qualidade técnica.
 5. Clareza da demonstração.
 6. Documentação e apresentação.
+
+## 9. Continuidade entre sessões
+
+No início de cada nova sessão:
+
+1. Ler docs/progress.md.
+2. Ler docs/decisions.md.
+3. Ler docs/challenge.md, quando existir.
+4. Identificar a última tarefa concluída.
+
+Ao finalizar uma tarefa importante:
+
+1. Atualizar docs/progress.md.
+2. Registrar decisões em docs/decisions.md.
+3. Atualizar a documentação técnica quando necessário.
+
+Não presumir que decisões antigas continuam válidas
+se houver informações novas que as contradigam.

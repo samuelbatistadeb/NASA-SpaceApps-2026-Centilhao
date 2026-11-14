@@ -12,6 +12,13 @@ venv/
 # Dados grandes
 data/raw/
 data/temporary/
+data/processed/
+data/cache/
+data/samples/
+
+# Resultados de teste e caches locais
+.pytest_cache/
+.cache/
 
 # Ferramentas
 .vscode/
