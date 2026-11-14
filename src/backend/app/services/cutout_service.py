@@ -76,7 +76,11 @@ class CutoutService:
     def decide_strategy(self, request: CutoutRequest) -> CutoutStrategy:
         """Return the strategy to be used for the given request."""
         mode = self._settings.cutout_mode
-        remote_available = bool(self._client.cutout_base_url)
+        ibe_available = self._client.supports_ibe_cutout(request.access_url)
+        remote_available = ibe_available or bool(self._client.cutout_base_url)
+
+        if ibe_available and mode in ("auto", "remote"):
+            return CutoutStrategy.REMOTE_CUTOUT
 
         if mode == "local":
             return CutoutStrategy.LOCAL_DOWNLOAD
@@ -109,18 +113,28 @@ class CutoutService:
     def _build_remote_cutout(
         self, request: CutoutRequest, strategy: CutoutStrategy
     ) -> CutoutResult:
-        """Ask the IRSA cutout service for the region."""
+        """Ask IRSA for the region (IBE cutout of the product, when possible)."""
         size_arcsec = max(request.fov_arcmin * 60.0, 1.0)
-        content = self._client.fetch_cutout(
-            request.ra_deg,
-            request.dec_deg,
-            size_arcsec,
-            product_url=request.access_url,
-        )
+        if self._client.supports_ibe_cutout(request.access_url):
+            content = self._client.fetch_ibe_cutout(
+                request.access_url,
+                request.ra_deg,
+                request.dec_deg,
+                size_arcsec / 3600.0,
+            )
+            center_source = "ibe_cutout"
+        else:
+            content = self._client.fetch_cutout(
+                request.ra_deg,
+                request.dec_deg,
+                size_arcsec,
+                product_url=request.access_url,
+            )
+            center_source = "remote_cutout_service"
         image = fits_processor.load_image(content)
         metadata: dict[str, Any] = {
             "cutout_strategy": strategy.value,
-            "cutout_center_source": "remote_cutout_service",
+            "cutout_center_source": center_source,
             "cutout_size_pixels": [int(image.data.shape[1]), int(image.data.shape[0])],
             "source_bytes": len(content),
         }

@@ -1,27 +1,17 @@
 """Client for the IRSA / IPAC services that archive the SPHEREx mission data.
 
-.. warning::
+Verified behaviour (DECISÃO 007 and DECISÃO 009, real queries on 2026-11-14):
 
-   **The official service addresses are still PENDING VERIFICATION.**
+* Discovery: SIA v2 at ``https://irsa.ipac.caltech.edu/SIA`` (``/SIA2`` is 404),
+  answering a VOTable whose FIELDs carry ``ID="col_N"`` and ObsCore names.
+* Cutout: there is no standalone cutout service. The IBE serves a cutout of
+  each product by appending ``?center=<ra>,<dec>d&size=<deg>`` to its
+  ``access_url`` (:meth:`IrsaClient.fetch_ibe_cutout`). HTTP 422 ("Arrays do
+  not overlap.") and 500 mean that the product does not cover the position.
 
-   ``docs/science/data-sources.md`` states that the SIA2 endpoint, the cutout
-   service and the download addresses have to be confirmed against the official
-   IRSA documentation. Because of that, the module level constants below are
-   intentionally **empty**: an empty address means "source not configured" and
-   the client raises :class:`SourceUnavailableError`, which the API publishes as
-   ``SOURCE_UNAVAILABLE``. The backend never queries an unverified address and
-   never returns fictitious observations.
-
-   Points to be completed once the researcher confirms the official addresses:
-
-   * ``IRSA_SIA2_BASE_URL`` -- official SIA2 endpoint of the SPHEREx archive.
-   * ``IRSA_CUTOUT_BASE_URL`` -- official cutout service of IRSA (if it exists).
-   * ``IrsaClient._build_sia2_params`` -- exact accepted parameter names.
-   * ``IrsaClient._build_cutout_params`` -- exact accepted cutout parameters.
-   * ``IrsaClient._parse_sia2_payload`` -- real response format and column names.
-
-The HTTP transport is injectable so that the test-suite never touches the
-network.
+An empty SIA address still means "source not configured" and raises
+:class:`SourceUnavailableError`. The HTTP transport is injectable so that the
+test-suite never touches the network.
 """
 
 from __future__ import annotations
@@ -40,17 +30,25 @@ import httpx
 import numpy as np
 
 from app.api.errors import (
+    ImageNotFoundError,
     MalformedResponseError,
     SourceUnavailableError,
 )
 
 logger = logging.getLogger(__name__)
 
-# --- Addresses pending verification by the researcher --------------------------
-# TODO(RESEARCHER-PENDING): replace with the official IRSA addresses and
-# document them in ``docs/science/data-sources.md``.
-IRSA_SIA2_BASE_URL: str = ""
+# --- Service addresses -----------------------------------------------------------
+#: SIA v2 endpoint verified on 2026-11-14 (DECISÃO 007 / 009).
+IRSA_SIA2_BASE_URL: str = "https://irsa.ipac.caltech.edu/SIA"
+#: IRSA has no standalone cutout service; see :meth:`IrsaClient.fetch_ibe_cutout`.
 IRSA_CUTOUT_BASE_URL: str = ""
+
+#: Path fragment that identifies an IBE product address (cutout capable).
+IBE_DATA_PATH = "/ibe/data/"
+
+#: HTTP statuses of an IBE cutout meaning "the product does not cover the
+#: position" (observed: 422 "Arrays do not overlap.", and 500). Not retried.
+IBE_NO_OVERLAP_STATUS_CODES = frozenset({422, 500})
 
 #: Default HTTP timeout, in seconds.
 DEFAULT_TIMEOUT_SECONDS = 30.0
@@ -413,6 +411,62 @@ class IrsaClient:
         response = self._request_with_retry("GET", url, params=params)
         return response.content
 
+    @staticmethod
+    def supports_ibe_cutout(access_url: str | None) -> bool:
+        """Whether ``access_url`` is an IRSA IBE product address."""
+        if not access_url:
+            return False
+        parsed = urlparse(access_url)
+        return parsed.scheme == "https" and IBE_DATA_PATH in parsed.path
+
+    def fetch_ibe_cutout(
+        self,
+        access_url: str,
+        ra_deg: float,
+        dec_deg: float,
+        size_deg: float,
+    ) -> bytes:
+        """Request an IBE cutout of one product: ``<access_url>?center=..&size=..``.
+
+        Args:
+            access_url: IBE address of the full FITS product (from the SIA).
+            ra_deg: Right ascension of the cutout centre (ICRS, degrees).
+            dec_deg: Declination of the cutout centre (ICRS, degrees).
+            size_deg: Side of the square cutout, in degrees.
+
+        Raises:
+            ImageNotFoundError: The product does not cover the position.
+            SourceUnavailableError: The address is invalid or IRSA failed.
+        """
+        if not self.supports_ibe_cutout(access_url):
+            raise SourceUnavailableError(
+                "O produto não oferece recorte pelo IRSA.",
+                detail=f"not an IBE address: {access_url}",
+            )
+        if access_url.split("#", 1)[0].find("?") != -1:
+            raise SourceUnavailableError(
+                "Endereço de arquivo científico inválido.",
+                detail=f"access_url already has a query string: {access_url}",
+            )
+        self._validate_download_url(access_url)
+        params = {
+            "center": f"{ra_deg:.6f},{dec_deg:.6f}d",
+            "size": f"{size_deg:.6f}",
+        }
+        response = self._request_with_retry(
+            "GET",
+            access_url,
+            params=params,
+            max_bytes=self.max_fits_bytes,
+            terminal_statuses=IBE_NO_OVERLAP_STATUS_CODES,
+        )
+        if response.status_code in IBE_NO_OVERLAP_STATUS_CODES:
+            raise ImageNotFoundError(
+                "Este produto não cobre a posição solicitada.",
+                detail=f"IBE cutout HTTP {response.status_code}: {response.text[:200]}",
+            )
+        return response.content
+
     def download_fits(self, url: str) -> bytes:
         """Download a scientific file, enforcing the size guard.
 
@@ -488,8 +542,13 @@ class IrsaClient:
         *,
         params: Mapping[str, Any] | None = None,
         max_bytes: int | None = None,
+        terminal_statuses: frozenset[int] = frozenset(),
     ) -> HttpResponse:
-        """Execute a request, retrying transient failures."""
+        """Execute a request, retrying transient failures.
+
+        Statuses in ``terminal_statuses`` are returned to the caller at once,
+        without retry and without raising, so it can interpret them.
+        """
         headers = {"User-Agent": self.user_agent, "Accept": "*/*"}
         last_error: Exception | None = None
 
@@ -512,6 +571,8 @@ class IrsaClient:
                 last_error = exc
                 logger.warning("Transport error contacting %s: %s", url, exc)
             else:
+                if response.status_code in terminal_statuses:
+                    return response
                 if response.status_code in RETRYABLE_STATUS_CODES and attempt < self.max_attempts:
                     last_error = SourceUnavailableError(
                         "A fonte científica respondeu com erro temporário.",

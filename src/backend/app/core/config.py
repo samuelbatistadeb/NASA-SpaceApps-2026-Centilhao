@@ -6,11 +6,11 @@ it must be provided through an environment variable (a local ``.env`` file is
 already ignored by git).
 
 This module is the single place where the IRSA service addresses are read. The
-official SPHEREx endpoints hosted by IRSA/IPAC were **not verified yet** (see
-``docs/science/data-sources.md``), therefore every address defaults to an empty
-string. An empty address means "source not configured": the API then answers
-``SOURCE_UNAVAILABLE`` instead of querying an unverified URL or returning
-fictitious observations.
+SIA v2 endpoint ``https://irsa.ipac.caltech.edu/SIA`` was verified by real
+queries (DECISÃO 007 and DECISÃO 009) and is the default. IRSA has no
+standalone cutout service: cutouts are requested from the IBE address of each
+product (``<access_url>?center=..&size=..``), so the cutout address stays empty
+by default.
 """
 
 from __future__ import annotations
@@ -43,6 +43,13 @@ ENV_CACHE_TTL = "SPHEREX_CACHE_TTL_SECONDS"
 ENV_CORS_ORIGINS = "SPHEREX_CORS_ORIGINS"
 ENV_PORT = "SPHEREX_PORT"
 ENV_CUTOUT_MODE = "SPHEREX_CUTOUT_MODE"
+ENV_ALLOWED_DOWNLOAD_HOSTS = "SPHEREX_ALLOWED_DOWNLOAD_HOSTS"
+
+#: SIA v2 endpoint of IRSA, verified on 2026-11-14 (DECISÃO 007 / 009).
+VERIFIED_IRSA_SIA_URL = "https://irsa.ipac.caltech.edu/SIA"
+
+#: Hosts from which scientific files may be downloaded (RNF-006).
+DEFAULT_ALLOWED_DOWNLOAD_HOSTS: tuple[str, ...] = ("irsa.ipac.caltech.edu",)
 
 #: Default user agent sent to IRSA. It identifies the project and the challenge.
 DEFAULT_USER_AGENT = "SPHERExExplorer/0.1 (NASA Space Apps Challenge 2026)"
@@ -146,10 +153,11 @@ class Settings:
     Attributes are immutable; a new instance is created by :meth:`from_env`.
     """
 
-    # --- IRSA services (addresses pending verification by the researcher) ---
-    irsa_sia2_base_url: str = ""
+    # --- IRSA services ---
+    irsa_sia2_base_url: str = VERIFIED_IRSA_SIA_URL
     irsa_cutout_base_url: str = ""
     irsa_data_base_url: str = ""
+    allowed_download_hosts: tuple[str, ...] = DEFAULT_ALLOWED_DOWNLOAD_HOSTS
 
     # --- HTTP behaviour ---
     http_timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
@@ -240,8 +248,17 @@ class Settings:
             else DEFAULT_CACHE_DIR
         )
 
+        raw_hosts = environment.get(ENV_ALLOWED_DOWNLOAD_HOSTS)
+        if raw_hosts and raw_hosts.strip():
+            hosts = tuple(h.strip() for h in raw_hosts.split(",") if h.strip())
+        else:
+            hosts = DEFAULT_ALLOWED_DOWNLOAD_HOSTS
+
         settings = cls(
-            irsa_sia2_base_url=_get_str(environment, ENV_IRSA_SIA2_URL, ""),
+            irsa_sia2_base_url=_get_str(
+                environment, ENV_IRSA_SIA2_URL, VERIFIED_IRSA_SIA_URL
+            ),
+            allowed_download_hosts=hosts,
             irsa_cutout_base_url=_get_str(environment, ENV_IRSA_CUTOUT_URL, ""),
             irsa_data_base_url=_get_str(environment, ENV_IRSA_DATA_BASE_URL, ""),
             http_timeout_seconds=_get_float(

@@ -38,6 +38,7 @@ def get_irsa_client() -> IrsaClient:
         max_attempts=settings.http_max_attempts,
         user_agent=settings.user_agent,
         max_fits_bytes=settings.max_fits_bytes,
+        allowed_download_hosts=settings.allowed_download_hosts,
     )
 
 

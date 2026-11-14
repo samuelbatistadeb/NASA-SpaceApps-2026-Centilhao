@@ -35,9 +35,9 @@ def make_client(transport: FakeTransport, **kwargs) -> IrsaClient:
     return IrsaClient(**options)
 
 
-def test_endpoint_constants_are_empty_until_verified() -> None:
-    """The addresses must stay empty until the researcher confirms them."""
-    assert IRSA_SIA2_BASE_URL == ""
+def test_endpoint_constants_match_the_verified_services() -> None:
+    """SIA v2 at /SIA was verified; IRSA has no standalone cutout service."""
+    assert IRSA_SIA2_BASE_URL == "https://irsa.ipac.caltech.edu/SIA"
     assert IRSA_CUTOUT_BASE_URL == ""
 
 
