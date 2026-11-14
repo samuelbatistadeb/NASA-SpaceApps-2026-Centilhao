@@ -62,6 +62,8 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
 
 - **Descoberta real via SIA integrada ao backend (14/11/2026, DECISÃO 009):** corrigidos três defeitos que só apareciam com a resposta real: (1) colunas da VOTable lidas pelo `ID` (`col_N`) em vez do `name`, o que deixava todos os metadados nulos; (2) `t_min` em MJD não era interpretado e a época caía na data de publicação; (3) o detector aparecia como "SPHEREx". Resposta real salva em `tests/backend/fixtures/sia_spherex_dr1_wise0855.xml`. Suíte: **86 passed, 2 skipped** (os 2 pulados dependem do FITS real, ausente neste clone). Busca ao vivo em WISE 0855 (FoV 1′): **258 observações, 129 épocas, 2025-05-05 → 2026-05-14**, detectores D1–D6.
 - **Fluxo backend ponta a ponta com dados reais (14/11/2026, DECISÃO 010):** SIA como padrão + recorte IBE por produto. Validado ao vivo pela API: `GET /api/observations` (WISE 0855) → `GET /api/images/{id}` → PNG para 4 épocas de 2025-05 a 2026-05.
+- **Frontend alinhado ao contrato real e validado com o backend real (14/11/2026):** a aplicação usa `ra_deg`/`dec_deg`/`fov_arcmin`, lê `observed_at`, `detector` e `band`, trata o envelope de erro e oferece filtro por detector. A galeria é limitada a 60 miniaturas lazy. Foi servida em `localhost:5173` (CORS ok) contra o uvicorn em `:8000`. O exemplo WISE 0855 com FoV 3′ trouxe 271 observações em 137 instantes e a primeira imagem real foi exibida, sem erros no console. Como rodar: `.claude/launch.json` (local) ou `src/frontend/src/frontend/README.md`.
+- **Unidades espectrais (DECISÃO 011):** `wavelength_*_nm` agora em nanômetros (SIA publica em metros). Suíte: **113 passed, 2 skipped**.
 
 ## Em andamento
 
