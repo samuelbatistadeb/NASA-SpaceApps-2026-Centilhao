@@ -163,30 +163,73 @@ def build_synthetic_json(records: Iterable[Mapping[str, Any]]) -> bytes:
     return json.dumps(list(records)).encode("utf-8")
 
 
+
 def build_synthetic_fits(
     size: int = 64,
     date_obs: str = "2026-01-02T03:04:05",
+    *,
+    with_wcs: bool = True,
 ) -> bytes:
-    """Build a SYNTHETIC FITS file with a simple 2D image extension."""
+    """Build a synthetic FITS image for automated tests.
+
+    The image and metadata are entirely synthetic.
+    """
+
     from astropy.io import fits
 
-    data = np.zeros((size, size), dtype=float)
+    data = np.zeros((size, size), dtype=np.float32)
+
     yy, xx = np.mgrid[0:size, 0:size]
-    data += 100.0 * np.exp(-((xx - size / 2.0) ** 2 + (yy - size / 2.0) ** 2) / 50.0)
+
+    data += 100.0 * np.exp(
+        -(
+            (xx - size / 2.0) ** 2
+            + (yy - size / 2.0) ** 2
+        ) / 50.0
+    )
 
     header = fits.Header()
+
     header["DATE-OBS"] = date_obs
     header["EXPTIME"] = 300.0
     header["INSTRUME"] = "synthetic-instrument"
     header["DETECTOR"] = "synthetic-detector-1"
     header["BUNIT"] = "MJy/sr"
 
+    if with_wcs:
+        # Synthetic celestial WCS centered on the test target.
+        header["CTYPE1"] = "RA---TAN"
+        header["CTYPE2"] = "DEC--TAN"
+
+        header["CRVAL1"] = 133.795129
+        header["CRVAL2"] = -7.245147
+
+        header["CRPIX1"] = (size + 1) / 2.0
+        header["CRPIX2"] = (size + 1) / 2.0
+
+        header["CDELT1"] = -0.001
+        header["CDELT2"] = 0.001
+
+        header["CUNIT1"] = "deg"
+        header["CUNIT2"] = "deg"
+        header["RADESYS"] = "ICRS"
+
     primary = fits.PrimaryHDU()
-    image_hdu = fits.ImageHDU(data=data, header=header)
-    hdulist = fits.HDUList([primary, image_hdu])
+
+    image_hdu = fits.ImageHDU(
+        data=data,
+        header=header,
+        name="IMAGE",
+    )
+
+    hdulist = fits.HDUList(
+        [primary, image_hdu]
+    )
 
     buffer = io.BytesIO()
+
     hdulist.writeto(buffer)
+
     return buffer.getvalue()
 
 

@@ -69,23 +69,55 @@ def test_missing_observation_datetime_returns_none() -> None:
     assert extract_observation_datetime(fits.Header()) is None
 
 
-def test_cutout_has_the_requested_size(synthetic_fits: bytes) -> None:
+
+def test_cutout_has_the_requested_size(
+    synthetic_fits: bytes,
+) -> None:
     """The cutout must have the requested side."""
+
     image = load_image(synthetic_fits)
-    cutout = cutout_image(image, 32.0, 32.0, 16)
+
+    cutout = cutout_image(
+        image,
+        133.795129,
+        -7.245147,
+        16,
+    )
 
     assert cutout.data.shape == (16, 16)
     assert cutout.metadata["cutout_size_pixels"] == 16
+    assert cutout.metadata["wcs_available"] is True
 
 
-def test_cutout_without_wcs_uses_the_centre_of_the_image(synthetic_fits: bytes) -> None:
-    """Without a WCS the centre of the image must be used and reported."""
-    image = load_image(synthetic_fits)
-    cutout = cutout_image(image, 10.0, 20.0, 8)
+
+def test_cutout_without_wcs_uses_the_centre_of_the_image() -> None:
+    """Explicit fallback must use the image center."""
+
+    content = build_synthetic_fits(
+        with_wcs=False,
+    )
+
+    image = load_image(content)
+
+    cutout = cutout_image(
+        image,
+        10.0,
+        20.0,
+        8,
+        allow_center_fallback=True,
+    )
 
     assert cutout.metadata["wcs_available"] is False
-    assert cutout.metadata["cutout_center_source"] == "image_center_no_wcs"
-    assert cutout.metadata["cutout_center_px"] == [31.5, 31.5]
+
+    assert (
+        cutout.metadata["cutout_center_source"]
+        == "image_center_no_wcs"
+    )
+
+    assert cutout.metadata["cutout_center_px"] == [
+        31.5,
+        31.5,
+    ]
 
 
 def test_cutout_with_a_wcs_uses_the_requested_position() -> None:
@@ -187,3 +219,23 @@ def test_pixel_scale_of_a_wcs_without_cdelt_is_none() -> None:
 
     assert wcs is not None
     assert pixel_scale_arcsec(wcs) is not None
+
+
+
+def test_cutout_without_wcs_is_rejected_by_default() -> None:
+    """A sky-position cutout must require celestial WCS."""
+
+    content = build_synthetic_fits(
+        with_wcs=False,
+    )
+
+    image = load_image(content)
+
+    with pytest.raises(ProcessingError):
+        cutout_image(
+            image,
+            133.795129,
+            -7.245147,
+            16,
+        )
+    

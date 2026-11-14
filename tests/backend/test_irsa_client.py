@@ -62,7 +62,8 @@ def test_query_sends_the_expected_parameters() -> None:
     assert "CIRCLE" in request["params"]["POS"]
     assert "133.795129" in request["params"]["POS"]
     assert "-7.245147" in request["params"]["POS"]
-    assert request["params"]["SIZE"].endswith("arcsec")
+    assert "SIZE" not in request["params"]
+    assert "CIRCLE" in request["params"]["POS"]
     assert request["headers"]["User-Agent"].startswith("SPHERExExplorer")
     assert request["timeout"] == 17.0
 
