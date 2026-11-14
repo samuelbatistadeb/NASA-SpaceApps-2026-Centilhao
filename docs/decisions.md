@@ -202,6 +202,31 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 010 — SIA como padrão e recorte IBE no backend
+
+**Data:** 14/11/2026
+
+**Assunto:** Pôr em código as estratégias de consulta e recorte da DECISÃO 007.
+
+**Decisão tomada:**
+
+- `Settings.irsa_sia2_base_url` passa a ter como padrão `https://irsa.ipac.caltech.edu/SIA`, já verificado. Downloads e recortes ficam restritos a `irsa.ipac.caltech.edu` (`SPHEREX_ALLOWED_DOWNLOAD_HOSTS`).
+- O recorte remoto usa o IBE do próprio produto: `<access_url>?center=<ra>,<dec>d&size=<graus>`, com `size = fov_arcmin / 60`. Não existe serviço de recorte separado; `irsa_cutout_base_url` fica vazio.
+- HTTP 422/500 do IBE significa que o produto não cobre a posição. Nesse caso a API responde `IMAGE_NOT_FOUND`, sem retry. HTTP 503 continua com retry e backoff exponencial.
+- `cutout_mode=local` continua forçando o download completo (~65 MB por produto).
+
+**Evidência:** teste ao vivo pela API (WISE 0855, FoV 1′), com 258 observações em 5,2 s e 4 recortes IBE convertidos em PNG, de 11 a 15 s cada (sem cache). Um 503 real foi recuperado pelo retry.
+
+**Consequências:**
+
+- O recorte IBE é lento (~11–15 s por produto). O cache de imagens é essencial, e a interface não deve pedir todas as imagens de uma vez.
+- A escala é de 6,15″/pixel: FoV de 1′ ≈ 10×10 pixels. Para a demonstração, convém um FoV padrão de vários minutos de arco.
+- Pendente: o pré-filtro de sobreposição por `s_fov`/`s_region` (DECISÃO 007, item 6) ainda não foi implementado. Por enquanto, a falta de sobreposição só aparece como `IMAGE_NOT_FOUND` ao pedir a imagem.
+
+**Responsável:** Liderança técnica.
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026

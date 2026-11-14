@@ -61,6 +61,7 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
 - **Verificação independente do Coordinator** dos achados de T-A: todos os números reproduzidos, com acréscimo de dois achados operacionais novos (§6.4 de `docs/board.md`).
 
 - **Descoberta real via SIA integrada ao backend (14/11/2026, DECISÃO 009):** corrigidos três defeitos que só apareciam com a resposta real: (1) colunas da VOTable lidas pelo `ID` (`col_N`) em vez do `name`, o que deixava todos os metadados nulos; (2) `t_min` em MJD não era interpretado e a época caía na data de publicação; (3) o detector aparecia como "SPHEREx". Resposta real salva em `tests/backend/fixtures/sia_spherex_dr1_wise0855.xml`. Suíte: **86 passed, 2 skipped** (os 2 pulados dependem do FITS real, ausente neste clone). Busca ao vivo em WISE 0855 (FoV 1′): **258 observações, 129 épocas, 2025-05-05 → 2026-05-14**, detectores D1–D6.
+- **Fluxo backend ponta a ponta com dados reais (14/11/2026, DECISÃO 010):** SIA como padrão + recorte IBE por produto. Validado ao vivo pela API: `GET /api/observations` (WISE 0855) → `GET /api/images/{id}` → PNG para 4 épocas de 2025-05 a 2026-05.
 
 ## Em andamento
 
