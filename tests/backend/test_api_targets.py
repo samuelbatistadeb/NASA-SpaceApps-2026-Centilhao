@@ -23,9 +23,10 @@ def test_targets_are_listed_in_the_format_used_by_the_frontend() -> None:
 
 
 def test_wise0855_uses_the_position_propagated_to_spherex() -> None:
-    """The J2000 challenge coordinate is ~207" away from the object in 2025."""
+    """The challenge coordinate (WISE epoch ~2010) is ~2' away from the object in 2025."""
     targets = TestClient(app).get("/api/targets").json()["targets"]
     wise = next(t for t in targets if t["name"] == "WISE 0855")
 
     assert wise["position_epoch"] == "2025.35"
-    assert (wise["ra"], wise["dec"]) == (133.737467, -7.240406)
+    # SIMBAD J2000 (133.81890825, -7.247048), Kirkpatrick et al. 2021, propagated to 2025.35.
+    assert (wise["ra"], wise["dec"]) == (133.761244, -7.242304)

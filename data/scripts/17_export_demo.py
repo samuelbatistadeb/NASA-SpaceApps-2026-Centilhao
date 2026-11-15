@@ -80,9 +80,14 @@ def main() -> int:
     )
 
     out = DEMO_DIR / args.target
+    # Keep what other scripts write here (19_motion_timeline.py: motion/ and motion.json).
+    keep = {"motion", "motion.json"}
     if out.exists():
-        shutil.rmtree(out)
-    (out / "img").mkdir(parents=True)
+        for item in out.iterdir():
+            if item.name in keep:
+                continue
+            shutil.rmtree(item) if item.is_dir() else item.unlink()
+    (out / "img").mkdir(parents=True, exist_ok=True)
     rel = f"demo/{args.target}"
     t0 = time.time()
 

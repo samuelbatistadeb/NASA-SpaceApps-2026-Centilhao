@@ -3,8 +3,10 @@
 Every coordinate below is copied from ``docs/science/target-catalog.md``
 (research of 2026-11-14). For objects with high proper motion the position
 PROPAGATED to the SPHEREx epochs is used, not the catalogue epoch: WISE 0855
-moved ~207" (3.5') since J2000, so the challenge coordinate would leave the
-object outside a 3' cutout.
+moves ~8.15"/yr, so a coordinate from another epoch can leave the object outside
+a 3' cutout. Its J2000 position comes from SIMBAD (Kirkpatrick et al. 2021); the
+challenge coordinate is the WISE discovery-epoch (~2010) position, not J2000
+(DECISION 019).
 
 Each target also carries its proper motion and the epoch of ``ra``/``dec``:
 the frontend passes them to ``/api/observations``, which cuts every exposure
@@ -48,14 +50,14 @@ _CATALOG = "docs/science/target-catalog.md"
 TARGETS: tuple[TargetEntry, ...] = (
     TargetEntry(
         name="WISE 0855",
-        ra=133.737467,
-        dec=-7.240406,
+        ra=133.761244,
+        dec=-7.242304,
         fov=3.0,
         position_epoch="2025.35",
         note="Anã marrom muito fria e próxima, com movimento próprio de ~8″/ano. "
-        "Posição propagada para a primeira observação SPHEREx (a coordenada J2000 "
-        "do desafio está ~3,5′ distante).",
-        source=f"{_CATALOG} §3.3 (propagação de J2000 com μ de Kirkpatrick et al. 2021, via Wikipédia)",
+        "Posição propagada para a primeira observação SPHEREx (a coordenada do desafio, "
+        "da época da descoberta pelo WISE, está ~2′ distante).",
+        source=f"{_CATALOG} §3.3 (posição J2000 e μ de Kirkpatrick et al. 2021 via SIMBAD; DECISÃO 019)",
         pm_ra_cosdec_masyr=-8123.7,
         pm_dec_masyr=673.2,
         ref_epoch_jyear=2025.35,

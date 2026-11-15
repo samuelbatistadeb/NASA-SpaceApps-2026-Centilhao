@@ -26,7 +26,7 @@
 
   /* ---------- Abas: Sequência | Comparar | Combinar ---------- */
   const abas = [...v.visor.querySelectorAll('.cine-abas [role="tab"]')];
-  const PAINEL = { seq: "painel-seq", comparar: "comparar", combinar: "combinar" };
+  const PAINEL = { seq: "painel-seq", comparar: "comparar", combinar: "combinar", decadas: "painel-decadas" };
 
   function visorAba(nome, { foco = false } = {}) {
     const aba = abas.find((a) => a.getAttribute("aria-controls") === PAINEL[nome]);

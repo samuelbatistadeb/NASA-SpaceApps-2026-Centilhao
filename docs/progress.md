@@ -95,6 +95,14 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
     - validar com um alvo brilhante (Estrela de Barnard), para mostrar um espectro com sinal real;
     - revalidar a busca ao vivo quando o SIA voltar;
     - validação científica pela Integrante 2.
+- **"Décadas" e correção do WISE 0855 (15/11/2026, DECISÃO 019):**
+  - O mesmo campo do céu de 1950 ao SPHEREx (`data/scripts/19_motion_timeline.py`): DSS, 2MASS e WISE + 3 exposições SPHEREx por detector, recortadas de novo no IBE (sem depender do SIA).
+  - Aba "Décadas" no visor e no painel de falha (`js/motion.js`): filtros "Outros telescópios" e D1–D6, eixo do tempo, reproduzir, piscar e trajeto previsto.
+  - Estrela de Barnard: 13,2′ em 76 anos; a estrela fica a ≤ 6,6″ da posição prevista nas 22 imagens.
+  - Novos pacotes SPHEREx reais: ε Indi (448 observações) e RW Aurigae.
+  - WISE 0855: a coordenada do desafio é da época ~2010, não J2000. Corrigido com o SIMBAD (Kirkpatrick et al. 2021); a fonte W2 confirma (1,4″).
+  - Testes: **199 passed, 2 skipped**. Testado no navegador: aba Décadas (Barnard), painel de falha (ε Indi) e o atalho para o pacote SPHEREx com D1–D6.
+  - **Pendente:** pacote e linha do tempo do R Draconis (o SIA estava fora do ar); o servidor backend na porta 8000 precisa ser reiniciado para servir o alvo corrigido.
 - **Interface em páginas, modo cinema, outras bases e imagens salvas (15/11/2026, DECISÃO 018):**
   - Páginas por hash (`js/router.js`); sonda SPHEREx real (render oficial transparente) com feixe que forma a navbar; fundo mais escuro e cartões flutuantes.
   - Visor redesenhado com modo cinema (`js/cinema.js`): abas Sequência/Comparar/Combinar, zoom e marcas de data.
@@ -133,7 +141,7 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
 
 ## Questões que exigem validação da liderança científica (Integrante 2)
 
-1. **WISE 0855 — astrometria.** Paralaxe e movimento próprio vieram de fonte secundária (infobox da Wikipédia citando Kirkpatrick et al. 2021); o artigo primário não pôde ser lido (ADS inacessível). O Gaia DR3 **não** oferece homólogo confiável para o objeto.
+1. **WISE 0855 — astrometria.** ~~Fonte secundária~~ — posição J2000 e μ confirmados no SIMBAD (Kirkpatrick et al. 2021); a coordenada do desafio era da época ~2010 (DECISÃO 019). Falta conferir no artigo a época de referência da posição.
 2. **ε Indi B** — não consta do Gaia DR3 e a separação (~6,5") é menor que a PSF (~7,45" FWHM). O teste precisa ser reformulado como "sistema ε Indi (A+B combinado)".
 3. **Detectabilidade por banda** — nenhuma fotometria real foi extraída até aqui; a detectabilidade dos alvos por banda permanece não verificada.
 4. **Comparabilidade DR1 × QR3** — definir se `l3_flux_corrections` entra no MVP para comparar fotometricamente entre reprocessamentos.

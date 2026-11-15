@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/glossary.css">
   <link rel="stylesheet" href="css/surveys.css">
   <link rel="stylesheet" href="css/refimages.css">
+  <link rel="stylesheet" href="css/motion.css">
   <link rel="stylesheet" href="css/cinema.css">
   <link rel="preload" as="image" href="assets/nasa/spherex-probe-cutout.png" imagesrcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x">
   <script>
@@ -29,6 +30,7 @@
   </script>
   <script src="js/app.js" defer></script>
   <script src="js/surveys.js" defer></script>
+  <script src="js/motion.js" defer></script>
   <script src="js/refimages.js" defer></script>
   <script src="js/cinema.js" defer></script>
   <script src="js/router.js" defer></script>
@@ -232,6 +234,8 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v18h-2zM4 6h5v12H4zM15 6h5v12h-5z"/></svg>Comparar</button>
             <button type="button" role="tab" id="aba-combinar" aria-selected="false" aria-controls="combinar" tabindex="-1">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4a8 8 0 1 0 0 16A8 8 0 0 0 9 4zm6 0a8 8 0 0 0-2.3.34 9.9 9.9 0 0 1 0 15.32A8 8 0 1 0 15 4z"/></svg>Combinar</button>
+            <button type="button" role="tab" id="aba-decadas" aria-selected="false" aria-controls="painel-decadas" tabindex="-1" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.4l4.2 2.5-1 1.7L11 13V7z"/></svg>Décadas</button>
           </div>
 
           <div class="cine-painel" id="painel-seq" role="tabpanel" aria-labelledby="aba-seq">
@@ -356,6 +360,8 @@
               <figcaption id="comb-legenda"></figcaption>
             </figure>
           </div>
+
+          <div class="cine-painel decadas" id="painel-decadas" role="tabpanel" aria-labelledby="aba-decadas" hidden></div>
         </div>
       </div>
     </section>

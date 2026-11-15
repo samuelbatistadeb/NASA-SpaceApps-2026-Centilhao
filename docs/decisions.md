@@ -400,6 +400,54 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 019 — "Décadas": o mesmo campo do céu de 1950 ao SPHEREx, e correção da posição do WISE 0855
+
+**Data:** 15/11/2026
+
+**Contexto:** A equipe pediu para ver, com as imagens salvas, o movimento das estrelas ao longo do tempo, sem perder o foco no SPHEREx. Pediu também que os filtros D1–D6 funcionem nas imagens baixadas.
+
+As imagens de referência da DECISÃO 018 (item 7) eram centradas no alvo em cada data. Isso deixava a estrela parada e escondia o movimento.
+
+**Decisão tomada:**
+
+1. **Campo fixo** (`data/scripts/19_motion_timeline.py`): todas as imagens de um alvo mostram o mesmo pedaço do céu, com o mesmo centro e o mesmo FOV, norte para cima.
+   - O centro é o ponto médio do trajeto; o FOV é o trajeto + 3′ (máx. 20′).
+   - Imagens DSS1/DSS2 (vermelho e IR), 2MASS K, WISE W1/W2, com a data real (`obsdate`) informada pelo IRSA Finder Chart.
+   - O 2MASS é omitido acima de 12′, porque o serviço devolve uma imagem preta; a omissão fica registrada em `skipped`.
+2. **SPHEREx no mesmo campo:** 3 exposições por detector, D1–D6 (a mais antiga, a do meio e a mais recente), escolhidas dos pacotes salvos.
+   - Cada uma é recortada de novo no IBE pelo `original_file_url` e reamostrada com o `project_to_frame` do backend.
+   - **Não depende do SIA**, a parte do IRSA que vive caindo.
+3. **Posição prevista:** a marca e o trajeto vêm do movimento próprio do catálogo, propagado pelo `propagate_position` do backend para a data de cada imagem. Nada é ajustado às imagens.
+4. **Interface** (`js/motion.js`):
+   - **Aba "Décadas"** no visor de Observações, ao lado de Sequência, Comparar e Combinar. Só aparece quando a região é um alvo com dados salvos, e tem atalho de volta para a sequência SPHEREx mês a mês.
+   - **Controles:** filtros "Outros telescópios" e D1–D6, eixo do tempo proporcional aos anos, reproduzir, "piscar 1ª ↔ última", trajeto previsto e as setas do teclado.
+   - **Busca falha:** o mesmo player aparece no painel de alternativas (`js/refimages.js`), com acesso ao pacote SPHEREx salvo, que mantém os filtros D1–D6 do visor principal.
+5. **Pacotes SPHEREx reais novos:** ε Indi (448 observações) e RW Aurigae, com `17_export_demo.py`.
+   - O R Draconis depende do SIA, que estava fora do ar.
+   - O `17_export_demo.py` passou a preservar `motion/` e `motion.json` ao refazer um pacote.
+6. **Substitui o item 7 da DECISÃO 018:** o script 18 e as imagens centradas foram removidos.
+
+**Evidência:**
+- **Estrela de Barnard** (13,2′ de trajeto em 76 anos, campo de 17′): nas 22 imagens (4 de outros telescópios + 18 SPHEREx), o centro da estrela, medido no núcleo saturado, fica a ≤ 6,6″ da posição prevista, com mediana de 2,3″.
+- **ε Indi:** trajeto de 2,6′ desde 1993, campo de 6′.
+- **RW Aurigae:** 0,03′ em 74 anos. O player avisa que o movimento não aparece e que a mudança a observar é de brilho.
+
+**Correção do WISE 0855** (achado durante este trabalho):
+- **O erro:** a coordenada do desafio é a da época da descoberta (~2010), não J2000.
+- **A fonte primária:** o SIMBAD (Kirkpatrick et al. 2021) dá a posição J2000 133,81890825 / −7,247048 e o mesmo μ que já usávamos.
+- **A confirmação nas imagens:** a fonte com maior excesso W2−W1 no campo AllWISE fica a 1,4″ da posição corrigida. Com a antiga, a distância era de 84″.
+- **O que foi atualizado:** `TARGETS` (2025,35: 133,761244 / −7,242304), os testes (**199 passed, 2 skipped**) e o §3.3 de `docs/science/target-catalog.md`.
+- **Pacote salvo:** o do WISE 0855 foi regenerado a partir da resposta SIA salva. O anterior tinha sido recortado 85″ fora do centro.
+
+**Limitações:**
+- O WISE 0855 não aparece no DSS (luz visível) nem em exposições únicas do SPHEREx. Isso é esperado para uma anã marrom Y, e o player avisa que um alvo fraco numa banda pode não aparecer.
+- O brilho e a resolução variam entre levantamentos, então a comparação é de posição, não de fotometria.
+- A data do AllWISE é a informada pelo serviço, mas a imagem soma exposições de 2010–2011.
+
+**Responsável:** Liderança técnica. **Validação pendente:** Integrante 2 (época da posição do SIMBAD e o texto do §3.3).
+
+---
+
 ## DECISÃO 018 — Interface em páginas, modo cinema, outras bases e imagens salvas dos 5 alvos
 
 **Data:** 15/11/2026
