@@ -917,8 +917,10 @@ function renderFovUi({ fromSlider = false } = {}) {
   else if (state.coverageLoading) parts.push("consultando a cobertura destas coordenadas");
   if (rec !== null) parts.push(Math.abs(rec - f) < 1e-6 ? "★ FOV recomendado para estas coordenadas" : `recomendado aqui: ${fmtArcmin(rec)}`);
   const mv = state.coverage?.motion;
-  if (mv !== null && mv !== undefined)
-    parts.push(`o alvo se desloca ${fmtNum(mv)}″ (≈ ${fmtNum(mv / pixelScale())} px) ao longo do levantamento`);
+  if (mv !== null && mv !== undefined) {
+    const px = (mv / pixelScale()).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+    parts.push(`o alvo se desloca ${fmtNum(mv)}″ (≈ ${px} px) nas datas disponíveis`);
+  }
   el.fovInfo.textContent = parts.join(" · ") + ".";
 }
 

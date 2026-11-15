@@ -610,13 +610,19 @@ class ObservationService:
 
     def _wcs_wave_table(self, access_url: str, detector: str | None):
         """WCS-WAVE table of a product; one download per (detector, processing run)."""
-        from astropy.io import fits
-
         key = calibration_key(access_url, detector)
         with self._image_locks_guard:
             if key in self._wave_tables:
                 return self._wave_tables[key]
         cache_key = DiskCache.make_key("wcs-wave", key)
+        # One download per calibration even when exposures are measured in parallel.
+        with self._image_lock(cache_key):
+            with self._image_locks_guard:
+                if key in self._wave_tables:
+                    return self._wave_tables[key]
+            return self._load_wcs_wave_table(key, cache_key, access_url)
+
+    def _load_wcs_wave_table(self, key: str, cache_key: str, access_url: str):
         payload = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key, allow_stale=True)
         table = None
         if payload is not None:

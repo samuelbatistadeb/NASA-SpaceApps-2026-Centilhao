@@ -51,3 +51,19 @@ def test_missing_entries_return_none(tmp_path: Path) -> None:
 
     assert cache.get_json("queries", "missing") is None
     assert cache.get_bytes("images", "missing") is None
+
+
+def test_concurrent_writes_of_the_same_key_do_not_fail(tmp_path) -> None:
+    """Regression: parallel spectra wrote the same entry and the rename failed
+    on Windows (PermissionError, WinError 32)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.services.cache import DiskCache
+
+    cache = DiskCache(tmp_path, 3600)
+    payloads = [bytes([i]) * 50_000 for i in range(16)]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        list(pool.map(lambda p: cache.set_bytes("images", "same-key", p), payloads))
+
+    assert cache.get_bytes("images", "same-key") in payloads
+    assert not list((tmp_path / "images").glob("*.tmp"))
