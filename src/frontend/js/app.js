@@ -16,6 +16,8 @@ const CONFIG = {
     { type: "script", url: "https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" },
     { type: "module", url: "https://cdn.jsdelivr.net/npm/aladin-lite@3.8.1/dist/aladin.js" },
   ],
+  // Espelhos do VizieR (catálogos Gaia/AllWISE no mapa do céu), tentados em ordem. O da CfA tem CORS liberado.
+  VIZIER_HOSTS: ["https://vizier.cds.unistra.fr", "https://vizier.cfa.harvard.edu"],
   SPECTRUM_PATH: "/api/spectrum", // ASSUMIDO: GET ?ra=&dec=&radius= (raio em segundos de arco)
   SPECTRUM_TIMEOUT_MS: 30000,
   IMAGE_EAST_LEFT: true, // ASSUMIDO: imagem com norte para cima e leste à esquerda (confirmar com o backend)
@@ -28,6 +30,17 @@ const CONFIG = {
   GALLERY_MAX: 24,
   // Miniaturas baixadas ao mesmo tempo (o IRSA responde 503 "Server busy" com muitos pedidos simultâneos).
   THUMB_CONCURRENCY: 2,
+  // GET ?ra_deg=&dec_deg=[&pm_ra_cosdec_masyr=&pm_dec_masyr=&ref_epoch_jyear=] → { fovs: [...], recommended_fov_arcmin, ... }
+  COVERAGE_PATH: "/api/coverage",
+  COVERAGE_DEBOUNCE_MS: 600,
+  COVERAGE_TIMEOUT_MS: 30000,
+  PIXEL_SCALE_ARCSEC: 6.15, // pixel SPHEREx (o backend pode informar outro valor em pixel_scale_arcsec)
+  MOON_DIAMETER_ARCMIN: 31, // diâmetro aparente médio da Lua, ~31′
+  COMPLETE_COVERAGE: 0.999, // mesmo limiar do backend para "quadro completo"
+  // GET ?op=mean&a=ids | ?op=diff&a=ids&b=ids → PNG (mesmo detector; máx. 40 ids no total)
+  COMPOSITE_PATH: "/api/composite",
+  COMPOSITE_MAX: 40,
+  COMPOSITE_TIMEOUT_MS: 180000, // sem cache: ~1–2 s por observação
 };
 
 // Mensagens para os códigos de erro do backend (src/backend/app/api/errors.py).
@@ -66,12 +79,26 @@ const el = {
   mapaGraf: $("mapa-grafico"), mapaVazio: $("mapa-vazio"), mapaMock: $("mapa-mock"),
   espStatus: $("esp-status"), espGraf: $("esp-grafico"), espTabBox: $("esp-tabela-box"),
   espTabela: $("esp-tabela"), raio: $("raio"), espCentro: $("esp-centro"), espLimpar: $("esp-limpar"), espCsv: $("esp-csv"), filtroVazio: $("filtro-vazio"), reset: $("filtro-reset"), galeria: $("galeria-lista"), galeriaVazio: $("galeria-vazio"), tIni: $("t-ini"), tFim: $("t-fim"), meta: $("meta"),
+  fovRegua: $("fov-regua"), fovParadas: $("fov-paradas"), fovInfo: $("fov-info"),
+  seguirBox: $("seguir-box"), seguir: $("seguir"),
+  soCompletos: $("so-completos"), soCompletosBox: $("so-completos-box"), soCompletosInfo: $("so-completos-info"),
+  combGerar: $("comb-gerar"), combSelecao: $("comb-selecao"), combStatus: $("comb-status"),
+  combResultado: $("comb-resultado"), combImg: $("comb-img"), combLegenda: $("comb-legenda"),
 };
 
 const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, active: "A", specCtl: {}, rows: [], keys: [], values: null, all: [], wls: [], detectors: new Set(), frames: [], index: 0, timer: null, isMock: false, controller: null, omitted: 0,
   // Movimento próprio do alvo de exemplo selecionado: { pmRa, pmDec, refEpoch, name } ou null.
   // Só vale para as coordenadas exatas do alvo; qualquer outra mudança de RA/Dec o descarta.
-  motion: null };
+  motion: null,
+  // Última resposta válida de /api/coverage para as coordenadas atuais (ou null).
+  coverage: null, coverageLoading: false };
+
+// Movimento efetivamente enviado ao backend: só quando o usuário escolhe seguir o alvo.
+const activeMotion = () => (state.motion && el.seguir.checked ? state.motion : null);
+
+// Fração do quadro dentro do detector; null quando o backend não informa.
+const isPartial = (f) => f.coverage !== null && f.coverage !== undefined && f.coverage < CONFIG.COMPLETE_COVERAGE;
+const fmtPct = (c) => `${Math.floor(c * 100)}%`;
 
 // Lê o movimento próprio (mas/ano) e a época de referência (ano juliano). Retorna null se faltar algum.
 function parseMotion(pmRa, pmDec, refEpoch, name = "") {
@@ -172,6 +199,10 @@ function normalizeObservation(o) {
     cutoutCenter: Number.isFinite(m.cutout_center_ra_deg) && Number.isFinite(m.cutout_center_dec_deg)
       ? { ra: m.cutout_center_ra_deg, dec: m.cutout_center_dec_deg } : null,
     positionSource: m.position_source ?? null, // "requested" | "proper_motion"
+    // Fração do quadro dentro do detector (0–1), prevista pelo polígono do detector; null se ausente.
+    coverage: typeof m.coverage_fraction === "number" && Number.isFinite(m.coverage_fraction)
+      ? Math.min(1, Math.max(0, m.coverage_fraction)) : null,
+    frame: m.frame ?? null, // "common_north_up"
   };
 }
 
@@ -219,7 +250,12 @@ function mockObservations() {
     g.beginPath();
     g.arc(30 + i * 6, 40 + i * 3, 3.5, 0, Math.PI * 2);
     g.fill();
+    // Dois quadros parciais (fictícios): a parte fora do "detector" fica transparente, como no backend.
+    const coverage = i === 3 ? 0.72 : i === 7 ? 0.45 : 1;
+    if (i === 3) g.clearRect(Math.round(128 * 0.72), 0, 128, 128);
+    if (i === 7) g.clearRect(0, Math.round(128 * 0.45), 128, 128);
     frames.push({
+      coverage, frame: "common_north_up",
       id: "FICTICIO-" + String(i + 1).padStart(2, "0"),
       productId: "FICTICIO-" + String(i + 1).padStart(2, "0"), wlRange: null, exposure: null, cutout: null,
       date: new Date(start + i * 30 * 864e5).toISOString(),
@@ -239,7 +275,8 @@ function showFrame(i) {
   el.img.src = f.imageUrl;
   el.img.alt = `Região do céu observada em ${fmtDateTime(f.date)}, detector ${f.detectorLabel}`;
   el.legenda.textContent =
-    `${fmtDateTime(f.date)} · detector ${f.detectorLabel} — quadro ${i + 1} de ${state.frames.length}`;
+    `${fmtDateTime(f.date)} · detector ${f.detectorLabel} — quadro ${i + 1} de ${state.frames.length}` +
+    (isPartial(f) ? ` · Cobertura do quadro: ${fmtPct(f.coverage)}` : "");
   el.slider.value = i;
   highlightMap(f.id);
   el.slider.setAttribute("aria-valuetext", fmtDateTime(f.date));
@@ -259,6 +296,10 @@ function showFrame(i) {
       ? [["Centro do recorte",
           `RA ${f.cutoutCenter.ra.toFixed(4)}°, Dec ${f.cutoutCenter.dec.toFixed(4)}°` +
             (f.positionSource === "proper_motion" ? " (propagado pelo movimento próprio)" : "")]]
+      : []),
+    ...(f.coverage !== null && f.coverage !== undefined
+      ? [["Cobertura do quadro", isPartial(f)
+          ? `${fmtPct(f.coverage)} (o restante fica fora do detector, sem dados)` : "Completa"]]
       : []),
     ["Coleção", f.product],
     ["Fonte dos dados", state.isMock ? "Fictícia (teste)" : "SPHEREx / IRSA-IPAC"],
@@ -347,8 +388,18 @@ function renderGallery(frames) {
       estado.style.cssText = "font-size:.7rem;opacity:.75";
       const label = document.createElement("span");
       label.textContent = `${fmtDate(f.date)} · ${f.detectorLabel}`;
-      btn.setAttribute("aria-label", `Ver observação de ${fmtDateTime(f.date)}, detector ${f.detectorLabel}`);
+      btn.setAttribute("aria-label", `Ver observação de ${fmtDateTime(f.date)}, detector ${f.detectorLabel}` +
+        (isPartial(f) ? `, quadro parcial (${fmtPct(f.coverage)} dentro do detector)` : ""));
       btn.append(img, estado, label);
+      if (isPartial(f)) {
+        btn.classList.add("parcial");
+        const selo = document.createElement("span");
+        selo.className = "selo-parcial";
+        selo.setAttribute("aria-hidden", "true");
+        selo.textContent = `parcial · ${fmtPct(f.coverage)}`;
+        btn.title = "Parte deste quadro fica fora do detector (área hachurada, sem dados).";
+        btn.append(selo);
+      }
       if (f.imageUrl.startsWith("data:")) {
         img.src = f.imageUrl; // modo fictício: imagem local, sem rede
         estado.hidden = true;
@@ -436,10 +487,19 @@ function setupFilters(frames) {
   el.wlMin.max = el.wlMax.max = last;
   el.wlMin.value = 0;
   el.wlMax.value = last;
+
+  // "Só quadros completos": desligado a cada nova busca; só aparece se o backend informar a cobertura.
+  const partials = frames.filter(isPartial).length;
+  el.soCompletos.checked = false;
+  el.soCompletosBox.hidden = !frames.some((f) => f.coverage !== null && f.coverage !== undefined);
+  el.soCompletosInfo.textContent = partials
+    ? `(esconde ${partials} quadro${partials > 1 ? "s" : ""} parcia${partials > 1 ? "is" : "l"})`
+    : "(nenhum quadro parcial nesta busca)";
 }
 
 function isVisible(f) {
   if (f.detector && !state.detectors.has(f.detector)) return false;
+  if (el.soCompletos.checked && isPartial(f)) return false;
   if (f.wavelength !== null && state.wls.length > 1) {
     const lo = state.wls[Number(el.wlMin.value)];
     const hi = state.wls[Number(el.wlMax.value)];
@@ -457,8 +517,10 @@ function applyFilters() {
   }
   const instants = new Set(frames.map((f) => f.date)).size;
   const detsVisible = new Set(frames.map((f) => f.detector).filter(Boolean)).size;
+  const partialsVisible = frames.filter(isPartial).length;
   el.contagem.textContent =
     `Mostrando ${frames.length} de ${state.all.length} observações (${instants} instantes distintos).` +
+    (partialsVisible ? ` ${partialsVisible} com quadro parcial (marcadas na galeria).` : "") +
     (detsVisible > 1
       ? " Atenção: há detectores diferentes intercalados; cada detector vê outra faixa do infravermelho. Para comparar épocas, deixe só um detector ativo."
       : "") +
@@ -467,6 +529,7 @@ function applyFilters() {
 
   stop();
   state.frames = frames;
+  resetComposite(); // a seleção mudou: o resultado combinado anterior deixa de valer
   renderMap();
   el.visor.hidden = !frames.length;
   el.filtroVazio.hidden = !!frames.length;
@@ -491,6 +554,111 @@ el.wlMax.addEventListener("input", () => {
 });
 el.reset.addEventListener("click", () => { setupFilters(state.all); applyFilters(); });
 
+/* ---------- Combinar épocas (/api/composite) ----------
+ * Só com UM detector ativo (o backend recusa misturar detectores). Usa as observações visíveis
+ * (já filtradas). Nunca pede composição no modo de dados fictícios. */
+const comb = { ctl: null, url: null };
+const combMode = () => document.querySelector('input[name="comb-modo"]:checked').value;
+const fmtSpan = (fs) => (fs.length ? `${fmtDate(fs[0].date)} a ${fmtDate(fs.at(-1).date)}` : "—");
+
+function compositeSelection() {
+  const det = state.detectors.size === 1 ? [...state.detectors][0] : null;
+  if (state.isMock) return { erro: "Combinar épocas não está disponível com dados fictícios: a combinação é feita pelo servidor com observações reais." };
+  if (det === null) return { erro: "Escolha um detector para combinar épocas (deixe só um ativo no filtro acima)." };
+  const frames = state.frames.filter((f) => f.detector === det); // já em ordem cronológica
+  if (combMode() === "mean") {
+    if (!frames.length) return { erro: "Nenhuma observação visível deste detector." };
+    // Mais de 40: prioriza quadros completos / de maior cobertura (cobertura desconhecida conta como completa).
+    const a = [...frames].sort((x, y) => (y.coverage ?? 1) - (x.coverage ?? 1)).slice(0, CONFIG.COMPOSITE_MAX)
+      .sort((x, y) => Date.parse(x.date) - Date.parse(y.date));
+    return { det, op: "mean", a, b: [], total: frames.length };
+  }
+  if (frames.length < 2) return { erro: "A diferença precisa de pelo menos duas observações visíveis deste detector." };
+  const half = Math.min(Math.floor(frames.length / 2), CONFIG.COMPOSITE_MAX / 2);
+  return { det, op: "diff", b: frames.slice(0, half), a: frames.slice(-half), total: frames.length };
+}
+
+function renderCompositeUi() {
+  const s = compositeSelection();
+  el.combGerar.disabled = !!s.erro;
+  if (s.erro) { el.combSelecao.textContent = s.erro; return; }
+  el.combSelecao.textContent = s.op === "mean"
+    ? `D${s.det}: ${s.a.length} observações` + (s.total > s.a.length ? ` (das ${s.total} visíveis, as de maior cobertura)` : "") + ` · ${fmtSpan(s.a)}`
+    : `D${s.det}: A = ${s.a.length} mais recentes (${fmtSpan(s.a)}) · B = ${s.b.length} mais antigas (${fmtSpan(s.b)})`;
+}
+
+function setCombStatus(msg, kind = "") {
+  el.combStatus.hidden = !msg;
+  el.combStatus.textContent = msg;
+  el.combStatus.className = "status " + kind;
+}
+
+// Nova seleção (filtros, nova busca): cancela o pedido e descarta o resultado anterior.
+function resetComposite() {
+  comb.ctl?.abort();
+  comb.ctl = null;
+  if (comb.url) URL.revokeObjectURL(comb.url);
+  comb.url = null;
+  el.combResultado.hidden = true;
+  el.combImg.removeAttribute("src");
+  setCombStatus("");
+  renderCompositeUi();
+}
+
+async function runComposite() {
+  const s = compositeSelection();
+  if (s.erro) { setCombStatus(s.erro); return; }
+  resetComposite();
+  const ctl = (comb.ctl = new AbortController());
+  const timer = setTimeout(() => ctl.abort("timeout"), CONFIG.COMPOSITE_TIMEOUT_MS);
+  const n = s.a.length + s.b.length;
+  el.combGerar.disabled = true;
+  setCombStatus(`Combinando ${n} observações no servidor… pode levar até ~${Math.max(5, n * 2)} s na primeira vez.`, "carregando");
+  try {
+    const url = new URL(CONFIG.COMPOSITE_PATH, CONFIG.API_BASE);
+    url.search = new URLSearchParams({
+      op: s.op, a: s.a.map((f) => f.id).join(","), ...(s.op === "diff" ? { b: s.b.map((f) => f.id).join(",") } : {}),
+      ...CONFIG.EXTRA_PARAMS,
+    }).toString();
+    const res = await fetch(url, { signal: ctl.signal });
+    if (!res.ok) throw await apiError(res);
+    const blob = await res.blob();
+    if (comb.ctl !== ctl) return;
+    comb.url = URL.createObjectURL(blob);
+    el.combImg.src = comb.url;
+    // Cabeçalhos de metadados: só usados se o navegador os expuser (CORS); a legenda não depende deles.
+    const hdrDet = res.headers.get("X-SpherEx-Detector");
+    const detTxt = `detector D${s.det}` + (hdrDet && !String(hdrDet).includes(String(s.det)) ? ` (servidor informou ${hdrDet})` : "");
+    if (s.op === "mean") {
+      el.combImg.alt = `Média de ${s.a.length} observações do ${detTxt}`;
+      el.combLegenda.textContent = `Média de ${s.a.length} observações · ${detTxt} · ${fmtSpan(s.a)}. Mais quadros = menos ruído; objetos fracos ficam mais visíveis.`;
+    } else {
+      el.combImg.alt = `Diferença entre épocas do ${detTxt}`;
+      el.combLegenda.textContent = `Diferença média(A) − média(B) · ${detTxt}. Claro = mais brilho em A (${s.a.length} recentes: ${fmtSpan(s.a)}); escuro = mais brilho em B (${s.b.length} antigas: ${fmtSpan(s.b)}); cinza médio = sem mudança.`;
+    }
+    el.combResultado.hidden = false;
+    setCombStatus("");
+  } catch (err) {
+    if (comb.ctl !== ctl) return; // substituído ou descartado
+    if (err instanceof ApiError) {
+      setCombStatus(err.code === "INVALID_PARAMETERS"
+        ? `O servidor recusou a combinação: ${err.message}`
+        : API_ERRORS[err.code] ?? `Não foi possível combinar as épocas: ${err.message}`, "erro");
+    } else {
+      setCombStatus(ctl.signal.reason === "timeout"
+        ? "A combinação demorou demais. Tente com menos observações (filtre por comprimento de onda ou só quadros completos)."
+        : "Não foi possível conectar ao servidor para combinar as épocas.", "erro");
+    }
+  } finally {
+    clearTimeout(timer);
+    if (comb.ctl === ctl) { comb.ctl = null; el.combGerar.disabled = !!compositeSelection().erro; }
+  }
+}
+
+el.combGerar.addEventListener("click", runComposite);
+document.querySelectorAll('input[name="comb-modo"]').forEach((r) => r.addEventListener("change", resetComposite));
+el.soCompletos.addEventListener("change", applyFilters);
+
 function loadFrames(frames, isMock) {
   stop();
   state.all = frames;
@@ -510,7 +678,10 @@ async function onSubmit(e) {
     return;
   }
   state.values = values;
-  const motion = el.mock.checked ? null : state.motion; // dados fictícios não usam movimento próprio
+  // Dados fictícios não usam movimento próprio; sem "seguir o alvo", o quadro fica fixo no céu.
+  const motion = el.mock.checked ? null : activeMotion();
+  renderFovUi();
+  scheduleCoverage();
   clearPoints();
   updateSky({ recenter: true });
   if (!el.mock.checked) updateUrl(values, state.motion);
@@ -533,7 +704,9 @@ async function onSubmit(e) {
     setStatus(`${frames.length} observações em ordem cronológica · RA ${values.ra}°, Dec ${values.dec}°, FOV ${values.fov}′.` +
       // Só afirma a correção se o backend confirmar (um backend antigo ignora os parâmetros).
       (motion && frames.some((f) => f.positionSource === "proper_motion")
-        ? ` Posição corrigida pelo movimento próprio${motion.name ? " de " + motion.name : ""} em cada data.` : ""));
+        ? ` Posição corrigida pelo movimento próprio${motion.name ? " de " + motion.name : ""} em cada data.` : "") +
+      (!el.mock.checked && state.motion && !motion
+        ? ` Quadro fixo no céu: ${state.motion.name || "o alvo"} pode aparecer deslocado entre as datas.` : ""));
   } catch (err) {
     const timedOut = err === "timeout" || err?.name === "AbortError";
     if (timedOut && state.controller?.signal.reason !== "timeout") return; // busca substituída
@@ -564,8 +737,201 @@ el.slider.addEventListener("input", () => { stop(); showFrame(Number(el.slider.v
 el.img.addEventListener("error", () =>
   setStatus("Não foi possível carregar esta imagem. Tente outro quadro.", "erro"));
 // Edição manual de RA/Dec: o movimento próprio do alvo deixa de valer (mudar só o FOV não afeta).
-el.ra.addEventListener("input", () => { state.motion = null; });
-el.dec.addEventListener("input", () => { state.motion = null; });
+el.ra.addEventListener("input", () => setMotion(null));
+el.dec.addEventListener("input", () => setMotion(null));
+
+/* ---------- Seletor de FOV com significado ----------
+ * Régua logarítmica de CONFIG.FOV_MIN a CONFIG.FOV_MAX, sincronizada com o campo numérico #fov
+ * (que continua sendo a fonte do valor e passa pela validação de sempre no envio).
+ * Os números de cobertura vêm de /api/coverage; sem essa resposta o seletor funciona igual. */
+const FOV_STOPS = [
+  { fov: 1, name: "Detalhe" }, { fov: 3, name: "Objeto" }, { fov: 5, name: "Vizinhança" },
+  { fov: 10, name: "Região" }, { fov: 30, name: "Campo amplo" },
+];
+const FOV_SPAN = Math.log(CONFIG.FOV_MAX / CONFIG.FOV_MIN);
+const FOV_POS_MAX = Number(el.fovRegua.max);
+const fovToPos = (f) => Math.round((Math.log(f / CONFIG.FOV_MIN) / FOV_SPAN) * FOV_POS_MAX);
+
+// Arredonda para valores "limpos": 0,1′ abaixo de 2′, 0,5′ até 10′, 1′ acima.
+function niceFov(x) {
+  const s = x < 2 ? 0.1 : x < 10 ? 0.5 : 1;
+  return Math.min(CONFIG.FOV_MAX, Math.max(CONFIG.FOV_MIN, Number((Math.round(x / s) * s).toFixed(1))));
+}
+
+function posToFov(p) {
+  for (const s of FOV_STOPS) if (Math.abs(fovToPos(s.fov) - p) <= 15) return s.fov; // "ímã" nas paradas
+  return niceFov(CONFIG.FOV_MIN * Math.exp((p / FOV_POS_MAX) * FOV_SPAN));
+}
+
+// FOV do campo numérico, se válido (sem marcar erro: a validação visível fica para o envio).
+function readFov() {
+  const n = parseNum(el.fov.value);
+  return el.fov.value.trim() !== "" && Number.isFinite(n) && n >= RULES.fov.min && n <= RULES.fov.max ? n : null;
+}
+
+const fmtArcmin = (f) => `${String(Number(f.toFixed(2))).replace(".", ",")}′`;
+const pixelScale = () => state.coverage?.pixelScale ?? CONFIG.PIXEL_SCALE_ARCSEC;
+const spherexPixels = (f) => Math.round((f * 60) / pixelScale());
+
+function moonText(f) {
+  const r = CONFIG.MOON_DIAMETER_ARCMIN / f;
+  return r >= 1.5 ? `≈ 1/${Math.round(r)} do diâmetro da Lua` : `≈ ${Math.round(100 / r)}% do diâmetro da Lua`;
+}
+
+const coverageEntry = (f) => state.coverage?.fovs.find((e) => Math.abs(e.fov - f) < 1e-6) ?? null;
+
+// Custo por imagem: valor do backend para o FOV exato; para outros FOV, escala o mais próximo
+// pela área em pixels (estimativa, marcada com "≈").
+function kbText(f) {
+  const exact = coverageEntry(f);
+  if (exact?.kb !== null && exact?.kb !== undefined) return `~${fmtNum(exact.kb)} kB por imagem`;
+  const ref = state.coverage?.fovs
+    .filter((e) => e.kb !== null && e.pixels > 0)
+    .sort((a, b) => Math.abs(Math.log(a.fov / f)) - Math.abs(Math.log(b.fov / f)))[0];
+  if (!ref) return null;
+  const kb = ref.kb * (spherexPixels(f) / ref.pixels) ** 2;
+  return `≈ ${fmtNum(Math.max(1, Math.round(kb)))} kB por imagem (estimado a partir de ${fmtArcmin(ref.fov)})`;
+}
+
+function coverageText(e) {
+  return `${e.observations} observações: ${e.complete} com quadro completo, ${e.partial} parcia${e.partial === 1 ? "l" : "is"}`;
+}
+
+(function buildFovStops() {
+  el.fovParadas.replaceChildren(...FOV_STOPS.map((s) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "fov-parada";
+    b.dataset.fov = s.fov;
+    const top = document.createElement("strong");
+    top.textContent = `${fmtArcmin(s.fov)} ${s.name}`;
+    const sub = document.createElement("small"); // contagem de cobertura (preenchida quando houver)
+    b.append(top, sub);
+    b.addEventListener("click", () => { el.fov.value = String(s.fov); onFovChange(); });
+    return b;
+  }));
+})();
+
+function renderFovUi({ fromSlider = false } = {}) {
+  const f = readFov();
+  const rec = state.coverage?.recommended ?? null;
+  for (const b of el.fovParadas.children) {
+    const sf = Number(b.dataset.fov);
+    const e = coverageEntry(sf);
+    b.setAttribute("aria-pressed", String(f !== null && Math.abs(sf - f) < 1e-6));
+    b.classList.toggle("recomendado", rec !== null && Math.abs(sf - rec) < 1e-6);
+    b.querySelector("small").textContent =
+      `${spherexPixels(sf)} px` + (e ? ` · ${e.complete}/${e.observations} completos` : "") +
+      (rec !== null && Math.abs(sf - rec) < 1e-6 ? " · ★ recomendado" : "");
+    b.title = `${fmtArcmin(sf)}: ${spherexPixels(sf)} × ${spherexPixels(sf)} pixels SPHEREx, ${moonText(sf)}` +
+      (e ? `. ${coverageText(e)}.` : "");
+  }
+  if (f === null) {
+    el.fovInfo.textContent = `Informe um FOV entre ${fmtArcmin(CONFIG.FOV_MIN)} e ${fmtArcmin(CONFIG.FOV_MAX)}.`;
+    return;
+  }
+  if (!fromSlider) el.fovRegua.value = fovToPos(f);
+  el.fovRegua.setAttribute("aria-valuetext", `${fmtArcmin(f)}, ${spherexPixels(f)} pixels SPHEREx de lado`);
+
+  const parts = [
+    `${fmtArcmin(f)} = ${spherexPixels(f)} × ${spherexPixels(f)} pixels SPHEREx (${fmtNum(pixelScale())}″ cada)`,
+    moonText(f),
+  ];
+  const kb = kbText(f);
+  if (kb) parts.push(kb);
+  const e = coverageEntry(f);
+  if (e) parts.push(coverageText(e));
+  else if (state.coverage?.fovs.length) parts.push(`contagem de cobertura disponível para ${state.coverage.fovs.map((x) => fmtArcmin(x.fov)).join(", ")}`);
+  else if (state.coverageLoading) parts.push("consultando a cobertura destas coordenadas");
+  if (rec !== null) parts.push(Math.abs(rec - f) < 1e-6 ? "★ FOV recomendado para estas coordenadas" : `recomendado aqui: ${fmtArcmin(rec)}`);
+  const mv = state.coverage?.motion;
+  if (mv !== null && mv !== undefined)
+    parts.push(`o alvo se desloca ${fmtNum(mv)}″ (≈ ${fmtNum(mv / pixelScale())} px) ao longo do levantamento`);
+  el.fovInfo.textContent = parts.join(" · ") + ".";
+}
+
+function onFovChange(opts) {
+  renderFovUi(opts);
+  scheduleSky(); // o retângulo do FOV no mapa do céu acompanha o seletor
+}
+
+el.fovRegua.addEventListener("input", () => {
+  el.fov.value = String(posToFov(Number(el.fovRegua.value)));
+  el.fov.setAttribute("aria-invalid", "false");
+  $("fov-erro").textContent = "";
+  onFovChange({ fromSlider: true });
+});
+el.fov.addEventListener("input", () => onFovChange());
+
+/* Cobertura por FOV (/api/coverage): debounce, cancela pedidos antigos, falha em silêncio. */
+const cov = { timer: null, ctl: null, key: "" };
+
+function coordsFromInputs() {
+  const ra = parseCoord(el.ra.value, "ra"), dec = parseCoord(el.dec.value, "dec");
+  const ok = Number.isFinite(ra) && Number.isFinite(dec) && ra >= 0 && ra < 360 && dec >= -90 && dec <= 90;
+  return ok ? { ra: Number(ra.toFixed(6)), dec: Number(dec.toFixed(6)) } : null;
+}
+
+function normalizeCoverage(d) {
+  const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const fovs = (Array.isArray(d?.fovs) ? d.fovs : [])
+    .map((e) => ({
+      fov: num(e.fov_arcmin), pixels: num(e.pixels), observations: num(e.observations),
+      complete: num(e.complete), partial: num(e.partial), kb: num(e.estimated_kb_per_image),
+    }))
+    .filter((e) => e.fov !== null && e.observations !== null && e.complete !== null && e.partial !== null);
+  return {
+    fovs, recommended: num(d?.recommended_fov_arcmin),
+    motion: num(d?.motion_arcsec_over_survey), pixelScale: num(d?.pixel_scale_arcsec),
+  };
+}
+
+function scheduleCoverage() {
+  const c = coordsFromInputs();
+  const motion = activeMotion();
+  const key = c ? JSON.stringify([c.ra, c.dec, motionParams(motion)]) : "";
+  if (key === cov.key) return; // mesmo pedido já feito ou em andamento
+  clearTimeout(cov.timer);
+  cov.ctl?.abort();
+  cov.key = key;
+  state.coverage = null;
+  state.coverageLoading = !!c;
+  renderFovUi();
+  if (c) cov.timer = setTimeout(() => fetchCoverage(c, motion, key), CONFIG.COVERAGE_DEBOUNCE_MS);
+}
+
+async function fetchCoverage({ ra, dec }, motion, key) {
+  const ctl = (cov.ctl = new AbortController());
+  const timer = setTimeout(() => ctl.abort(), CONFIG.COVERAGE_TIMEOUT_MS);
+  try {
+    const url = new URL(CONFIG.COVERAGE_PATH, CONFIG.API_BASE);
+    url.search = new URLSearchParams({ ra_deg: ra, dec_deg: dec, ...motionParams(motion), ...CONFIG.EXTRA_PARAMS }).toString();
+    const res = await fetch(url, { signal: ctl.signal });
+    if (!res.ok) throw new Error("http-" + res.status);
+    const data = normalizeCoverage(await res.json());
+    if (cov.key !== key) return;
+    state.coverage = data.fovs.length ? data : null;
+  } catch (err) {
+    if (cov.key !== key) return; // pedido substituído
+    console.debug("Cobertura por FOV indisponível:", err);
+    cov.key = ""; // permite tentar de novo na próxima busca
+  } finally {
+    clearTimeout(timer);
+    if (cov.key === key || cov.key === "") { state.coverageLoading = false; renderFovUi(); }
+  }
+}
+
+/* "Seguir o alvo": só aparece quando há movimento próprio (alvo de exemplo ou link compartilhado). */
+function setMotion(m) {
+  state.motion = m;
+  el.seguirBox.hidden = !m;
+  scheduleCoverage();
+}
+
+el.seguir.addEventListener("change", () => {
+  scheduleCoverage();
+  if (state.values && !el.mock.checked) el.form.requestSubmit(); // refaz a busca com/sem correção
+});
 
 // Alvos de exemplo: nomes e coordenadas vêm do backend (o frontend não guarda coordenadas).
 // Formato esperado: [{ name, ra, dec, fov?, note? }] ou { targets: [...] }, RA/Dec em graus.
@@ -600,7 +966,7 @@ async function loadTargets() {
         el.ra.value = t.ra;
         el.dec.value = t.dec;
         el.fov.value = t.fov;
-        state.motion = t.motion;
+        setMotion(t.motion);
         el.form.requestSubmit();
       });
       box.append(b);
@@ -1072,7 +1438,7 @@ function renderMap() {
 }
 
 /* ---------- Mapa do céu (Aladin Lite, carregado só quando o usuário pede) ---------- */
-const sky = { A: null, aladin: null, timer: null };
+const sky = { A: null, aladin: null, timer: null, drawGen: 0 };
 
 // Fundo do mapa: por padrão, os mapas HiPS da própria missão SPHEREx (um por detector)
 (function preencherFundos() {
@@ -1082,7 +1448,11 @@ const sky = { A: null, aladin: null, timer: null };
     spherex.append(new Option(`SPHEREx D${i + 1} · ${fmtRange(r)}`, CONFIG.SPHEREX_HIPS_BASE + (i + 1))));
   const outros = document.createElement("optgroup");
   outros.label = "Outros telescópios (comparação)";
-  [["DSS2 (luz visível)", "P/DSS2/color"], ["2MASS (infravermelho próximo)", "P/2MASS/color"], ["AllWISE (infravermelho)", "P/allWISE/color"]]
+  // Espelhos do IRSA (NASA) dos HiPS do CDS (listados no MocServer do CDS). Em 2026-11-15 o alasky/alaskybis
+  // não respondia e o Aladin, com os IDs "P/...", escolhia o alaskybis: o fundo ficava cinza.
+  [["DSS2 (luz visível)", "https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color"],
+   ["2MASS (infravermelho próximo)", "https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color"],
+   ["AllWISE (infravermelho)", "https://irsa.ipac.caltech.edu/data/hips/CDS/AllWISE/RGB-W4-W2-W1"]]
     .forEach(([nome, id]) => outros.append(new Option(nome, id)));
   el.ceuFundo.replaceChildren(spherex, outros);
 })();
@@ -1130,8 +1500,11 @@ function drawSkyLayers() {
   if (!al || !v) return;
   try {
     al.removeLayers();
-    // retângulo da área pesquisada (coordenadas do céu: leste = RA crescente)
-    const h = v.fov / 120; // meia largura, em graus
+    sky.drawGen++; // descarta catálogos assíncronos de desenhos anteriores
+    // retângulo da área (coordenadas do céu: leste = RA crescente). Centro = última busca;
+    // lado = valor atual do seletor de FOV (acompanha a régua antes mesmo de buscar de novo).
+    const fov = readFov() ?? v.fov;
+    const h = fov / 120; // meia largura, em graus
     const k = h / Math.cos((v.dec * Math.PI) / 180);
     const ov = A.graphicOverlay({ color: "#ff5c8a", lineWidth: 2 });
     al.addOverlay(ov);
@@ -1150,17 +1523,51 @@ function drawSkyLayers() {
     marca("Ponto A", "#ff5c8a", "circle", 14, state.pts.A ? [{ ra: state.pts.A.ra, dec: state.pts.A.dec, name: "Ponto A" }] : []);
     marca("Ponto B", "#7fd1ff", "square", 14, state.pts.B ? [{ ra: state.pts.B.ra, dec: state.pts.B.dec, name: "Ponto B" }] : []);
 
-    const raio = Math.max((v.fov / 60) * 0.8, 0.02); // graus
-    const alvo = `${v.ra} ${v.dec}`;
-    if (el.ceuGaia.checked)
-      al.addCatalog(A.catalogFromVizieR("I/355/gaiadr3", alvo, raio,
-        { name: "Gaia DR3", shape: "circle", color: "#ffd98a", sourceSize: 8, onClick: "showTable", limit: 300 }));
-    if (el.ceuWise.checked)
-      al.addCatalog(A.catalogFromVizieR("II/328/allwise", alvo, raio,
-        { name: "AllWISE", shape: "rhomb", color: "#9be28a", sourceSize: 9, onClick: "showTable", limit: 300 }));
+    const raio = Math.max((fov / 60) * 0.8, 0.02); // graus
+    const pedidos = [
+      el.ceuGaia.checked && { table: "I/355/gaiadr3", opts: { name: "Gaia DR3", shape: "circle", color: "#ffd98a", sourceSize: 8, onClick: "showTable" } },
+      el.ceuWise.checked && { table: "II/328/allwise", opts: { name: "AllWISE", shape: "rhomb", color: "#9be28a", sourceSize: 9, onClick: "showTable" } },
+    ].filter(Boolean);
+    if (pedidos.length) addVizierCatalogs(pedidos, v, raio, sky.drawGen);
   } catch (err) {
     console.error("Mapa do céu:", err);
     setCeuStatus("O mapa abriu, mas não foi possível desenhar todas as camadas.", "erro");
+  }
+}
+
+/* Catálogos Gaia/AllWISE via VizieR.
+ * Não usamos A.catalogFromVizieR: o Aladin Lite 3.8.1 monta a URL em vizier.unistra.fr, domínio que
+ * não resolve no DNS (testado em 2026-11-15), então as camadas vinham sempre vazias. Montamos a
+ * consulta VOTable e tentamos os espelhos em ordem, guardando o primeiro que responder. */
+let vizierHostPromise = null;
+function vizierHost() {
+  vizierHostPromise ??= (async () => {
+    for (const host of CONFIG.VIZIER_HOSTS) {
+      try {
+        const res = await fetch(`${host}/viz-bin/votable?-source=I/355/gaiadr3&-c=0%200&-c.rd=0.01&-out.max=1`,
+          { signal: AbortSignal.timeout(10000) });
+        if (res.ok && /<VOTABLE/i.test(await res.text())) return host;
+      } catch { /* tenta o próximo espelho */ }
+    }
+    vizierHostPromise = null; // nenhum respondeu: tenta de novo no próximo desenho
+    throw new Error("Nenhum espelho do VizieR respondeu.");
+  })();
+  return vizierHostPromise;
+}
+
+async function addVizierCatalogs(pedidos, v, raio, gen) {
+  try {
+    const host = await vizierHost();
+    if (gen !== sky.drawGen) return; // camadas redesenhadas enquanto esperava
+    for (const { table, opts } of pedidos) {
+      const q = new URLSearchParams({ "-source": table, "-c": `${v.ra} ${v.dec}`, "-c.rd": raio.toFixed(4), "-out.max": 300 });
+      const cat = sky.A.catalogFromURL(`${host}/viz-bin/votable?${q}`, opts, undefined,
+        () => setCeuStatus(`Não foi possível carregar o catálogo ${opts.name}.`, "erro"));
+      sky.aladin.addCatalog(cat);
+    }
+  } catch (err) {
+    console.error("Mapa do céu:", err);
+    if (gen === sky.drawGen) setCeuStatus("Catálogos Gaia/WISE indisponíveis: o serviço VizieR não respondeu. Tente de novo mais tarde.", "erro");
   }
 }
 
@@ -1199,7 +1606,7 @@ function onSkyClick(e) {
   dec = Math.max(-90, Math.min(90, dec));
   el.ra.value = ra.toFixed(5);
   el.dec.value = dec.toFixed(5);
-  state.motion = null; // ponto arbitrário do céu: sem movimento próprio
+  setMotion(null); // ponto arbitrário do céu: sem movimento próprio
   if (!el.fov.value.trim()) el.fov.value = "3";
   setCeuStatus(`Ponto clicado: RA ${ra.toFixed(4)}°, Dec ${dec.toFixed(4)}°. Buscando observações… O resultado aparece na seção Observações.`, "carregando");
   el.form.requestSubmit();
@@ -1255,8 +1662,10 @@ el.ceuWise.addEventListener("change", scheduleSky);
 
 /* ---------- URL, compartilhamento e modo incorporado ---------- */
 // Movimento próprio na URL: mesmos nomes do backend, mais "alvo" (nome exibido na mensagem).
-const MOTION_URL_KEYS = ["pm_ra_cosdec_masyr", "pm_dec_masyr", "ref_epoch_jyear", "alvo"];
-const motionUrlParams = (m) => (m ? { ...motionParams(m), ...(m.name ? { alvo: m.name } : {}) } : {});
+const MOTION_URL_KEYS = ["pm_ra_cosdec_masyr", "pm_dec_masyr", "ref_epoch_jyear", "alvo", "seguir"];
+const motionUrlParams = (m) => (m
+  ? { ...motionParams(m), ...(m.name ? { alvo: m.name } : {}), ...(el.seguir.checked ? {} : { seguir: 0 }) }
+  : {});
 
 function updateUrl({ ra, dec, fov }, motion = null) {
   const q = new URLSearchParams(location.search);
@@ -1287,6 +1696,8 @@ $("copiar-embed").addEventListener("click", () =>
   copy(`<iframe src="${shareUrl(true)}" width="100%" height="640" style="border:0" title="SPHEREx Explorer" loading="lazy"></iframe>`,
        "Código copiado."));
 
+renderFovUi(); // estado inicial do seletor de FOV (depois de todas as funções auxiliares existirem)
+
 (function initFromUrl() {
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1") document.body.classList.add("embed");
@@ -1295,7 +1706,8 @@ $("copiar-embed").addEventListener("click", () =>
     el.dec.value = q.get("dec");
     if (q.has("fov")) el.fov.value = q.get("fov");
     // Restaura o movimento próprio só se os três parâmetros vierem válidos; senão, nenhum.
-    state.motion = parseMotion(q.get("pm_ra_cosdec_masyr"), q.get("pm_dec_masyr"), q.get("ref_epoch_jyear"), q.get("alvo") ?? "");
+    if (q.get("seguir") === "0") el.seguir.checked = false;
+    setMotion(parseMotion(q.get("pm_ra_cosdec_masyr"), q.get("pm_dec_masyr"), q.get("ref_epoch_jyear"), q.get("alvo") ?? ""));
     el.form.requestSubmit();
   }
 })();

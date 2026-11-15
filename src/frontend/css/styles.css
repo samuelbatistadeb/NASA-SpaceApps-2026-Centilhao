@@ -319,3 +319,35 @@ details summary{cursor:pointer;padding:12px;border:1px solid var(--line);border-
 .teaser{padding:22px;border-radius:12px;background:linear-gradient(100deg,#112b3b,#121b32)}
 .link-btn{display:inline-block;text-decoration:none}
 @media(max-width:760px){.section-head{align-items:flex-start}.ceu-controles>*{max-width:100%}.ceu-mapa{min-height:320px}}
+
+/* Seletor de FOV com significado, quadros parciais e área sem dados. */
+.check.vis input{position:static;opacity:1;accent-color:var(--cyan);width:15px;height:15px;margin:0}
+.fov-seletor{grid-column:1/-1;display:grid;gap:8px;border:1px solid #22364f;border-radius:9px;padding:12px 14px;background:#0a1526}
+.fov-topo{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}.fov-topo span{font:10px var(--mono);letter-spacing:.1em;color:#9eb1c7}.fov-topo small{font-size:10px;color:#72869d}
+.fov-paradas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.fov-parada{display:grid;gap:2px;text-align:left;border:1px solid #2a4057;background:#0b1728;color:#b6c7d9;border-radius:7px;padding:7px 9px;min-width:0}
+.fov-parada strong{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fov-parada small{font:9px var(--mono);color:#7890a8;overflow-wrap:anywhere}
+.fov-parada:hover{border-color:var(--cyan)}.fov-parada[aria-pressed=true]{border-color:#81dce0;background:#13283a;color:#efffff}
+.fov-parada.recomendado{box-shadow:inset 0 -2px #ffd98a}.fov-parada.recomendado small{color:#ffd98a}
+.fov-info{margin:0;font-size:11px;color:#a9bdd0;line-height:1.55}
+.seguir{grid-column:1/-1;display:grid;gap:3px}.seguir .check{font-size:12px;color:#c9d8e6}.seguir small{font-size:10px;color:#72869d}
+#so-completos-box{margin:4px 0}#so-completos-box small{font-size:10px;color:#72869d}
+/* Fundo hachurado atrás das imagens: pixels transparentes = fora do detector (sem dados). */
+.frame img,.gallery img,.sw-sem-dados{background-color:#0b1320;background-image:repeating-linear-gradient(45deg,#24324a 0 2px,transparent 2px 7px)}
+.legenda-sem-dados{margin:0;display:flex;align-items:center;gap:8px;font-size:10px;color:#72869d;text-align:left}
+.sw-sem-dados{flex:none;width:16px;height:16px;border:1px solid #2b425c;border-radius:3px}
+.gallery button{position:relative}
+.selo-parcial{position:absolute;top:10px;right:10px;padding:1px 6px;border-radius:4px;background:#352b19e6;border:1px solid #6b5228;color:#ffd78b;font:9px var(--mono)}
+.gallery button.parcial img{outline:1px dashed #6b5228;outline-offset:-1px}
+@media(max-width:760px){.fov-paradas{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:430px){.fov-paradas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sw-invalido{flex:none;width:12px;height:12px;border-radius:3px;background:#b03060;display:inline-block;margin-left:4px}
+.legenda-sem-dados{flex-wrap:wrap}
+/* Combinar épocas */
+.combinar{margin-top:20px;border-top:1px solid #22354b;padding-top:16px}.combinar h3{font-size:16px;margin:0 0 4px}
+.combinar-modos{display:flex;flex-wrap:wrap;gap:8px 18px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:8px 0}
+.combinar-modos legend{color:var(--muted);font-size:11px;padding:0 5px}.combinar-modos label{font-size:12px;color:#c9d8e6;display:flex;gap:6px;align-items:center}
+.combinar-modos input{accent-color:var(--cyan)}
+.combinar-acoes{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}.comb-selecao{font-size:11px;color:#9bb0c5}
+#comb-gerar:disabled{opacity:.45;cursor:not-allowed}
+#comb-resultado img{image-rendering:pixelated}

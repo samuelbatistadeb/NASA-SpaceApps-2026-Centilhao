@@ -69,9 +69,23 @@
           <small id="fov-ajuda">Escolha o tamanho da região que deseja visualizar. Quanto maior o valor, maior a área exibida. Use de 0,5 a 30.</small>
           <small id="fov-erro" class="erro" role="alert"></small>
         </div>
+        <div class="fov-seletor" role="group" aria-labelledby="fov-seletor-titulo">
+          <div class="fov-topo">
+            <span id="fov-seletor-titulo">Régua do FOV</span>
+            <small>Arraste ou escolha uma parada. O campo numérico acima continua valendo.</small>
+          </div>
+          <input type="range" id="fov-regua" min="0" max="1000" step="1" value="500"
+                 aria-labelledby="fov-seletor-titulo" aria-describedby="fov-info">
+          <div id="fov-paradas" class="fov-paradas"></div>
+          <p id="fov-info" class="fov-info" aria-live="polite"></p>
+        </div>
+        <div class="seguir" id="seguir-box" hidden>
+          <label class="check vis"><input type="checkbox" id="seguir" checked> Seguir o movimento do alvo</label>
+          <small>Marcado: cada quadro é centrado onde o alvo estava naquela data. Desmarcado: quadro fixo no céu, para ver o alvo se deslocar.</small>
+        </div>
         <div class="actions">
           <button type="submit" id="buscar" class="primary">Buscar observações</button>
-          <label class="check">
+          <label class="check vis">
             <input type="checkbox" id="mock"> Usar dados fictícios (só para testar a interface)
           </label>
         </div>
@@ -97,6 +111,7 @@
             <label for="wl-max">Máximo: <output id="wl-max-out" for="wl-max"></output></label>
             <input type="range" id="wl-max" min="0" max="0" value="0">
           </div>
+          <label class="check vis" id="so-completos-box" hidden><input type="checkbox" id="so-completos"> Só quadros completos <small id="so-completos-info"></small></label>
           <p class="dica">Dica: para ver só a mudança ao longo do tempo, deixe um detector e uma faixa estreita de comprimento de onda.</p>
           <div class="filtro-rodape">
             <span id="contagem" role="status" aria-live="polite"></span>
@@ -115,6 +130,7 @@
             <img id="imagem" alt="">
           </div>
           <figcaption id="legenda"></figcaption>
+          <p class="legenda-sem-dados"><span class="sw-sem-dados" aria-hidden="true"></span>Hachurado = fora do detector (sem dados), não céu escuro. <span class="sw-invalido" aria-hidden="true"></span>Vinho (#B03060) = pixel inválido dentro do detector (núcleo saturado de estrela brilhante ou pixel defeituoso). Norte para cima, leste à esquerda.</p>
         </figure>
 
         <div class="controls" role="group" aria-label="Controles da sequência">
@@ -143,6 +159,26 @@
           <span id="copiado" role="status"></span>
         </div>
         <p class="note">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
+
+        <div class="combinar" id="combinar" role="group" aria-labelledby="t-combinar">
+          <h3 id="t-combinar">Combinar épocas</h3>
+          <p class="dica">Junta várias observações do mesmo detector numa só imagem, calculada pelo servidor. O fundo de cada quadro (mediana) é subtraído antes de combinar. A primeira combinação pode levar 1–2 s por observação.</p>
+          <fieldset class="combinar-modos">
+            <legend>Modo</legend>
+            <label><input type="radio" name="comb-modo" value="mean" checked> Somar épocas (melhor sinal/ruído)</label>
+            <label><input type="radio" name="comb-modo" value="diff"> Diferença entre épocas (o que mudou?)</label>
+          </fieldset>
+          <p class="dica" id="comb-explica">Na diferença, com “Seguir o movimento do alvo” desmarcado, uma estrela que se move aparece como um par claro/escuro; marcado, o alvo fica parado e se cancela, e são as estrelas de fundo que podem aparecer como pares.</p>
+          <div class="combinar-acoes">
+            <button type="button" id="comb-gerar" class="chip">Combinar</button>
+            <span id="comb-selecao" class="comb-selecao"></span>
+          </div>
+          <p id="comb-status" class="status" role="status" aria-live="polite" hidden></p>
+          <figure class="frame" id="comb-resultado" hidden>
+            <img id="comb-img" alt="">
+            <figcaption id="comb-legenda"></figcaption>
+          </figure>
+        </div>
         </div>
       </div>
     </section>
@@ -156,8 +192,8 @@
         <button type="button" id="ceu-tudo" class="chip">Ver o céu todo</button>
         <label for="ceu-fundo">Imagem de fundo</label>
         <select id="ceu-fundo"></select>
-        <label class="check"><input type="checkbox" id="ceu-gaia"> Estrelas Gaia</label>
-        <label class="check"><input type="checkbox" id="ceu-wise"> Fontes WISE</label>
+        <label class="check vis"><input type="checkbox" id="ceu-gaia"> Estrelas Gaia</label>
+        <label class="check vis"><input type="checkbox" id="ceu-wise"> Fontes WISE</label>
       </div>
 
       <p id="ceu-status" class="status" role="status" aria-live="polite">Clique em “Carregar mapa interativo” para ver o céu todo e escolher um ponto.</p>
