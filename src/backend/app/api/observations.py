@@ -14,6 +14,7 @@ from functools import lru_cache
 from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.errors import InvalidParametersError
+from app.api.releases import get_collection_resolver
 from app.core.config import Settings, get_settings
 from app.schemas.observation import ObservationResponse
 from app.services.astrometry import ProperMotion
@@ -41,6 +42,7 @@ def get_irsa_client() -> IrsaClient:
         max_fits_bytes=settings.max_fits_bytes,
         allowed_download_hosts=settings.allowed_download_hosts,
         max_concurrent_product_requests=settings.max_concurrent_product_requests,
+        collections=get_collection_resolver().collections,
     )
 
 

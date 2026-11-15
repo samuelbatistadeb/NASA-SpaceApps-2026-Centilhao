@@ -700,7 +700,8 @@ class ObservationService:
             f"{ra_deg:.6f}",
             f"{dec_deg:.6f}",
             f"{fov_arcmin:.6f}",
-            self._client.sia2_base_url,
+            # SIA address + collections: a new data release never reuses old results.
+            self._client.query_signature,
         ]
         if margin_deg:
             parts.append(f"{margin_deg:.6f}")
