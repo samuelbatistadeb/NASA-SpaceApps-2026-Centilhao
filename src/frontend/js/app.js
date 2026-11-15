@@ -68,7 +68,21 @@ const el = {
   espTabela: $("esp-tabela"), raio: $("raio"), espCentro: $("esp-centro"), espLimpar: $("esp-limpar"), espCsv: $("esp-csv"), filtroVazio: $("filtro-vazio"), reset: $("filtro-reset"), galeria: $("galeria-lista"), galeriaVazio: $("galeria-vazio"), tIni: $("t-ini"), tFim: $("t-fim"), meta: $("meta"),
 };
 
-const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, active: "A", specCtl: {}, rows: [], keys: [], values: null, all: [], wls: [], detectors: new Set(), frames: [], index: 0, timer: null, isMock: false, controller: null, omitted: 0 };
+const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, active: "A", specCtl: {}, rows: [], keys: [], values: null, all: [], wls: [], detectors: new Set(), frames: [], index: 0, timer: null, isMock: false, controller: null, omitted: 0,
+  // Movimento próprio do alvo de exemplo selecionado: { pmRa, pmDec, refEpoch, name } ou null.
+  // Só vale para as coordenadas exatas do alvo; qualquer outra mudança de RA/Dec o descarta.
+  motion: null };
+
+// Lê o movimento próprio (mas/ano) e a época de referência (ano juliano). Retorna null se faltar algum.
+function parseMotion(pmRa, pmDec, refEpoch, name = "") {
+  const vals = [pmRa, pmDec, refEpoch].map((v) => (v === null || v === undefined || v === "" ? NaN : Number(v)));
+  if (!vals.every(Number.isFinite)) return null;
+  return { pmRa: vals[0], pmDec: vals[1], refEpoch: vals[2], name: String(name ?? "") };
+}
+
+// Parâmetros do contrato /api/observations (os três juntos ou nenhum).
+const motionParams = (m) =>
+  m ? { pm_ra_cosdec_masyr: m.pmRa, pm_dec_masyr: m.pmDec, ref_epoch_jyear: m.refEpoch } : {};
 
 /* ---------- Utilitários ---------- */
 const parseNum = (v) => Number(String(v).trim().replace(",", "."));
@@ -154,16 +168,20 @@ function normalizeObservation(o) {
     product: m.data_release ?? "—",
     exposure: m.exposure_time_s ?? null,
     cutout: m.cutout_strategy ?? null,
+    // Centro real do recorte (pode diferir do pedido quando o backend propaga o movimento próprio).
+    cutoutCenter: Number.isFinite(m.cutout_center_ra_deg) && Number.isFinite(m.cutout_center_dec_deg)
+      ? { ra: m.cutout_center_ra_deg, dec: m.cutout_center_dec_deg } : null,
+    positionSource: m.position_source ?? null, // "requested" | "proper_motion"
   };
 }
 
-async function fetchObservations({ ra, dec, fov }) {
+async function fetchObservations({ ra, dec, fov }, motion = null) {
   state.controller?.abort();
   const controller = (state.controller = new AbortController());
   const timeout = setTimeout(() => controller.abort("timeout"), CONFIG.TIMEOUT_MS);
   const url = new URL(CONFIG.OBSERVATIONS_PATH, CONFIG.API_BASE);
   url.search = new URLSearchParams({
-    ra_deg: ra, dec_deg: dec, fov_arcmin: fov, ...CONFIG.EXTRA_PARAMS,
+    ra_deg: ra, dec_deg: dec, fov_arcmin: fov, ...motionParams(motion), ...CONFIG.EXTRA_PARAMS,
   }).toString();
 
   try {
@@ -237,6 +255,11 @@ function showFrame(i) {
     ["Detector", f.detectorLabel],
     ["Faixa espectral do detector", wlText],
     ["Tempo de exposição", f.exposure === null ? "—" : `${Math.round(f.exposure)} s`],
+    ...(f.cutoutCenter
+      ? [["Centro do recorte",
+          `RA ${f.cutoutCenter.ra.toFixed(4)}°, Dec ${f.cutoutCenter.dec.toFixed(4)}°` +
+            (f.positionSource === "proper_motion" ? " (propagado pelo movimento próprio)" : "")]]
+      : []),
     ["Coleção", f.product],
     ["Fonte dos dados", state.isMock ? "Fictícia (teste)" : "SPHEREx / IRSA-IPAC"],
   ];
@@ -487,9 +510,10 @@ async function onSubmit(e) {
     return;
   }
   state.values = values;
+  const motion = el.mock.checked ? null : state.motion; // dados fictícios não usam movimento próprio
   clearPoints();
   updateSky({ recenter: true });
-  if (!el.mock.checked) updateUrl(values);
+  if (!el.mock.checked) updateUrl(values, state.motion);
 
   stop();
   el.player.hidden = true;
@@ -500,13 +524,16 @@ async function onSubmit(e) {
 
   try {
     state.omitted = 0;
-    const frames = el.mock.checked ? mockObservations() : await fetchObservations(values);
+    const frames = el.mock.checked ? mockObservations() : await fetchObservations(values, motion);
     if (!frames.length) {
       setStatus(API_ERRORS.NO_OBSERVATIONS_FOUND);
       return;
     }
     loadFrames(frames, el.mock.checked);
-    setStatus(`${frames.length} observações em ordem cronológica · RA ${values.ra}°, Dec ${values.dec}°, FOV ${values.fov}′.`);
+    setStatus(`${frames.length} observações em ordem cronológica · RA ${values.ra}°, Dec ${values.dec}°, FOV ${values.fov}′.` +
+      // Só afirma a correção se o backend confirmar (um backend antigo ignora os parâmetros).
+      (motion && frames.some((f) => f.positionSource === "proper_motion")
+        ? ` Posição corrigida pelo movimento próprio${motion.name ? " de " + motion.name : ""} em cada data.` : ""));
   } catch (err) {
     const timedOut = err === "timeout" || err?.name === "AbortError";
     if (timedOut && state.controller?.signal.reason !== "timeout") return; // busca substituída
@@ -536,6 +563,9 @@ el.speed.addEventListener("change", () => state.timer && start());
 el.slider.addEventListener("input", () => { stop(); showFrame(Number(el.slider.value)); });
 el.img.addEventListener("error", () =>
   setStatus("Não foi possível carregar esta imagem. Tente outro quadro.", "erro"));
+// Edição manual de RA/Dec: o movimento próprio do alvo deixa de valer (mudar só o FOV não afeta).
+el.ra.addEventListener("input", () => { state.motion = null; });
+el.dec.addEventListener("input", () => { state.motion = null; });
 
 // Alvos de exemplo: nomes e coordenadas vêm do backend (o frontend não guarda coordenadas).
 // Formato esperado: [{ name, ra, dec, fov?, note? }] ou { targets: [...] }, RA/Dec em graus.
@@ -545,6 +575,8 @@ function normalizeTarget(t) {
     ra: Number(t.ra), dec: Number(t.dec),
     fov: Number(t.fov ?? t.default_fov ?? 3),
     note: t.note ?? t.description ?? "",
+    // ra/dec estão na época ref_epoch_jyear; null se o alvo não tiver movimento próprio conhecido.
+    motion: parseMotion(t.pm_ra_cosdec_masyr, t.pm_dec_masyr, t.ref_epoch_jyear, t.name ?? t.id),
   };
 }
 
@@ -568,6 +600,7 @@ async function loadTargets() {
         el.ra.value = t.ra;
         el.dec.value = t.dec;
         el.fov.value = t.fov;
+        state.motion = t.motion;
         el.form.requestSubmit();
       });
       box.append(b);
@@ -1166,6 +1199,7 @@ function onSkyClick(e) {
   dec = Math.max(-90, Math.min(90, dec));
   el.ra.value = ra.toFixed(5);
   el.dec.value = dec.toFixed(5);
+  state.motion = null; // ponto arbitrário do céu: sem movimento próprio
   if (!el.fov.value.trim()) el.fov.value = "3";
   setCeuStatus(`Ponto clicado: RA ${ra.toFixed(4)}°, Dec ${dec.toFixed(4)}°. Buscando observações… O resultado aparece na seção Observações.`, "carregando");
   el.form.requestSubmit();
@@ -1220,9 +1254,15 @@ el.ceuGaia.addEventListener("change", scheduleSky);
 el.ceuWise.addEventListener("change", scheduleSky);
 
 /* ---------- URL, compartilhamento e modo incorporado ---------- */
-function updateUrl({ ra, dec, fov }) {
+// Movimento próprio na URL: mesmos nomes do backend, mais "alvo" (nome exibido na mensagem).
+const MOTION_URL_KEYS = ["pm_ra_cosdec_masyr", "pm_dec_masyr", "ref_epoch_jyear", "alvo"];
+const motionUrlParams = (m) => (m ? { ...motionParams(m), ...(m.name ? { alvo: m.name } : {}) } : {});
+
+function updateUrl({ ra, dec, fov }, motion = null) {
   const q = new URLSearchParams(location.search);
   q.set("ra", ra); q.set("dec", dec); q.set("fov", fov);
+  MOTION_URL_KEYS.forEach((k) => q.delete(k));
+  for (const [k, v] of Object.entries(motionUrlParams(motion))) q.set(k, v);
   try { history.replaceState(null, "", "?" + q); } catch { /* ex.: file:// */ }
 }
 
@@ -1230,7 +1270,7 @@ function shareUrl(embed) {
   const { ra, dec, fov } = state.values;
   const u = new URL(location.href);
   u.hash = "";
-  u.search = new URLSearchParams({ ra, dec, fov, ...(embed ? { embed: 1 } : {}) });
+  u.search = new URLSearchParams({ ra, dec, fov, ...motionUrlParams(state.motion), ...(embed ? { embed: 1 } : {}) });
   return u.toString();
 }
 
@@ -1254,6 +1294,8 @@ $("copiar-embed").addEventListener("click", () =>
     el.ra.value = q.get("ra");
     el.dec.value = q.get("dec");
     if (q.has("fov")) el.fov.value = q.get("fov");
+    // Restaura o movimento próprio só se os três parâmetros vierem válidos; senão, nenhum.
+    state.motion = parseMotion(q.get("pm_ra_cosdec_masyr"), q.get("pm_dec_masyr"), q.get("ref_epoch_jyear"), q.get("alvo") ?? "");
     el.form.requestSubmit();
   }
 })();
