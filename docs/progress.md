@@ -102,7 +102,9 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
   - Novos pacotes SPHEREx reais: ε Indi (448 observações) e RW Aurigae.
   - WISE 0855: a coordenada do desafio é da época ~2010, não J2000. Corrigido com o SIMBAD (Kirkpatrick et al. 2021); a fonte W2 confirma (1,4″).
   - Testes: **199 passed, 2 skipped**. Testado no navegador: aba Décadas (Barnard), painel de falha (ε Indi) e o atalho para o pacote SPHEREx com D1–D6.
-  - **Pendente:** pacote e linha do tempo do R Draconis (o SIA estava fora do ar); o servidor backend na porta 8000 precisa ser reiniciado para servir o alvo corrigido.
+  - R Draconis concluído: 957 observações SPHEREx reais e 23 imagens de décadas (com 2MASS K). O espectro veio todo sinalizado (estrela brilhante satura o detector, como a Barnard).
+  - Fato novo: parte das exposições do R Draconis é da coleção QR3 (`/spherex/qr3/`), que antes não aparecia nas respostas.
+  - Backend da porta 8000 reiniciado com o `.venv`; `/api/targets` serve a posição corrigida do WISE 0855.
 - **Interface em páginas, modo cinema, outras bases e imagens salvas (15/11/2026, DECISÃO 018):**
   - Páginas por hash (`js/router.js`); sonda SPHEREx real (render oficial transparente) com feixe que forma a navbar; fundo mais escuro e cartões flutuantes.
   - Visor redesenhado com modo cinema (`js/cinema.js`): abas Sequência/Comparar/Combinar, zoom e marcas de data.

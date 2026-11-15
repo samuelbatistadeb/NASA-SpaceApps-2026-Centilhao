@@ -423,7 +423,7 @@ As imagens de referência da DECISÃO 018 (item 7) eram centradas no alvo em cad
    - **Controles:** filtros "Outros telescópios" e D1–D6, eixo do tempo proporcional aos anos, reproduzir, "piscar 1ª ↔ última", trajeto previsto e as setas do teclado.
    - **Busca falha:** o mesmo player aparece no painel de alternativas (`js/refimages.js`), com acesso ao pacote SPHEREx salvo, que mantém os filtros D1–D6 do visor principal.
 5. **Pacotes SPHEREx reais novos:** ε Indi (448 observações) e RW Aurigae, com `17_export_demo.py`.
-   - O R Draconis depende do SIA, que estava fora do ar.
+   - R Draconis (957 observações) exportado depois que o SIA voltou; parte dos produtos é da coleção QR3.
    - O `17_export_demo.py` passou a preservar `motion/` e `motion.json` ao refazer um pacote.
 6. **Substitui o item 7 da DECISÃO 018:** o script 18 e as imagens centradas foram removidos.
 

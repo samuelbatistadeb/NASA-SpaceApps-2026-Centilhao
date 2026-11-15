@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-15T16:02:39+00:00",
+ "generated_utc": "2026-11-15T16:24:35+00:00",
  "targets": [
   {
    "id": "barnard",
@@ -60,6 +60,21 @@
    "track_extent_arcmin": 0.03,
    "ra": 76.956081,
    "dec": 30.401205
+  },
+  {
+   "id": "rdra",
+   "name": "R Draconis",
+   "file": "demo/rdra/motion.json",
+   "frames": 23,
+   "thumb": "demo/rdra/motion/dss1_red.png",
+   "years": [
+    "1955",
+    "2026"
+   ],
+   "pm_total_arcsec_per_year": 0.022,
+   "track_extent_arcmin": 0.03,
+   "ra": 248.167378,
+   "dec": 66.755007
   }
  ]
 }

@@ -1045,8 +1045,298 @@
    ],
    "product_list_source": "resposta real do SIA salva (wise0855_sia_2026-11-15.xml); pode ser uma lista parcial",
    "exported_at": "2026-11-15T15:59:02.353993+00:00"
+  },
+  {
+   "id": "rdra",
+   "name": "R Draconis",
+   "ra": 248.167378,
+   "dec": 66.755007,
+   "fov": 3.0,
+   "motion": {
+    "pm_ra_cosdec_masyr": -20.643,
+    "pm_dec_masyr": 6.149,
+    "ref_epoch_jyear": 2016.0
+   },
+   "observations": "demo/rdra/observations.json",
+   "coverage": null,
+   "spectrum": "demo/rdra/spectrum.json",
+   "quality": "demo/rdra/quality.json",
+   "composites": [
+    {
+     "op": "mean",
+     "detector": "D1",
+     "file": "demo/rdra/composite_mean_D1.png",
+     "description": "Média de 40 épocas do D1 (maior sinal/ruído)",
+     "metadata": {
+      "composite_op": "mean",
+      "frames_a": 40,
+      "frames_b": 0,
+      "detector": "D1",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4291,
+       2025.675
+      ],
+      "max_frames_per_pixel": 40,
+      "difference_limits": null
+     }
+    },
+    {
+     "op": "diff",
+     "detector": "D1",
+     "file": "demo/rdra/composite_diff_D1.png",
+     "description": "Diferença D1: 20 épocas mais recentes − 20 mais antigas",
+     "metadata": {
+      "composite_op": "diff",
+      "frames_a": 20,
+      "frames_b": 20,
+      "detector": "D1",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4291,
+       2026.7224
+      ],
+      "max_frames_per_pixel": 20,
+      "difference_limits": [
+       -7.397481153266767,
+       7.397481153266767
+      ]
+     }
+    },
+    {
+     "op": "mean",
+     "detector": "D2",
+     "file": "demo/rdra/composite_mean_D2.png",
+     "description": "Média de 40 épocas do D2 (maior sinal/ruído)",
+     "metadata": {
+      "composite_op": "mean",
+      "frames_a": 40,
+      "frames_b": 0,
+      "detector": "D2",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4354,
+       2025.9185
+      ],
+      "max_frames_per_pixel": 40,
+      "difference_limits": null
+     }
+    },
+    {
+     "op": "diff",
+     "detector": "D2",
+     "file": "demo/rdra/composite_diff_D2.png",
+     "description": "Diferença D2: 20 épocas mais recentes − 20 mais antigas",
+     "metadata": {
+      "composite_op": "diff",
+      "frames_a": 20,
+      "frames_b": 20,
+      "detector": "D2",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4354,
+       2025.9527
+      ],
+      "max_frames_per_pixel": 20,
+      "difference_limits": [
+       -10.009760040442185,
+       10.009760040442185
+      ]
+     }
+    },
+    {
+     "op": "mean",
+     "detector": "D3",
+     "file": "demo/rdra/composite_mean_D3.png",
+     "description": "Média de 40 épocas do D3 (maior sinal/ruído)",
+     "metadata": {
+      "composite_op": "mean",
+      "frames_a": 40,
+      "frames_b": 0,
+      "detector": "D3",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.3125,
+       2025.3441
+      ],
+      "max_frames_per_pixel": 40,
+      "difference_limits": null
+     }
+    },
+    {
+     "op": "diff",
+     "detector": "D3",
+     "file": "demo/rdra/composite_diff_D3.png",
+     "description": "Diferença D3: 20 épocas mais recentes − 20 mais antigas",
+     "metadata": {
+      "composite_op": "diff",
+      "frames_a": 20,
+      "frames_b": 20,
+      "detector": "D3",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.3125,
+       2026.4325
+      ],
+      "max_frames_per_pixel": 20,
+      "difference_limits": [
+       -11.502963053584095,
+       11.502963053584095
+      ]
+     }
+    },
+    {
+     "op": "mean",
+     "detector": "D4",
+     "file": "demo/rdra/composite_mean_D4.png",
+     "description": "Média de 40 épocas do D4 (maior sinal/ruído)",
+     "metadata": {
+      "composite_op": "mean",
+      "frames_a": 40,
+      "frames_b": 0,
+      "detector": "D4",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4291,
+       2025.675
+      ],
+      "max_frames_per_pixel": 40,
+      "difference_limits": null
+     }
+    },
+    {
+     "op": "diff",
+     "detector": "D4",
+     "file": "demo/rdra/composite_diff_D4.png",
+     "description": "Diferença D4: 20 épocas mais recentes − 20 mais antigas",
+     "metadata": {
+      "composite_op": "diff",
+      "frames_a": 20,
+      "frames_b": 20,
+      "detector": "D4",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4291,
+       2026.7224
+      ],
+      "max_frames_per_pixel": 20,
+      "difference_limits": [
+       -6.6389345022269675,
+       6.6389345022269675
+      ]
+     }
+    },
+    {
+     "op": "mean",
+     "detector": "D5",
+     "file": "demo/rdra/composite_mean_D5.png",
+     "description": "Média de 40 épocas do D5 (maior sinal/ruído)",
+     "metadata": {
+      "composite_op": "mean",
+      "frames_a": 40,
+      "frames_b": 0,
+      "detector": "D5",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4354,
+       2025.9185
+      ],
+      "max_frames_per_pixel": 40,
+      "difference_limits": null
+     }
+    },
+    {
+     "op": "diff",
+     "detector": "D5",
+     "file": "demo/rdra/composite_diff_D5.png",
+     "description": "Diferença D5: 20 épocas mais recentes − 20 mais antigas",
+     "metadata": {
+      "composite_op": "diff",
+      "frames_a": 20,
+      "frames_b": 20,
+      "detector": "D5",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.4354,
+       2025.9527
+      ],
+      "max_frames_per_pixel": 20,
+      "difference_limits": [
+       -16.589356058713726,
+       16.589356058713726
+      ]
+     }
+    },
+    {
+     "op": "mean",
+     "detector": "D6",
+     "file": "demo/rdra/composite_mean_D6.png",
+     "description": "Média de 40 épocas do D6 (maior sinal/ruído)",
+     "metadata": {
+      "composite_op": "mean",
+      "frames_a": 40,
+      "frames_b": 0,
+      "detector": "D6",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.3125,
+       2025.3387
+      ],
+      "max_frames_per_pixel": 40,
+      "difference_limits": null
+     }
+    },
+    {
+     "op": "diff",
+     "detector": "D6",
+     "file": "demo/rdra/composite_diff_D6.png",
+     "description": "Diferença D6: 20 épocas mais recentes − 20 mais antigas",
+     "metadata": {
+      "composite_op": "diff",
+      "frames_a": 20,
+      "frames_b": 20,
+      "detector": "D6",
+      "frame": "common_north_up",
+      "background": "median of each frame subtracted",
+      "masked": "pixels with contamination FLAGS excluded",
+      "epoch_span_jyear": [
+       2025.3125,
+       2026.4325
+      ],
+      "max_frames_per_pixel": 20,
+      "difference_limits": [
+       -32.628210914205184,
+       32.628210914205184
+      ]
+     }
+    }
+   ],
+   "product_list_source": "SIA do IRSA ao vivo",
+   "exported_at": "2026-11-15T16:21:44.469113+00:00"
   }
  ],
- "generated_at": "2026-11-15T15:59:02.353993+00:00",
+ "generated_at": "2026-11-15T16:21:44.469113+00:00",
  "note": "Dados reais do SPHEREx (IRSA/IPAC) salvos para demonstração quando o arquivo IRSA ou o servidor não estiverem disponíveis. Gerado por data/scripts/17_export_demo.py."
 }
