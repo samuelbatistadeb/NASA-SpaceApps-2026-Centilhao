@@ -369,6 +369,8 @@ function showFrame(i) {
   );
   positionMarkers();
   scheduleSkyFrame(); // marcador do alvo e FOV no mapa do céu acompanham o quadro
+  // Visor (js/cinema.js): sobreposição com data/detector, bolha da linha do tempo e tira de miniaturas.
+  document.dispatchEvent(new CustomEvent("visor:quadro", { detail: { index: i, frame: f } }));
 }
 
 /* ---------- Qualidade do quadro (máscara de flags do SPHEREx) ---------- */
@@ -531,15 +533,19 @@ function renderGallery(frames) {
 function stop() {
   clearInterval(state.timer);
   state.timer = null;
-  el.play.textContent = "Reproduzir";
-  el.play.setAttribute("aria-pressed", "false");
+  setPlayLabel(false);
+}
+
+// O botão tem ícone (CSS, pelo aria-pressed) e texto; só o texto muda aqui.
+function setPlayLabel(playing) {
+  (el.play.querySelector(".txt") ?? el.play).textContent = playing ? "Pausar" : "Reproduzir";
+  el.play.setAttribute("aria-pressed", String(playing));
 }
 
 function start() {
   if (state.frames.length < 2) return;
   stop();
-  el.play.textContent = "Pausar";
-  el.play.setAttribute("aria-pressed", "true");
+  setPlayLabel(true);
   state.timer = setInterval(
     () => showFrame((state.index + 1) % state.frames.length),
     Number(el.speed.value)
@@ -704,6 +710,8 @@ function applyFilters() {
   renderMap();
   el.visor.hidden = !frames.length;
   el.filtroVazio.hidden = !!frames.length;
+  // Visor (js/cinema.js): marcas da linha do tempo, abas e tira de miniaturas da nova seleção.
+  document.dispatchEvent(new CustomEvent("visor:quadros", { detail: { frames } }));
   if (!frames.length) { clearGallery(); resetCompare(); return; }
 
   el.slider.max = frames.length - 1;
@@ -892,8 +900,9 @@ function loadFrames(frames, isMock) {
       b.addEventListener("click", () => {
         pickDetector(det, false);
         document.querySelector('input[name="comb-modo"][value="diff"]').checked = true;
+        window.visorAba?.("combinar"); // aba "Combinar" do visor (js/cinema.js)
         showDemoComposite();
-        $("combinar").scrollIntoView({ behavior: "smooth", block: "center" });
+        el.visor.scrollIntoView({ behavior: "smooth", block: "start" });
       });
       el.demoSair.before(b);
     }
@@ -2469,8 +2478,7 @@ function startBlink() {
 function resetCompare({ keep = false } = {}) {
   stopBlink();
   const frames = state.frames;
-  el.cmp.hidden = frames.length < 2;
-  if (frames.length < 2) return;
+  if (frames.length < 2) return; // a aba "Comparar" fica desativada (js/cinema.js)
   const prevA = el.cmpA.value, prevB = el.cmpB.value;
   const det = state.detectors.size === 1 ? [...state.detectors][0] : frames[state.index]?.detector ?? null;
   const doDet = frames.filter((f) => f.detector === det);
@@ -2484,8 +2492,9 @@ function resetCompare({ keep = false } = {}) {
   renderCompare();
 }
 
+// el.cmp é o painel da aba "Comparar": escondido = outra aba ativa (não baixa imagens nem pisca).
 function renderCompare() {
-  if (el.cmp.hidden || !el.cmp.open) { stopBlink(); return; }
+  if (el.cmp.hidden || state.frames.length < 2) { stopBlink(); return; }
   const a = cmpFrame(el.cmpA), b = cmpFrame(el.cmpB);
   if (!a || !b) return;
   if (el.cmpImgA.getAttribute("src") !== a.imageUrl) el.cmpImgA.src = a.imageUrl;
@@ -2521,7 +2530,6 @@ function paintCompare() {
   }
 }
 
-el.cmp.addEventListener("toggle", renderCompare);
 el.cmpA.addEventListener("change", renderCompare);
 el.cmpB.addEventListener("change", renderCompare);
 el.cmpDivisor.addEventListener("input", paintCompare);
@@ -2574,7 +2582,7 @@ async function copy(text, okMsg) {
 }
 $("copiar-link").addEventListener("click", () => copy(shareUrl(false), "Link copiado."));
 $("copiar-embed").addEventListener("click", () =>
-  copy(`<iframe src="${shareUrl(true)}" width="100%" height="640" style="border:0" title="SPHEREx Explorer" loading="lazy"></iframe>`,
+  copy(`<iframe src="${shareUrl(true)}" width="100%" height="640" style="border:0" title="SPHEREx Explorer" loading="lazy" allow="fullscreen"></iframe>`,
        "Código copiado."));
 
 renderFovUi(); // estado inicial do seletor de FOV (depois de todas as funções auxiliares existirem)

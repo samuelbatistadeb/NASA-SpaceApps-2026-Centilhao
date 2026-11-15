@@ -403,13 +403,13 @@ main section h2[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }
 }
 .teaser { background: linear-gradient(110deg, rgba(17, 43, 59, .85), rgba(18, 27, 50, .88)); }
 /* Elementos pequenos sobem levemente ao passar o mouse. */
-.chip, .fov-parada, .gallery button, .detectores .det, .link-btn, .primary {
+.chip, .fov-parada, .gallery button, .link-btn, .primary {
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s, background-color .2s, color .2s;
 }
-.chip:hover, .fov-parada:hover, .gallery button:hover, .detectores .det:hover:not(:disabled), .link-btn:hover {
+.chip:hover, .fov-parada:hover, .gallery button:hover, .link-btn:hover {
   transform: translateY(-2px); box-shadow: 0 10px 22px -10px rgba(0, 0, 0, .9);
 }
-.filtros, .fov-seletor, .alternativas, .grafico, .ceu-mapa, #imgwrap, .cmp-stage {
+.fov-seletor, .alternativas, .grafico, .ceu-mapa {
   box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .9);
 }
 
@@ -434,5 +434,5 @@ main section h2[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }
   .hero-copy h1 { font-size: 30px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chip:hover, .fov-parada:hover, .gallery button:hover, .detectores .det:hover:not(:disabled), .link-btn:hover { transform: none; }
+  .chip:hover, .fov-parada:hover, .gallery button:hover, .link-btn:hover { transform: none; }
 }

@@ -200,6 +200,14 @@
   function fecharAviso() { clearTimeout(avisoTimer); if (aviso) aviso.hidden = true; }
   window.addEventListener("spx:page", fecharAviso);
 
+  // Modo cinema (js/cinema.js) ligado e o usuário sai de "Observações" (ex.: botão voltar):
+  // desliga o cinema pelo mesmo atalho que ele já escuta (Esc), para não ficar um palco fixo órfão.
+  window.addEventListener("spx:page", (e) => {
+    if (e.detail.prev === "observacoes" && document.querySelector("#visor .cine-palco.cinema")) {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    }
+  });
+
   const marcarNovidade = (page) => {
     if (page === current) return;
     navLinks.find((a) => a.hash === "#" + page)?.classList.add("novidade");
