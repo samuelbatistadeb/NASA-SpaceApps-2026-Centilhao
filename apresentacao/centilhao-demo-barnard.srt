@@ -1,0 +1,27 @@
+1
+00:00:00,300 --> 00:00:03,510
+Aim: pick Barnard's Star, or type any coordinates.
+
+2
+00:00:03,710 --> 00:00:08,691
+Watch: real SPHEREx images from every date become a video, filtered by detector.
+
+3
+00:00:08,891 --> 00:00:13,430
+Discover: subtract two dates, and whatever moved shows up as bright and dark pairs.
+
+4
+00:00:13,630 --> 00:00:18,854
+Then jump seventy-six years: from 1950 to SPHEREx, same patch of sky.
+
+5
+00:00:19,054 --> 00:00:21,665
+Instant spectra, with contamination flags.
+
+6
+00:00:21,865 --> 00:00:24,153
+Plus Gaia and WISE overlays on the sky map.
+
+7
+00:00:24,603 --> 00:00:28,142
+Aim. Watch. Discover.
