@@ -20,6 +20,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.errors import ApiError, InternalError
 from app.api.observations import router as observations_router
+from app.api.releases import router as releases_router
 from app.api.targets import router as targets_router
 from app.core.config import get_settings
 
@@ -58,6 +59,7 @@ app.add_middleware(
 
 app.include_router(observations_router, prefix="/api")
 app.include_router(targets_router, prefix="/api")
+app.include_router(releases_router, prefix="/api")
 
 
 @app.get(

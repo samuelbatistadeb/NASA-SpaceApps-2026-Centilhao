@@ -35,6 +35,7 @@ from app.api.errors import (
     MalformedResponseError,
     SourceUnavailableError,
 )
+from app.core.config import DEFAULT_SPHEREX_COLLECTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -396,7 +397,13 @@ class IrsaClient:
         sleep: Callable[[float], None] = time.sleep,
         allowed_download_hosts: Sequence[str] = (),
         max_concurrent_product_requests: int = DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS,
+        collections: Sequence[str] | Callable[[], Sequence[str]] | None = None,
     ) -> None:
+        #: SIA ``COLLECTION`` values: a fixed list, or a provider called at each
+        #: query (e.g. the release resolver, so a discovered list takes effect).
+        self._collections_source = (
+            collections if collections is not None else DEFAULT_SPHEREX_COLLECTIONS
+        )
         #: Limits simultaneous cutouts/downloads across all request threads.
         self._product_slots = threading.BoundedSemaphore(
             max(1, int(max_concurrent_product_requests))
@@ -417,6 +424,46 @@ class IrsaClient:
     def is_configured(self) -> bool:
         """Whether a SIA2 endpoint address is available."""
         return bool(self.sia2_base_url)
+
+    @property
+    def collections(self) -> tuple[str, ...]:
+        """SIA v2 collections queried now (never empty: falls back to default)."""
+        source = self._collections_source
+        names = source() if callable(source) else source
+        unique = tuple(dict.fromkeys(str(n).strip() for n in names if str(n).strip()))
+        return unique or DEFAULT_SPHEREX_COLLECTIONS
+
+    @property
+    def query_signature(self) -> str:
+        """Identity of the archive queried: endpoint plus collections.
+
+        Meant for cache keys, so a cached answer of another data release (other
+        collection list) is never served.
+        """
+        return f"{self.sia2_base_url}|COLLECTION={','.join(sorted(self.collections))}"
+
+    def list_sia_collections(self) -> list[str]:
+        """Return every ``COLLECTION`` advertised by the SIA v2 self-description.
+
+        IRSA's answer starts with ``<RESOURCE type="meta">`` holding
+        ``<PARAM name="COLLECTION">`` and one ``<OPTION>`` per collection
+        (verified in the real answer saved on 2026-11-14,
+        ``tests/backend/fixtures/sia_spherex_dr1_wise0855.xml``). ``MAXREC=0``
+        is the IVOA way of asking for metadata only.
+
+        Raises:
+            SourceUnavailableError: Not configured, unreachable or HTTP error.
+            MalformedResponseError: No COLLECTION parameter in the answer.
+        """
+        if not self.is_configured:
+            raise SourceUnavailableError(
+                "A fonte científica IRSA não está configurada neste ambiente.",
+                detail="IRSA_SIA2_BASE_URL is empty",
+            )
+        response = self._request_with_retry(
+            "GET", self.sia2_base_url, params={"MAXREC": 0}
+        )
+        return parse_sia_collection_options(response.content)
 
     # -- public API -------------------------------------------------------------
     def query_by_position(
@@ -591,12 +638,7 @@ class IrsaClient:
                 f"CIRCLE {ra_deg:.6f} "
                 f"{dec_deg:.6f} {radius_deg:.6f}"
             ),
-            "COLLECTION": [
-                "spherex_dr1",
-                "spherex_qr3",
-                "spherex_dr1_deep",
-                "spherex_qr3_deep",
-            ],
+            "COLLECTION": list(self.collections),
             "RESPONSEFORMAT": "votable",
             "MAXREC": 1000,
         }
@@ -825,6 +867,38 @@ class IrsaClient:
     def _join(base: str, path: str) -> str:
         """Join a base address and a relative path."""
         return f"{base.rstrip('/')}/{path.lstrip('/')}"
+
+
+def parse_sia_collection_options(content: bytes) -> list[str]:
+    """Return the ``OPTION`` values of the ``COLLECTION`` PARAM of a VOTable.
+
+    Raises:
+        MalformedResponseError: The XML is invalid or has no COLLECTION PARAM.
+    """
+    import xml.etree.ElementTree as ElementTree
+
+    try:
+        root = ElementTree.fromstring(content)
+    except ElementTree.ParseError as exc:
+        raise MalformedResponseError(
+            "Não foi possível interpretar a resposta da fonte científica.",
+            detail=f"SIA self-description is not XML: {exc}",
+        ) from exc
+
+    def local(tag: str) -> str:
+        return tag.rsplit("}", 1)[-1]
+
+    for element in root.iter():
+        if local(element.tag) == "PARAM" and element.get("name", "").upper() == "COLLECTION":
+            return [
+                option.get("value", "").strip()
+                for option in element.iter()
+                if local(option.tag) == "OPTION" and option.get("value", "").strip()
+            ]
+    raise MalformedResponseError(
+        "Não foi possível interpretar a resposta da fonte científica.",
+        detail="SIA self-description without a COLLECTION parameter",
+    )
 
 
 def radius_from_fov(fov_arcmin: float) -> float:
