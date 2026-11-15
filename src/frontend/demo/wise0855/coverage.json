@@ -36,8 +36,8 @@
    "fov_arcmin": 10.0,
    "pixels": 99,
    "observations": 50,
-   "complete": 48,
-   "partial": 2,
+   "complete": 47,
+   "partial": 3,
    "estimated_kb_per_image": 92.8
   },
   {
@@ -52,14 +52,14 @@
    "fov_arcmin": 30.0,
    "pixels": 293,
    "observations": 50,
-   "complete": 44,
-   "partial": 6,
+   "complete": 43,
+   "partial": 7,
    "estimated_kb_per_image": 764.7
   }
  ],
  "recommended_fov_arcmin": 3.0,
  "motion_arcsec_over_survey": 4.0,
  "pixel_scale_arcsec": 6.15,
- "data_source": "cache",
- "data_cached_at": "2026-11-15T13:05:49.156442+00:00"
+ "data_source": "live",
+ "data_cached_at": null
 }

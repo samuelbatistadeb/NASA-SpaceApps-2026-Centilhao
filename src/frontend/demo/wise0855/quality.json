@@ -1,25 +1,6 @@
 {
- "obs_f214063f689ab924": {
-  "observation_id": "obs_f214063f689ab924",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0104,
-   "SUR_ERROR": 0.0083,
-   "NONFUNC": 0.0073,
-   "COLD": 0.0021,
-   "OUTLIER": 0.0177,
-   "SOURCE": 0.5026,
-   "HALO": 0.0156
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_1793258c6c521f09": {
-  "observation_id": "obs_1793258c6c521f09",
+ "obs_5bb0f1aaf476d9a5": {
+  "observation_id": "obs_5bb0f1aaf476d9a5",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
@@ -27,16 +8,35 @@
   ],
   "frame_flagged_fraction": {
    "TRANSIENT": 0.0042,
-   "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.0073,
-   "OUTLIER": 0.0177,
-   "SOURCE": 0.41
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0031,
+   "OUTLIER": 0.0166,
+   "SOURCE": 0.3528,
+   "HALO": 0.0052
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_e6eed74d9643ac1d": {
-  "observation_id": "obs_e6eed74d9643ac1d",
+ "obs_7c3e0a3b9da27a7b": {
+  "observation_id": "obs_7c3e0a3b9da27a7b",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0062,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0073,
+   "OUTLIER": 0.0198,
+   "SOURCE": 0.2758,
+   "HALO": 0.0021
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_c18cf5f4918c5272": {
+  "observation_id": "obs_c18cf5f4918c5272",
   "contaminated_at_target": true,
   "flags_at_target": [
    {
@@ -49,55 +49,19 @@
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0031,
-   "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.0021,
-   "DICHROIC": 0.8897,
-   "COLD": 0.001,
-   "SOURCE": 0.5068,
-   "HALO": 0.0104
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_6b835722a3ac4f92": {
-  "observation_id": "obs_6b835722a3ac4f92",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.001,
-   "NONFUNC": 0.001,
-   "PERSIST": 0.001,
-   "OUTLIER": 0.0083,
-   "SOURCE": 0.4079,
-   "HALO": 0.0052
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_a8563531de1b00ba": {
-  "observation_id": "obs_a8563531de1b00ba",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0031,
+   "TRANSIENT": 0.0021,
    "SUR_ERROR": 0.0021,
    "NONFUNC": 0.0021,
-   "OUTLIER": 0.0166,
-   "SOURCE": 0.5068,
+   "DICHROIC": 0.9501,
+   "COLD": 0.001,
+   "SOURCE": 0.3476,
    "HALO": 0.0052
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_4e83b68abe7daaf9": {
-  "observation_id": "obs_4e83b68abe7daaf9",
+ "obs_6a93f2091fcddc67": {
+  "observation_id": "obs_6a93f2091fcddc67",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
@@ -105,17 +69,133 @@
   ],
   "frame_flagged_fraction": {
    "TRANSIENT": 0.0042,
-   "SUR_ERROR": 0.0021,
-   "NONFUNC": 0.0052,
-   "OUTLIER": 0.0146,
-   "SOURCE": 0.4121,
-   "HALO": 0.0062
+   "SUR_ERROR": 0.001,
+   "NONFUNC": 0.0021,
+   "PERSIST": 0.001,
+   "OUTLIER": 0.0135,
+   "SOURCE": 0.2695,
+   "HALO": 0.0146
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_54e486abf9e693dd": {
-  "observation_id": "obs_54e486abf9e693dd",
+ "obs_06c7468e41fe75cb": {
+  "observation_id": "obs_06c7468e41fe75cb",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0031,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.001,
+   "COLD": 0.001,
+   "OUTLIER": 0.0198,
+   "SOURCE": 0.3496,
+   "HALO": 0.0114
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_a832697d617de097": {
+  "observation_id": "obs_a832697d617de097",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0042,
+   "OVERFLOW": 0.001,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0052,
+   "OUTLIER": 0.0125,
+   "SOURCE": 0.2747,
+   "HALO": 0.0052
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_5f1263e08457d637": {
+  "observation_id": "obs_5f1263e08457d637",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0104,
+   "SUR_ERROR": 0.0062,
+   "NONFUNC": 0.0052,
+   "COLD": 0.001,
+   "PERSIST": 0.001,
+   "OUTLIER": 0.0271,
+   "SOURCE": 0.3476,
+   "HALO": 0.0375
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_c1ad50e5fc79ae48": {
+  "observation_id": "obs_c1ad50e5fc79ae48",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0052,
+   "OVERFLOW": 0.0021,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.0021,
+   "COLD": 0.001,
+   "OUTLIER": 0.0166,
+   "SOURCE": 0.3059,
+   "HALO": 0.0187
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_dcf6b23ea633128c": {
+  "observation_id": "obs_dcf6b23ea633128c",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0073,
+   "SUR_ERROR": 0.0052,
+   "NONFUNC": 0.0031,
+   "OUTLIER": 0.0208,
+   "SOURCE": 0.3476,
+   "HALO": 0.0229
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_9c272c8645d83aec": {
+  "observation_id": "obs_9c272c8645d83aec",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0125,
+   "SUR_ERROR": 0.0083,
+   "NONFUNC": 0.001,
+   "COLD": 0.001,
+   "OUTLIER": 0.026,
+   "SOURCE": 0.2945,
+   "HALO": 0.0395
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_80167c69f0fd437a": {
+  "observation_id": "obs_80167c69f0fd437a",
   "contaminated_at_target": true,
   "flags_at_target": [
    {
@@ -124,38 +204,32 @@
     "description": "raio cósmico ou transiente"
    },
    {
-    "bit": 2,
-    "name": "SUR_ERROR",
-    "description": "erro de leitura a bordo"
-   },
-   {
-    "bit": 6,
-    "name": "NONFUNC",
-    "description": "pixel morto"
+    "bit": 28,
+    "name": "HALO",
+    "description": "halo de transiente"
    }
   ],
   "informational": [
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0021,
-   "OUTLIER": 0.0094,
-   "SOURCE": 0.5557,
-   "HALO": 0.0219
+   "TRANSIENT": 0.0031,
+   "SUR_ERROR": 0.0021,
+   "OUTLIER": 0.0125,
+   "SOURCE": 0.3444,
+   "HALO": 0.0208
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_45fd2d37ef26593e": {
-  "observation_id": "obs_45fd2d37ef26593e",
+ "obs_b4c780b4dd6dd9dd": {
+  "observation_id": "obs_b4c780b4dd6dd9dd",
   "contaminated_at_target": true,
   "flags_at_target": [
    {
-    "bit": 19,
-    "name": "OUTLIER",
-    "description": "valor anômalo"
+    "bit": 0,
+    "name": "TRANSIENT",
+    "description": "raio cósmico ou transiente"
    },
    {
     "bit": 28,
@@ -167,627 +241,18 @@
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0073,
-   "OVERFLOW": 0.0021,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0031,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.4995,
-   "HALO": 0.0198
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_87f7edc1b1ed4f15": {
-  "observation_id": "obs_87f7edc1b1ed4f15",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.001,
-   "SUR_ERROR": 0.001,
-   "OUTLIER": 0.0083,
-   "SOURCE": 0.5463,
-   "HALO": 0.0052
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_17e2db7d04c99def": {
-  "observation_id": "obs_17e2db7d04c99def",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0114,
-   "SUR_ERROR": 0.0062,
-   "NONFUNC": 0.0031,
-   "COLD": 0.0031,
-   "OUTLIER": 0.0135,
-   "SOURCE": 0.4932,
-   "HALO": 0.0343
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_9d9e2ac058db2a81": {
-  "observation_id": "obs_9d9e2ac058db2a81",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.001,
-   "OUTLIER": 0.0135,
-   "SOURCE": 0.5505,
-   "HALO": 0.0198
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_9183f765f1a4d315": {
-  "observation_id": "obs_9183f765f1a4d315",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0094,
-   "OVERFLOW": 0.0021,
-   "SUR_ERROR": 0.0083,
-   "NONFUNC": 0.0052,
-   "OUTLIER": 0.0146,
-   "SOURCE": 0.4984,
-   "HALO": 0.0239
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_8ab41d800bc952ac": {
-  "observation_id": "obs_8ab41d800bc952ac",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
    "TRANSIENT": 0.0042,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0062,
-   "OUTLIER": 0.0146,
-   "SOURCE": 0.539,
-   "HALO": 0.0052
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_275d8e273488edb0": {
-  "observation_id": "obs_275d8e273488edb0",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.001,
-   "SUR_ERROR": 0.001,
+   "SUR_ERROR": 0.0021,
    "NONFUNC": 0.001,
-   "OUTLIER": 0.0042,
-   "SOURCE": 0.4922,
-   "HALO": 0.0052
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_ca458adc0134ec79": {
-  "observation_id": "obs_ca458adc0134ec79",
-  "contaminated_at_target": true,
-  "flags_at_target": [
-   {
-    "bit": 19,
-    "name": "OUTLIER",
-    "description": "valor anômalo"
-   }
-  ],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.001,
-   "SUR_ERROR": 0.001,
-   "NONFUNC": 0.001,
-   "OUTLIER": 0.0156,
-   "SOURCE": 0.5463,
-   "HALO": 0.0156
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_c083782c8ed86486": {
-  "observation_id": "obs_c083782c8ed86486",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.0021,
-   "OUTLIER": 0.0062,
-   "SOURCE": 0.4953,
-   "HALO": 0.0156
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_cf58d981f6357f4f": {
-  "observation_id": "obs_cf58d981f6357f4f",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.001,
-   "PERSIST": 0.001,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.5525,
-   "HALO": 0.0042
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_ca1e80141f4e1496": {
-  "observation_id": "obs_ca1e80141f4e1496",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0042,
-   "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.001,
-   "OUTLIER": 0.0052,
-   "SOURCE": 0.4964,
-   "HALO": 0.0114
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_5553210a4d17b0a7": {
-  "observation_id": "obs_5553210a4d17b0a7",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.001,
-   "SUR_ERROR": 0.001,
    "OUTLIER": 0.0146,
-   "SOURCE": 0.5536,
-   "HALO": 0.0094
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_0702cf54d38106fc": {
-  "observation_id": "obs_0702cf54d38106fc",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0114,
-   "OVERFLOW": 0.0021,
-   "SUR_ERROR": 0.0135,
-   "NONFUNC": 0.0094,
-   "OUTLIER": 0.0146,
-   "SOURCE": 0.5005,
-   "HALO": 0.0312
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_0fe5b7fdc1bc8926": {
-  "observation_id": "obs_0fe5b7fdc1bc8926",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0021,
-   "COLD": 0.001,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.5567,
-   "HALO": 0.0271
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_108638c57323ffc6": {
-  "observation_id": "obs_108638c57323ffc6",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0114,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0042,
-   "OUTLIER": 0.0114,
-   "SOURCE": 0.488,
-   "HALO": 0.0302
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_9532e4abd2b068ef": {
-  "observation_id": "obs_9532e4abd2b068ef",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0042,
-   "COLD": 0.0021,
-   "OUTLIER": 0.0187,
-   "SOURCE": 0.4152,
-   "HALO": 0.0198
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_8566336456552514": {
-  "observation_id": "obs_8566336456552514",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0094,
-   "SUR_ERROR": 0.0062,
-   "NONFUNC": 0.0094,
-   "COLD": 0.001,
-   "PERSIST": 0.0021,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.5796,
-   "HALO": 0.0177
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_a0ffe88ba1e4863f": {
-  "observation_id": "obs_a0ffe88ba1e4863f",
-  "contaminated_at_target": true,
-  "flags_at_target": [
-   {
-    "bit": 28,
-    "name": "HALO",
-    "description": "halo de transiente"
-   }
-  ],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0073,
-   "SUR_ERROR": 0.0052,
-   "NONFUNC": 0.0042,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.4142,
-   "HALO": 0.0239
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_a56be15c2336b389": {
-  "observation_id": "obs_a56be15c2336b389",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0052,
-   "OVERFLOW": 0.001,
-   "SUR_ERROR": 0.0052,
-   "NONFUNC": 0.0114,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.5879,
-   "HALO": 0.0052
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_6705ef46766b6953": {
-  "observation_id": "obs_6705ef46766b6953",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0042,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0031,
-   "OUTLIER": 0.0187,
-   "SOURCE": 0.411,
-   "HALO": 0.0104
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_206c6da3015d53d8": {
-  "observation_id": "obs_206c6da3015d53d8",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0042,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0042,
-   "COLD": 0.001,
-   "OUTLIER": 0.0208,
-   "SOURCE": 0.5858,
-   "HALO": 0.0135
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_abac03c1709c1c42": {
-  "observation_id": "obs_abac03c1709c1c42",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.0031,
-   "COLD": 0.001,
-   "OUTLIER": 0.0135,
-   "SOURCE": 0.4162,
+   "SOURCE": 0.2934,
    "HALO": 0.0146
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_3b61fc1b578da63d": {
-  "observation_id": "obs_3b61fc1b578da63d",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0073,
-   "OVERFLOW": 0.001,
-   "SUR_ERROR": 0.0073,
-   "NONFUNC": 0.0073,
-   "OUTLIER": 0.0187,
-   "SOURCE": 0.5775,
-   "HALO": 0.0042
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_e63ddf8cd0b54327": {
-  "observation_id": "obs_e63ddf8cd0b54327",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0062,
-   "NONFUNC": 0.0042,
-   "PERSIST": 0.0031,
-   "OUTLIER": 0.0146,
-   "SOURCE": 0.4225,
-   "HALO": 0.0094
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_0088c859785e89f9": {
-  "observation_id": "obs_0088c859785e89f9",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0052,
-   "SUR_ERROR": 0.0052,
-   "NONFUNC": 0.0052,
-   "COLD": 0.001,
-   "OUTLIER": 0.0146,
-   "SOURCE": 0.5963
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_b39915abc4982d5c": {
-  "observation_id": "obs_b39915abc4982d5c",
-  "contaminated_at_target": true,
-  "flags_at_target": [
-   {
-    "bit": 19,
-    "name": "OUTLIER",
-    "description": "valor anômalo"
-   }
-  ],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0052,
-   "SUR_ERROR": 0.0052,
-   "NONFUNC": 0.0042,
-   "PERSIST": 0.0031,
-   "OUTLIER": 0.0198,
-   "SOURCE": 0.4277,
-   "HALO": 0.0052
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_37c654334d552ce2": {
-  "observation_id": "obs_37c654334d552ce2",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0073,
-   "SUR_ERROR": 0.0073,
-   "NONFUNC": 0.0042,
-   "PERSIST": 0.001,
-   "OUTLIER": 0.0208,
-   "SOURCE": 0.5942,
-   "HALO": 0.0156
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_d633ce9c21941fab": {
-  "observation_id": "obs_d633ce9c21941fab",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0177,
-   "SUR_ERROR": 0.0104,
-   "OUTLIER": 0.0135,
-   "SOURCE": 0.436,
-   "HALO": 0.0541
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_628b13a80aead237": {
-  "observation_id": "obs_628b13a80aead237",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0052,
-   "OVERFLOW": 0.001,
-   "SUR_ERROR": 0.0021,
-   "NONFUNC": 0.0031,
-   "OUTLIER": 0.0187,
-   "SOURCE": 0.5952,
-   "HALO": 0.0125
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_96fd6dcbfccbba89": {
-  "observation_id": "obs_96fd6dcbfccbba89",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.001,
-   "PERSIST": 0.0021,
-   "OUTLIER": 0.0062,
-   "SOURCE": 0.4329,
-   "HALO": 0.025
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_18956b860bd662ce": {
-  "observation_id": "obs_18956b860bd662ce",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0073,
-   "SUR_ERROR": 0.0062,
-   "NONFUNC": 0.0073,
-   "OUTLIER": 0.0094,
-   "SOURCE": 0.5973,
-   "HALO": 0.0187
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_3f049bf36b776e6b": {
-  "observation_id": "obs_3f049bf36b776e6b",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.0021,
-   "PERSIST": 0.0021,
-   "OUTLIER": 0.0219,
-   "SOURCE": 0.4298,
-   "HALO": 0.0323
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_873730ddd6a5e772": {
-  "observation_id": "obs_873730ddd6a5e772",
-  "contaminated_at_target": false,
-  "flags_at_target": [],
-  "informational": [
-   "SOURCE"
-  ],
-  "frame_flagged_fraction": {
-   "TRANSIENT": 0.0073,
-   "SUR_ERROR": 0.0062,
-   "NONFUNC": 0.0052,
-   "COLD": 0.001,
-   "OUTLIER": 0.0135,
-   "SOURCE": 0.6015,
-   "HALO": 0.0219
-  },
-  "target_box_pixels": 9,
-  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
- },
- "obs_7d220a3f341f7e67": {
-  "observation_id": "obs_7d220a3f341f7e67",
+ "obs_8c2f6ade4ebdce71": {
+  "observation_id": "obs_8c2f6ade4ebdce71",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
@@ -797,17 +262,130 @@
    "TRANSIENT": 0.0042,
    "SUR_ERROR": 0.0021,
    "NONFUNC": 0.0021,
-   "COLD": 0.001,
-   "PERSIST": 0.001,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.4339,
+   "OUTLIER": 0.025,
+   "SOURCE": 0.3496,
+   "HALO": 0.0187
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_fa04c2930a19e632": {
+  "observation_id": "obs_fa04c2930a19e632",
+  "contaminated_at_target": true,
+  "flags_at_target": [
+   {
+    "bit": 28,
+    "name": "HALO",
+    "description": "halo de transiente"
+   }
+  ],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.001,
+   "SUR_ERROR": 0.001,
+   "OUTLIER": 0.0187,
+   "SOURCE": 0.3007,
+   "HALO": 0.0062
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_b74ba1719ebc42f2": {
+  "observation_id": "obs_b74ba1719ebc42f2",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0052,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.001,
+   "COLD": 0.0021,
+   "OUTLIER": 0.026,
+   "SOURCE": 0.3476,
+   "HALO": 0.0208
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_99a70875bf04a597": {
+  "observation_id": "obs_99a70875bf04a597",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0042,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.0031,
+   "OUTLIER": 0.0083,
+   "SOURCE": 0.308,
    "HALO": 0.0094
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_25f1499b1f6612cd": {
-  "observation_id": "obs_25f1499b1f6612cd",
+ "obs_93456b66f1baf875": {
+  "observation_id": "obs_93456b66f1baf875",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0062,
+   "SUR_ERROR": 0.001,
+   "COLD": 0.001,
+   "OUTLIER": 0.0198,
+   "SOURCE": 0.3476,
+   "HALO": 0.0219
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_a5fb73931585afe6": {
+  "observation_id": "obs_a5fb73931585afe6",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0052,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0031,
+   "COLD": 0.001,
+   "OUTLIER": 0.0104,
+   "SOURCE": 0.3018,
+   "HALO": 0.0104
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_11646e9889fe6b31": {
+  "observation_id": "obs_11646e9889fe6b31",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.001,
+   "SUR_ERROR": 0.001,
+   "NONFUNC": 0.001,
+   "COLD": 0.001,
+   "OUTLIER": 0.0239,
+   "SOURCE": 0.3444
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_9e4d3c8095fd736c": {
+  "observation_id": "obs_9e4d3c8095fd736c",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
@@ -815,37 +393,303 @@
   ],
   "frame_flagged_fraction": {
    "TRANSIENT": 0.0021,
-   "OVERFLOW": 0.0021,
+   "OVERFLOW": 0.001,
    "SUR_ERROR": 0.0021,
-   "NONFUNC": 0.0042,
-   "OUTLIER": 0.0135,
-   "SOURCE": 0.6004,
-   "HALO": 0.0083
+   "NONFUNC": 0.0062,
+   "OUTLIER": 0.0156,
+   "SOURCE": 0.2934,
+   "HALO": 0.0104
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_20404c3cc324e5a9": {
-  "observation_id": "obs_20404c3cc324e5a9",
+ "obs_aba063fd50bceb94": {
+  "observation_id": "obs_aba063fd50bceb94",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0114,
-   "SUR_ERROR": 0.0083,
-   "NONFUNC": 0.0114,
+   "TRANSIENT": 0.0042,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0031,
    "COLD": 0.001,
-   "OUTLIER": 0.0114,
-   "SOURCE": 0.4214,
-   "HALO": 0.0187
+   "OUTLIER": 0.0177,
+   "SOURCE": 0.3538,
+   "HALO": 0.0104
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_283ece3039bf7b3e": {
-  "observation_id": "obs_283ece3039bf7b3e",
+ "obs_f2e8e44ae8cd31b4": {
+  "observation_id": "obs_f2e8e44ae8cd31b4",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0062,
+   "NONFUNC": 0.001,
+   "OUTLIER": 0.0146,
+   "SOURCE": 0.2997,
+   "HALO": 0.0094
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_1a1d8e86f47e74de": {
+  "observation_id": "obs_1a1d8e86f47e74de",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0062,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.001,
+   "COLD": 0.0021,
+   "OUTLIER": 0.0187,
+   "SOURCE": 0.2934,
+   "HALO": 0.0271
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_2bc7a6142ad7d9a3": {
+  "observation_id": "obs_2bc7a6142ad7d9a3",
+  "contaminated_at_target": true,
+  "flags_at_target": [
+   {
+    "bit": 28,
+    "name": "HALO",
+    "description": "halo de transiente"
+   }
+  ],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0073,
+   "OVERFLOW": 0.0021,
+   "SUR_ERROR": 0.0094,
+   "NONFUNC": 0.0104,
+   "COLD": 0.001,
+   "OUTLIER": 0.0166,
+   "SOURCE": 0.4131,
+   "HALO": 0.0135
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_1b3c333c0565be07": {
+  "observation_id": "obs_1b3c333c0565be07",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0062,
+   "SUR_ERROR": 0.0052,
+   "NONFUNC": 0.0042,
+   "OUTLIER": 0.0187,
+   "SOURCE": 0.3007,
+   "HALO": 0.0156
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_e0bd22f1970f71eb": {
+  "observation_id": "obs_e0bd22f1970f71eb",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0042,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.0083,
+   "COLD": 0.001,
+   "OUTLIER": 0.0177,
+   "SOURCE": 0.4204,
+   "HALO": 0.0052
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_4067b9d3cf480eae": {
+  "observation_id": "obs_4067b9d3cf480eae",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0021,
+   "SUR_ERROR": 0.0021,
+   "NONFUNC": 0.001,
+   "OUTLIER": 0.0219,
+   "SOURCE": 0.2882,
+   "HALO": 0.0042
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_588ce14a7a7a2712": {
+  "observation_id": "obs_588ce14a7a7a2712",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0052,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0062,
+   "PERSIST": 0.001,
+   "OUTLIER": 0.0291,
+   "SOURCE": 0.4183,
+   "HALO": 0.0146
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_8bbfef986a9707f7": {
+  "observation_id": "obs_8bbfef986a9707f7",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0042,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.0031,
+   "COLD": 0.001,
+   "OUTLIER": 0.0146,
+   "SOURCE": 0.2882,
+   "HALO": 0.0104
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_207e49907786ef2e": {
+  "observation_id": "obs_207e49907786ef2e",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0052,
+   "OVERFLOW": 0.001,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0042,
+   "OUTLIER": 0.0239,
+   "SOURCE": 0.4121,
+   "HALO": 0.0114
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_ba3dbed0cc7fd6b8": {
+  "observation_id": "obs_ba3dbed0cc7fd6b8",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0031,
+   "SUR_ERROR": 0.0021,
+   "NONFUNC": 0.0021,
+   "PERSIST": 0.001,
+   "OUTLIER": 0.0104,
+   "SOURCE": 0.2955,
+   "HALO": 0.0114
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_6a08d01bd574629e": {
+  "observation_id": "obs_6a08d01bd574629e",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0042,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0052,
+   "COLD": 0.001,
+   "OUTLIER": 0.0302,
+   "SOURCE": 0.4204
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_6983b2749082086c": {
+  "observation_id": "obs_6983b2749082086c",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0021,
+   "SUR_ERROR": 0.0021,
+   "NONFUNC": 0.001,
+   "OUTLIER": 0.0208,
+   "SOURCE": 0.2997,
+   "HALO": 0.0052
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_66a2581f0542bc9d": {
+  "observation_id": "obs_66a2581f0542bc9d",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0094,
+   "SUR_ERROR": 0.0062,
+   "NONFUNC": 0.0042,
+   "PERSIST": 0.001,
+   "OUTLIER": 0.0281,
+   "SOURCE": 0.4142,
+   "HALO": 0.0229
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_a41c7e4f302d83df": {
+  "observation_id": "obs_a41c7e4f302d83df",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0083,
+   "SUR_ERROR": 0.0073,
+   "NONFUNC": 0.0021,
+   "OUTLIER": 0.0177,
+   "SOURCE": 0.2955,
+   "HALO": 0.026
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_20a5132862d6a77e": {
+  "observation_id": "obs_20a5132862d6a77e",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
@@ -855,14 +699,52 @@
    "TRANSIENT": 0.0031,
    "SUR_ERROR": 0.0031,
    "NONFUNC": 0.0042,
-   "OUTLIER": 0.0083,
-   "SOURCE": 0.5911
+   "OUTLIER": 0.0281,
+   "SOURCE": 0.4194,
+   "HALO": 0.0062
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_688121e25b7bf8ac": {
-  "observation_id": "obs_688121e25b7bf8ac",
+ "obs_5af6d6c676d33836": {
+  "observation_id": "obs_5af6d6c676d33836",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0083,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0021,
+   "PERSIST": 0.0021,
+   "OUTLIER": 0.0208,
+   "SOURCE": 0.2986,
+   "HALO": 0.0312
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_93b4292dbf2e66ee": {
+  "observation_id": "obs_93b4292dbf2e66ee",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0052,
+   "SUR_ERROR": 0.0042,
+   "NONFUNC": 0.0042,
+   "OUTLIER": 0.0208,
+   "SOURCE": 0.4142,
+   "HALO": 0.0156
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_c39fa1535715dddb": {
+  "observation_id": "obs_c39fa1535715dddb",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
@@ -871,112 +753,217 @@
   "frame_flagged_fraction": {
    "TRANSIENT": 0.0052,
    "SUR_ERROR": 0.0031,
-   "NONFUNC": 0.0042,
-   "OUTLIER": 0.0229,
-   "SOURCE": 0.4225,
+   "NONFUNC": 0.0031,
+   "OUTLIER": 0.026,
+   "SOURCE": 0.2934,
    "HALO": 0.0135
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_6460d2a67ca6d3a6": {
-  "observation_id": "obs_6460d2a67ca6d3a6",
+ "obs_df84e0c18b71feb8": {
+  "observation_id": "obs_df84e0c18b71feb8",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0083,
+   "TRANSIENT": 0.0052,
    "SUR_ERROR": 0.0052,
-   "NONFUNC": 0.0042,
-   "COLD": 0.0031,
-   "OUTLIER": 0.0187,
-   "SOURCE": 0.6015,
-   "HALO": 0.025
+   "NONFUNC": 0.0062,
+   "COLD": 0.001,
+   "OUTLIER": 0.0239,
+   "SOURCE": 0.4225,
+   "HALO": 0.0083
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_9120b28e4d2174f5": {
-  "observation_id": "obs_9120b28e4d2174f5",
-  "contaminated_at_target": true,
-  "flags_at_target": [
-   {
-    "bit": 19,
-    "name": "OUTLIER",
-    "description": "valor anômalo"
-   }
-  ],
+ "obs_4dc736e431a01144": {
+  "observation_id": "obs_4dc736e431a01144",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
   "informational": [
    "SOURCE"
   ],
   "frame_flagged_fraction": {
    "TRANSIENT": 0.0062,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.0021,
+   "COLD": 0.001,
+   "PERSIST": 0.001,
+   "OUTLIER": 0.0187,
+   "SOURCE": 0.307,
+   "HALO": 0.0177
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_0a5cafc2df4ee787": {
+  "observation_id": "obs_0a5cafc2df4ee787",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0094,
    "SUR_ERROR": 0.0062,
    "NONFUNC": 0.0031,
    "COLD": 0.0021,
-   "OUTLIER": 0.0156,
-   "SOURCE": 0.4287,
-   "HALO": 0.0146
+   "OUTLIER": 0.0198,
+   "SOURCE": 0.4173,
+   "HALO": 0.0281
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_5952a3dec43433b1": {
-  "observation_id": "obs_5952a3dec43433b1",
+ "obs_fd239f086113c465": {
+  "observation_id": "obs_fd239f086113c465",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0104,
+   "TRANSIENT": 0.0073,
    "SUR_ERROR": 0.0073,
-   "NONFUNC": 0.0062,
-   "COLD": 0.0021,
-   "OUTLIER": 0.0125,
-   "SOURCE": 0.5921,
-   "HALO": 0.0219
+   "NONFUNC": 0.0052,
+   "OUTLIER": 0.0177,
+   "SOURCE": 0.2934,
+   "HALO": 0.0104
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_53ac650e65cd56ae": {
-  "observation_id": "obs_53ac650e65cd56ae",
+ "obs_23c5616caf603514": {
+  "observation_id": "obs_23c5616caf603514",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0062,
-   "SUR_ERROR": 0.0042,
+   "TRANSIENT": 0.0114,
+   "SUR_ERROR": 0.0114,
+   "NONFUNC": 0.0094,
+   "OUTLIER": 0.0219,
+   "SOURCE": 0.4121,
+   "HALO": 0.0052
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_f929f2d72e8bc88d": {
+  "observation_id": "obs_f929f2d72e8bc88d",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0114,
+   "OVERFLOW": 0.001,
+   "SUR_ERROR": 0.0083,
+   "NONFUNC": 0.0104,
+   "OUTLIER": 0.0229,
+   "SOURCE": 0.2966,
+   "HALO": 0.026
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_0e58f7783f3cccb0": {
+  "observation_id": "obs_0e58f7783f3cccb0",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0042,
+   "SUR_ERROR": 0.0021,
+   "NONFUNC": 0.001,
+   "OUTLIER": 0.0312,
+   "SOURCE": 0.4162,
+   "HALO": 0.0208
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_f4ff463e4519cb33": {
+  "observation_id": "obs_f4ff463e4519cb33",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0052,
+   "SUR_ERROR": 0.0052,
    "NONFUNC": 0.0031,
    "COLD": 0.001,
-   "PERSIST": 0.001,
-   "OUTLIER": 0.0166,
-   "SOURCE": 0.4298,
-   "HALO": 0.0219
+   "OUTLIER": 0.0114,
+   "SOURCE": 0.3007,
+   "HALO": 0.0094
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
  },
- "obs_1f6f3c5458920314": {
-  "observation_id": "obs_1f6f3c5458920314",
+ "obs_9b21e42aa5d30e06": {
+  "observation_id": "obs_9b21e42aa5d30e06",
   "contaminated_at_target": false,
   "flags_at_target": [],
   "informational": [
    "SOURCE"
   ],
   "frame_flagged_fraction": {
-   "TRANSIENT": 0.0021,
-   "OVERFLOW": 0.0021,
-   "SUR_ERROR": 0.0042,
-   "NONFUNC": 0.0021,
-   "OUTLIER": 0.0094,
-   "SOURCE": 0.5931,
-   "HALO": 0.0052
+   "TRANSIENT": 0.0146,
+   "SUR_ERROR": 0.0114,
+   "NONFUNC": 0.0052,
+   "COLD": 0.0021,
+   "OUTLIER": 0.025,
+   "SOURCE": 0.411,
+   "HALO": 0.0323
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_ae6f3afedb45e628": {
+  "observation_id": "obs_ae6f3afedb45e628",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0031,
+   "SUR_ERROR": 0.0031,
+   "NONFUNC": 0.001,
+   "PERSIST": 0.0021,
+   "OUTLIER": 0.0229,
+   "SOURCE": 0.2986,
+   "HALO": 0.0104
+  },
+  "target_box_pixels": 9,
+  "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"
+ },
+ "obs_1aa244b422660e9e": {
+  "observation_id": "obs_1aa244b422660e9e",
+  "contaminated_at_target": false,
+  "flags_at_target": [],
+  "informational": [
+   "SOURCE"
+  ],
+  "frame_flagged_fraction": {
+   "TRANSIENT": 0.0042,
+   "OVERFLOW": 0.0031,
+   "SUR_ERROR": 0.0062,
+   "NONFUNC": 0.0042,
+   "OUTLIER": 0.0104,
+   "SOURCE": 0.4214,
+   "HALO": 0.0125
   },
   "target_box_pixels": 9,
   "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)"

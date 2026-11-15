@@ -1,7 +1,7 @@
 {
  "target": {
-  "ra_deg": 133.737467,
-  "dec_deg": -7.240406
+  "ra_deg": 133.761244,
+  "dec_deg": -7.242304
  },
  "query": {
   "fov_arcmin": 3.0
@@ -9,11 +9,11 @@
  "total_observations": 50,
  "observations": [
   {
-   "id": "obs_f214063f689ab924",
+   "id": "obs_5bb0f1aaf476d9a5",
    "observed_at": "2025-05-05T16:48:02.419200Z",
    "band": "SPHEREx-D3",
    "detector": "D3",
-   "image_url": "demo/wise0855/img/obs_f214063f689ab924.png",
+   "image_url": "demo/wise0855/img/obs_5bb0f1aaf476d9a5.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0116_1/D3",
     "quality": null,
@@ -32,19 +32,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.737485,
-    "cutout_center_dec_deg": -7.2404075,
+    "cutout_center_ra_deg": 133.761262,
+    "cutout_center_dec_deg": -7.2423055,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_1793258c6c521f09",
+   "id": "obs_7c3e0a3b9da27a7b",
    "observed_at": "2025-05-05T16:48:02.419200Z",
    "band": "SPHEREx-D6",
    "detector": "D6",
-   "image_url": "demo/wise0855/img/obs_1793258c6c521f09.png",
+   "image_url": "demo/wise0855/img/obs_7c3e0a3b9da27a7b.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0116_1/D6",
     "quality": null,
@@ -63,19 +63,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.737485,
-    "cutout_center_dec_deg": -7.2404075,
+    "cutout_center_ra_deg": 133.761262,
+    "cutout_center_dec_deg": -7.2423055,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_e6eed74d9643ac1d",
+   "id": "obs_c18cf5f4918c5272",
    "observed_at": "2025-05-05T16:50:11.414400Z",
    "band": "SPHEREx-D3",
    "detector": "D3",
-   "image_url": "demo/wise0855/img/obs_e6eed74d9643ac1d.png",
+   "image_url": "demo/wise0855/img/obs_c18cf5f4918c5272.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0116_2/D3",
     "quality": null,
@@ -94,19 +94,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.737485,
-    "cutout_center_dec_deg": -7.2404075,
+    "cutout_center_ra_deg": 133.761262,
+    "cutout_center_dec_deg": -7.2423055,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_6b835722a3ac4f92",
+   "id": "obs_6a93f2091fcddc67",
    "observed_at": "2025-05-05T16:50:11.414400Z",
    "band": "SPHEREx-D6",
    "detector": "D6",
-   "image_url": "demo/wise0855/img/obs_6b835722a3ac4f92.png",
+   "image_url": "demo/wise0855/img/obs_6a93f2091fcddc67.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0116_2/D6",
     "quality": null,
@@ -125,19 +125,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.737485,
-    "cutout_center_dec_deg": -7.2404075,
+    "cutout_center_ra_deg": 133.761262,
+    "cutout_center_dec_deg": -7.2423055,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_a8563531de1b00ba",
+   "id": "obs_06c7468e41fe75cb",
    "observed_at": "2025-05-05T20:01:35.443200Z",
    "band": "SPHEREx-D3",
    "detector": "D3",
-   "image_url": "demo/wise0855/img/obs_a8563531de1b00ba.png",
+   "image_url": "demo/wise0855/img/obs_06c7468e41fe75cb.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0138_1/D3",
     "quality": null,
@@ -156,19 +156,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374841,
-    "cutout_center_dec_deg": -7.2404074,
+    "cutout_center_ra_deg": 133.7612611,
+    "cutout_center_dec_deg": -7.2423054,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_4e83b68abe7daaf9",
+   "id": "obs_a832697d617de097",
    "observed_at": "2025-05-05T20:01:35.443200Z",
    "band": "SPHEREx-D6",
    "detector": "D6",
-   "image_url": "demo/wise0855/img/obs_4e83b68abe7daaf9.png",
+   "image_url": "demo/wise0855/img/obs_a832697d617de097.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0138_1/D6",
     "quality": null,
@@ -187,19 +187,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374841,
-    "cutout_center_dec_deg": -7.2404074,
+    "cutout_center_ra_deg": 133.7612611,
+    "cutout_center_dec_deg": -7.2423054,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_54e486abf9e693dd",
+   "id": "obs_5f1263e08457d637",
    "observed_at": "2025-05-06T02:33:29.894400Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_54e486abf9e693dd.png",
+   "image_url": "demo/wise0855/img/obs_5f1263e08457d637.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_1/D2",
     "quality": null,
@@ -218,19 +218,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374825,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612595,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_45fd2d37ef26593e",
+   "id": "obs_c1ad50e5fc79ae48",
    "observed_at": "2025-05-06T02:33:29.894400Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_45fd2d37ef26593e.png",
+   "image_url": "demo/wise0855/img/obs_c1ad50e5fc79ae48.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_1/D5",
     "quality": null,
@@ -249,19 +249,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374825,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612595,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_87f7edc1b1ed4f15",
+   "id": "obs_dcf6b23ea633128c",
    "observed_at": "2025-05-06T02:35:38.889600Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_87f7edc1b1ed4f15.png",
+   "image_url": "demo/wise0855/img/obs_dcf6b23ea633128c.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_2/D2",
     "quality": null,
@@ -280,19 +280,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374824,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612594,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_17e2db7d04c99def",
+   "id": "obs_9c272c8645d83aec",
    "observed_at": "2025-05-06T02:35:38.889600Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_17e2db7d04c99def.png",
+   "image_url": "demo/wise0855/img/obs_9c272c8645d83aec.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_2/D5",
     "quality": null,
@@ -311,19 +311,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374824,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612594,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_9d9e2ac058db2a81",
+   "id": "obs_80167c69f0fd437a",
    "observed_at": "2025-05-06T02:37:47.798400Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_9d9e2ac058db2a81.png",
+   "image_url": "demo/wise0855/img/obs_80167c69f0fd437a.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_3/D2",
     "quality": null,
@@ -342,19 +342,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374824,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612594,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_9183f765f1a4d315",
+   "id": "obs_b4c780b4dd6dd9dd",
    "observed_at": "2025-05-06T02:37:47.798400Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_9183f765f1a4d315.png",
+   "image_url": "demo/wise0855/img/obs_b4c780b4dd6dd9dd.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_3/D5",
     "quality": null,
@@ -373,19 +373,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374824,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612594,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_8ab41d800bc952ac",
+   "id": "obs_8c2f6ade4ebdce71",
    "observed_at": "2025-05-06T02:39:56.707200Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_8ab41d800bc952ac.png",
+   "image_url": "demo/wise0855/img/obs_8c2f6ade4ebdce71.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_4/D2",
     "quality": null,
@@ -404,19 +404,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374824,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612594,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_275d8e273488edb0",
+   "id": "obs_fa04c2930a19e632",
    "observed_at": "2025-05-06T02:39:56.707200Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_275d8e273488edb0.png",
+   "image_url": "demo/wise0855/img/obs_fa04c2930a19e632.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0181_4/D5",
     "quality": null,
@@ -435,19 +435,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374824,
-    "cutout_center_dec_deg": -7.2404073,
+    "cutout_center_ra_deg": 133.7612594,
+    "cutout_center_dec_deg": -7.2423053,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_ca458adc0134ec79",
+   "id": "obs_b74ba1719ebc42f2",
    "observed_at": "2025-05-06T10:41:43.296000Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_ca458adc0134ec79.png",
+   "image_url": "demo/wise0855/img/obs_b74ba1719ebc42f2.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_1/D2",
     "quality": null,
@@ -466,19 +466,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_c083782c8ed86486",
+   "id": "obs_99a70875bf04a597",
    "observed_at": "2025-05-06T10:41:43.296000Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_c083782c8ed86486.png",
+   "image_url": "demo/wise0855/img/obs_99a70875bf04a597.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_1/D5",
     "quality": null,
@@ -497,19 +497,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_cf58d981f6357f4f",
+   "id": "obs_93456b66f1baf875",
    "observed_at": "2025-05-06T10:43:52.204800Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_cf58d981f6357f4f.png",
+   "image_url": "demo/wise0855/img/obs_93456b66f1baf875.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_2/D2",
     "quality": null,
@@ -528,19 +528,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_ca1e80141f4e1496",
+   "id": "obs_a5fb73931585afe6",
    "observed_at": "2025-05-06T10:43:52.204800Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_ca1e80141f4e1496.png",
+   "image_url": "demo/wise0855/img/obs_a5fb73931585afe6.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_2/D5",
     "quality": null,
@@ -559,19 +559,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_5553210a4d17b0a7",
+   "id": "obs_11646e9889fe6b31",
    "observed_at": "2025-05-06T10:46:01.113600Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_5553210a4d17b0a7.png",
+   "image_url": "demo/wise0855/img/obs_11646e9889fe6b31.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_3/D2",
     "quality": null,
@@ -590,19 +590,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_0702cf54d38106fc",
+   "id": "obs_9e4d3c8095fd736c",
    "observed_at": "2025-05-06T10:46:01.113600Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_0702cf54d38106fc.png",
+   "image_url": "demo/wise0855/img/obs_9e4d3c8095fd736c.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_3/D5",
     "quality": null,
@@ -621,19 +621,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_0fe5b7fdc1bc8926",
+   "id": "obs_aba063fd50bceb94",
    "observed_at": "2025-05-06T10:48:10.108800Z",
    "band": "SPHEREx-D2",
    "detector": "D2",
-   "image_url": "demo/wise0855/img/obs_0fe5b7fdc1bc8926.png",
+   "image_url": "demo/wise0855/img/obs_aba063fd50bceb94.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_4/D2",
     "quality": null,
@@ -652,19 +652,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_108638c57323ffc6",
+   "id": "obs_f2e8e44ae8cd31b4",
    "observed_at": "2025-05-06T10:48:10.108800Z",
    "band": "SPHEREx-D5",
    "detector": "D5",
-   "image_url": "demo/wise0855/img/obs_108638c57323ffc6.png",
+   "image_url": "demo/wise0855/img/obs_f2e8e44ae8cd31b4.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0231_4/D5",
     "quality": null,
@@ -683,19 +683,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374803,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612573,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_9532e4abd2b068ef",
+   "id": "obs_1a1d8e86f47e74de",
    "observed_at": "2025-05-06T12:20:24.892800Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_9532e4abd2b068ef.png",
+   "image_url": "demo/wise0855/img/obs_1a1d8e86f47e74de.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_1/D1",
     "quality": null,
@@ -714,19 +714,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_8566336456552514",
+   "id": "obs_2bc7a6142ad7d9a3",
    "observed_at": "2025-05-06T12:20:24.892800Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_8566336456552514.png",
+   "image_url": "demo/wise0855/img/obs_2bc7a6142ad7d9a3.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_1/D4",
     "quality": null,
@@ -745,19 +745,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_a0ffe88ba1e4863f",
+   "id": "obs_1b3c333c0565be07",
    "observed_at": "2025-05-06T12:22:33.801600Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_a0ffe88ba1e4863f.png",
+   "image_url": "demo/wise0855/img/obs_1b3c333c0565be07.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_2/D1",
     "quality": null,
@@ -776,19 +776,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_a56be15c2336b389",
+   "id": "obs_e0bd22f1970f71eb",
    "observed_at": "2025-05-06T12:22:33.801600Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_a56be15c2336b389.png",
+   "image_url": "demo/wise0855/img/obs_e0bd22f1970f71eb.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_2/D4",
     "quality": null,
@@ -807,19 +807,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_6705ef46766b6953",
+   "id": "obs_4067b9d3cf480eae",
    "observed_at": "2025-05-06T12:24:42.710400Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_6705ef46766b6953.png",
+   "image_url": "demo/wise0855/img/obs_4067b9d3cf480eae.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_3/D1",
     "quality": null,
@@ -838,19 +838,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_206c6da3015d53d8",
+   "id": "obs_588ce14a7a7a2712",
    "observed_at": "2025-05-06T12:24:42.710400Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_206c6da3015d53d8.png",
+   "image_url": "demo/wise0855/img/obs_588ce14a7a7a2712.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_3/D4",
     "quality": null,
@@ -869,19 +869,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_abac03c1709c1c42",
+   "id": "obs_8bbfef986a9707f7",
    "observed_at": "2025-05-06T12:26:51.705600Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_abac03c1709c1c42.png",
+   "image_url": "demo/wise0855/img/obs_8bbfef986a9707f7.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_4/D1",
     "quality": null,
@@ -900,19 +900,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_3b61fc1b578da63d",
+   "id": "obs_207e49907786ef2e",
    "observed_at": "2025-05-06T12:26:51.705600Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_3b61fc1b578da63d.png",
+   "image_url": "demo/wise0855/img/obs_207e49907786ef2e.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W19_1B_0241_4/D4",
     "quality": null,
@@ -931,19 +931,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7374799,
-    "cutout_center_dec_deg": -7.2404071,
+    "cutout_center_ra_deg": 133.7612569,
+    "cutout_center_dec_deg": -7.2423051,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_e63ddf8cd0b54327",
+   "id": "obs_ba3dbed0cc7fd6b8",
    "observed_at": "2025-10-31T17:20:39.292800Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_e63ddf8cd0b54327.png",
+   "image_url": "demo/wise0855/img/obs_ba3dbed0cc7fd6b8.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_1/D1",
     "quality": null,
@@ -962,19 +962,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363701,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601471,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_0088c859785e89f9",
+   "id": "obs_6a08d01bd574629e",
    "observed_at": "2025-10-31T17:20:39.292800Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_0088c859785e89f9.png",
+   "image_url": "demo/wise0855/img/obs_6a08d01bd574629e.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_1/D4",
     "quality": null,
@@ -993,19 +993,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363701,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601471,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_b39915abc4982d5c",
+   "id": "obs_6983b2749082086c",
    "observed_at": "2025-10-31T17:22:48.201600Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_b39915abc4982d5c.png",
+   "image_url": "demo/wise0855/img/obs_6983b2749082086c.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_2/D1",
     "quality": null,
@@ -1024,19 +1024,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.73637,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.760147,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_37c654334d552ce2",
+   "id": "obs_66a2581f0542bc9d",
    "observed_at": "2025-10-31T17:22:48.201600Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_37c654334d552ce2.png",
+   "image_url": "demo/wise0855/img/obs_66a2581f0542bc9d.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_2/D4",
     "quality": null,
@@ -1055,19 +1055,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.73637,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.760147,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_d633ce9c21941fab",
+   "id": "obs_a41c7e4f302d83df",
    "observed_at": "2025-10-31T17:24:57.196800Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_d633ce9c21941fab.png",
+   "image_url": "demo/wise0855/img/obs_a41c7e4f302d83df.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_3/D1",
     "quality": null,
@@ -1086,19 +1086,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.73637,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.760147,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_628b13a80aead237",
+   "id": "obs_20a5132862d6a77e",
    "observed_at": "2025-10-31T17:24:57.196800Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_628b13a80aead237.png",
+   "image_url": "demo/wise0855/img/obs_20a5132862d6a77e.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_3/D4",
     "quality": null,
@@ -1117,19 +1117,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.73637,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.760147,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_96fd6dcbfccbba89",
+   "id": "obs_5af6d6c676d33836",
    "observed_at": "2025-10-31T17:27:06.105600Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_96fd6dcbfccbba89.png",
+   "image_url": "demo/wise0855/img/obs_5af6d6c676d33836.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_4/D1",
     "quality": null,
@@ -1148,19 +1148,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.73637,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.760147,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_18956b860bd662ce",
+   "id": "obs_93b4292dbf2e66ee",
    "observed_at": "2025-10-31T17:27:06.105600Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_18956b860bd662ce.png",
+   "image_url": "demo/wise0855/img/obs_93b4292dbf2e66ee.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0305_4/D4",
     "quality": null,
@@ -1179,19 +1179,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.73637,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.760147,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_3f049bf36b776e6b",
+   "id": "obs_c39fa1535715dddb",
    "observed_at": "2025-10-31T18:51:00.547200Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_3f049bf36b776e6b.png",
+   "image_url": "demo/wise0855/img/obs_c39fa1535715dddb.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0321_1/D1",
     "quality": null,
@@ -1210,19 +1210,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363697,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601467,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_873730ddd6a5e772",
+   "id": "obs_df84e0c18b71feb8",
    "observed_at": "2025-10-31T18:51:00.547200Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_873730ddd6a5e772.png",
+   "image_url": "demo/wise0855/img/obs_df84e0c18b71feb8.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0321_1/D4",
     "quality": null,
@@ -1241,19 +1241,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363697,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601467,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_7d220a3f341f7e67",
+   "id": "obs_4dc736e431a01144",
    "observed_at": "2025-10-31T18:53:09.456000Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_7d220a3f341f7e67.png",
+   "image_url": "demo/wise0855/img/obs_4dc736e431a01144.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0321_2/D1",
     "quality": null,
@@ -1272,19 +1272,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363697,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601467,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_25f1499b1f6612cd",
+   "id": "obs_0a5cafc2df4ee787",
    "observed_at": "2025-10-31T18:53:09.456000Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_25f1499b1f6612cd.png",
+   "image_url": "demo/wise0855/img/obs_0a5cafc2df4ee787.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0321_2/D4",
     "quality": null,
@@ -1303,19 +1303,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363697,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601467,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_20404c3cc324e5a9",
+   "id": "obs_fd239f086113c465",
    "observed_at": "2025-10-31T18:55:38.323200Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_20404c3cc324e5a9.png",
+   "image_url": "demo/wise0855/img/obs_fd239f086113c465.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_1/D1",
     "quality": null,
@@ -1334,19 +1334,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_283ece3039bf7b3e",
+   "id": "obs_23c5616caf603514",
    "observed_at": "2025-10-31T18:55:38.323200Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_283ece3039bf7b3e.png",
+   "image_url": "demo/wise0855/img/obs_23c5616caf603514.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_1/D4",
     "quality": null,
@@ -1365,19 +1365,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_688121e25b7bf8ac",
+   "id": "obs_f929f2d72e8bc88d",
    "observed_at": "2025-10-31T18:57:47.318400Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_688121e25b7bf8ac.png",
+   "image_url": "demo/wise0855/img/obs_f929f2d72e8bc88d.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_2/D1",
     "quality": null,
@@ -1396,19 +1396,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_6460d2a67ca6d3a6",
+   "id": "obs_0e58f7783f3cccb0",
    "observed_at": "2025-10-31T18:57:47.318400Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_6460d2a67ca6d3a6.png",
+   "image_url": "demo/wise0855/img/obs_0e58f7783f3cccb0.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_2/D4",
     "quality": null,
@@ -1427,19 +1427,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_9120b28e4d2174f5",
+   "id": "obs_f4ff463e4519cb33",
    "observed_at": "2025-10-31T18:59:56.227200Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_9120b28e4d2174f5.png",
+   "image_url": "demo/wise0855/img/obs_f4ff463e4519cb33.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_3/D1",
     "quality": null,
@@ -1458,19 +1458,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_5952a3dec43433b1",
+   "id": "obs_9b21e42aa5d30e06",
    "observed_at": "2025-10-31T18:59:56.227200Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_5952a3dec43433b1.png",
+   "image_url": "demo/wise0855/img/obs_9b21e42aa5d30e06.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_3/D4",
     "quality": null,
@@ -1489,19 +1489,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_53ac650e65cd56ae",
+   "id": "obs_ae6f3afedb45e628",
    "observed_at": "2025-10-31T19:02:05.136000Z",
    "band": "SPHEREx-D1",
    "detector": "D1",
-   "image_url": "demo/wise0855/img/obs_53ac650e65cd56ae.png",
+   "image_url": "demo/wise0855/img/obs_ae6f3afedb45e628.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_4/D1",
     "quality": null,
@@ -1520,19 +1520,19 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
    }
   },
   {
-   "id": "obs_1f6f3c5458920314",
+   "id": "obs_1aa244b422660e9e",
    "observed_at": "2025-10-31T19:02:05.136000Z",
    "band": "SPHEREx-D4",
    "detector": "D4",
-   "image_url": "demo/wise0855/img/obs_1f6f3c5458920314.png",
+   "image_url": "demo/wise0855/img/obs_1aa244b422660e9e.png",
    "metadata": {
     "product_id": "ivo://irsa.ipac/spherex_dr1?2025W44_2B_0322_4/D4",
     "quality": null,
@@ -1551,8 +1551,8 @@
     "cutout_size_pixels": null,
     "visual_normalization": "percentile stretch (1-99) applied to the finite pixels for display only; this is NOT a photometric measurement",
     "duplicate_count": 0,
-    "cutout_center_ra_deg": 133.7363696,
-    "cutout_center_dec_deg": -7.2403158,
+    "cutout_center_ra_deg": 133.7601466,
+    "cutout_center_dec_deg": -7.2422138,
     "coverage_fraction": 1.0,
     "frame": "common_north_up",
     "position_source": "proper_motion"
@@ -1560,5 +1560,5 @@
   }
  ],
  "data_source": "demo_snapshot",
- "data_cached_at": "2026-11-15T13:27:12.163065+00:00"
+ "data_cached_at": "2026-11-15T15:58:19.067741+00:00"
 }

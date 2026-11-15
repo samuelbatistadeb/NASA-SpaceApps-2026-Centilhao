@@ -77,7 +77,10 @@
 
 .cine-painel.decadas { padding-top: 6px; }
 
+/* Com a 4ª aba, a barra de abas não cabe em telas estreitas: quebra em linhas. */
 @media (max-width: 760px) {
+  #visor div.cine-abas { flex-wrap: wrap; }
+  #visor div.cine-abas button[role="tab"] { flex: 1 1 40%; justify-content: center; }
   .mv-palco { width: 100%; }
   .mv-dec:nth-child(even) { display: none; }
 }

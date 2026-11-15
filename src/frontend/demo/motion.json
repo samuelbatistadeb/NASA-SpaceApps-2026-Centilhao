@@ -1,0 +1,65 @@
+{
+ "generated_utc": "2026-11-15T16:02:39+00:00",
+ "targets": [
+  {
+   "id": "barnard",
+   "name": "Estrela de Barnard",
+   "file": "demo/barnard/motion.json",
+   "frames": 22,
+   "pm_total_arcsec_per_year": 10.393,
+   "track_extent_arcmin": 13.23,
+   "ra": 269.446358,
+   "dec": 4.767053,
+   "thumb": "demo/barnard/motion/dss1_red.png",
+   "years": [
+    "1950",
+    "2026"
+   ]
+  },
+  {
+   "id": "epsindi",
+   "name": "ε Indi",
+   "file": "demo/epsindi/motion.json",
+   "frames": 22,
+   "pm_total_arcsec_per_year": 4.708,
+   "track_extent_arcmin": 2.6,
+   "ra": 330.891121,
+   "dec": -56.803806,
+   "thumb": "demo/epsindi/motion/dss2_red.png",
+   "years": [
+    "1993",
+    "2026"
+   ]
+  },
+  {
+   "id": "wise0855",
+   "name": "WISE 0855",
+   "file": "demo/wise0855/motion.json",
+   "frames": 22,
+   "thumb": "demo/wise0855/motion/dss1_red.png",
+   "years": [
+    "1953",
+    "2025"
+   ],
+   "pm_total_arcsec_per_year": 8.152,
+   "track_extent_arcmin": 10.04,
+   "ra": 133.761244,
+   "dec": -7.242304
+  },
+  {
+   "id": "rwaur",
+   "name": "RW Aurigae",
+   "file": "demo/rwaur/motion.json",
+   "frames": 23,
+   "thumb": "demo/rwaur/motion/dss2_red.png",
+   "years": [
+    "1952",
+    "2026"
+   ],
+   "pm_total_arcsec_per_year": 0.028,
+   "track_extent_arcmin": 0.03,
+   "ra": 76.956081,
+   "dec": 30.401205
+  }
+ ]
+}
