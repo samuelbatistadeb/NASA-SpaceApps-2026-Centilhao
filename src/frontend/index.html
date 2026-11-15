@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SPHEREx Explorer — o céu em infravermelho ao longo do tempo</title>
   <meta name="description" content="Explore imagens reais da missão SPHEREx da NASA e veja como uma região do céu muda entre observações.">
-  <meta name="theme-color" content="#080d1b">
+  <meta name="theme-color" content="#03050b">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -13,8 +13,21 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/glossary.css">
   <link rel="stylesheet" href="css/cinema.css">
+  <link rel="preload" as="image" href="assets/nasa/spherex-probe-cutout.png" imagesrcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x">
+  <script>
+    /* Esconde a barra até theme.js disparar o feixe que a "desenha" (evita piscar).
+       Não vale no modo incorporado nem com movimento reduzido; some sozinho em 3 s. */
+    (function (r) {
+      try {
+        if (/[?&]embed=1(&|$)/.test(location.search) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        r.classList.add("laser-pre");
+        setTimeout(function () { r.classList.remove("laser-pre"); }, 3000);
+      } catch (e) { r.classList.remove("laser-pre"); }
+    })(document.documentElement);
+  </script>
   <script src="js/app.js" defer></script>
   <script src="js/cinema.js" defer></script>
+  <script src="js/router.js" defer></script>
   <script src="js/theme.js" defer></script>
   <script src="js/glossary-data.js" defer></script>
   <script src="js/glossary.js" defer></script>
@@ -23,28 +36,25 @@
   <a class="skip" href="#busca">Ir para a pesquisa</a>
 
   <div class="layout">
-  <aside class="sidebar">
-    <div>
-      <div class="sidebar-head">
-        <button type="button" class="probe-toggle" aria-expanded="false" aria-controls="menu-principal" hidden><img src="assets/favicon.svg" alt="" width="34" height="34"><span class="sr-only">Menu de navegação</span></button>
-        <a class="brand" href="#busca"><span class="brand-mark"><img src="assets/favicon.svg" alt="" width="36" height="36"></span><span>SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
-      </div>
-      <div class="nav-label">EXPLORE</div>
-      <nav id="menu-principal" aria-label="Menu principal"><ul>
-        <li><a href="#busca" aria-current="true"><span class="nav-icon">⌕</span>Explorar o céu</a></li>
-        <li><a href="#observacoes"><span class="nav-icon">◉</span>Observações</a></li>
-        <li><a href="#ceu"><span class="nav-icon">✧</span>Mapa do céu</a></li>
-        <li><a href="#mapa"><span class="nav-icon">⌖</span>Mapa de observações</a></li>
-        <li><a href="#espectro"><span class="nav-icon">∿</span>Espectro</a></li>
-        <li><a href="#galeria"><span class="nav-icon">▦</span>Galeria</a></li>
-        <li><a href="termos.html"><span class="nav-icon">⌁</span>Guia de termos</a></li>
-      </ul></nav>
+  <!-- Barra de navegação: a sonda SPHEREx (render oficial NASA/JPL-Caltech) dispara um feixe
+       que "desenha" a barra (theme.js + theme.css). Mantém a classe .sidebar por compatibilidade
+       com app.js (destaque do item ativo) e com o modo incorporado. -->
+  <header class="sidebar navbar">
+    <div class="sidebar-head">
+      <button type="button" class="probe-toggle" aria-expanded="false" aria-controls="menu-principal" hidden><img class="probe-img" src="assets/nasa/spherex-probe-cutout.png" srcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x" alt="" width="40" height="30"><span class="sr-only">Menu de navegação</span></button>
+      <a class="brand" href="#busca"><span class="brand-probe" aria-hidden="true"><img class="probe-img" src="assets/nasa/spherex-probe-cutout.png" srcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x" alt="" width="72" height="54"></span><span class="brand-txt">SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
     </div>
-    <div class="sidebar-bottom">
-      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small data-term="irsa">Arquivo científico · IRSA/IPAC</small></div>
-      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
-    </div>
-  </aside>
+    <span class="feixe" aria-hidden="true"></span>
+    <nav id="menu-principal" aria-label="Menu principal"><ul>
+      <li style="--i:0"><a href="#busca" aria-current="page"><span class="nav-icon" aria-hidden="true">⌕</span>Explorar o céu</a></li>
+      <li style="--i:1"><a href="#observacoes"><span class="nav-icon" aria-hidden="true">◉</span>Observações</a></li>
+      <li style="--i:2"><a href="#ceu"><span class="nav-icon" aria-hidden="true">✧</span>Mapa do céu</a></li>
+      <li style="--i:3"><a href="#mapa"><span class="nav-icon" aria-hidden="true">⌖</span>Mapa de observações</a></li>
+      <li style="--i:4"><a href="#espectro"><span class="nav-icon" aria-hidden="true">∿</span>Espectro</a></li>
+      <li style="--i:5"><a href="#galeria"><span class="nav-icon" aria-hidden="true">▦</span>Galeria</a></li>
+      <li style="--i:6"><a href="termos.html"><span class="nav-icon" aria-hidden="true">⌁</span>Guia de termos</a></li>
+    </ul></nav>
+  </header>
 
   <div class="content">
   <header class="top">
@@ -61,7 +71,7 @@
   </header>
 
   <main>
-    <section id="busca" class="panel" aria-labelledby="t-busca">
+    <section id="busca" class="panel page" data-page="busca" aria-labelledby="t-busca">
       <div><span class="eyebrow">COMECE POR AQUI</span><h2 id="t-busca">Qual região do céu você quer explorar?</h2></div>
 
       <div class="presets" id="presets" role="group" aria-label="Alvos de exemplo">
@@ -110,7 +120,7 @@
       </form>
     </section>
 
-    <section id="observacoes" class="panel viewer" aria-labelledby="t-viz">
+    <section id="observacoes" class="panel viewer page" data-page="observacoes" aria-labelledby="t-viz">
       <h2 id="t-viz">Observações</h2>
 
       <div id="status" class="status" role="status" aria-live="polite">
@@ -307,7 +317,7 @@
       </div>
     </section>
 
-    <section id="ceu" class="panel" aria-labelledby="t-ceu">
+    <section id="ceu" class="panel page" data-page="ceu" aria-labelledby="t-ceu">
       <h2 id="t-ceu" data-term="hips">Mapa do céu</h2>
       <p class="dica">O mapa abre mostrando o céu todo, de preferência com imagens da própria missão SPHEREx (uma por detector); se esse mapa estiver fora do ar, o aviso abaixo diz qual fundo está em uso. Clique em qualquer ponto para pesquisar aquelas coordenadas: elas são preenchidas no formulário e a busca é feita. Para mais precisão, aproxime o zoom e clique de novo. O retângulo rosa é a área (FOV) do quadro em exibição e o círculo rosa é o alvo naquela data. O mapa usa a biblioteca Aladin Lite, do Centro de Dados Astronômicos de Estrasburgo (CDS), e é carregado quando esta seção aparece na tela.</p>
 
@@ -327,7 +337,7 @@
       <p class="note" data-term="releases">Mapas SPHEREx: NASA/JPL-Caltech, dados do IRSA/IPAC, ladrilhos HiPS do CDS (versão QR2). DSS2, 2MASS, AllWISE e os catálogos Gaia DR3 e AllWISE são de outros telescópios, só para comparação. Marcas: cruz = centro da busca, círculo rosa = alvo no quadro em exibição, A e B = pontos do espectro.</p>
     </section>
 
-    <section id="mapa" class="panel" aria-labelledby="t-mapa">
+    <section id="mapa" class="panel page" data-page="mapa" aria-labelledby="t-mapa">
       <h2 id="t-mapa" data-term="mapa-observacoes">Mapa de observações</h2>
       <p class="dica">Cada ponto é uma observação do arquivo da NASA: a posição horizontal é a data e a vertical é o comprimento de onda. A cor indica o detector. Clique num ponto para ver aquele quadro. Pontos apagados estão escondidos pelos filtros.</p>
       <p id="mapa-mock" class="mock" hidden>Dados fictícios: não representam observações científicas.</p>
@@ -335,7 +345,7 @@
       <div id="mapa-grafico" class="grafico" hidden></div>
     </section>
 
-    <section id="espectro" class="panel" aria-labelledby="t-esp">
+    <section id="espectro" class="panel page" data-page="espectro" aria-labelledby="t-esp">
       <h2 id="t-esp" data-term="espectro lvf">Espectro de um ponto</h2>
       <p class="dica" data-term="exposicao">Clique na imagem (ou foque nela e use as setas) para medir o fluxo do ponto em cada comprimento de onda. Marque um segundo ponto como fundo do céu para comparar. O espectro usa as exposições disponíveis (até 60), não só o quadro mostrado: cada medida vem de uma exposição em que o ponto caiu numa posição diferente do detector. Com “Seguir o movimento do alvo” ativo, “Espectro do alvo” (ou um clique no centro do quadro) acompanha o alvo em cada data; os demais pontos ficam fixos no céu. A primeira medida de um ponto é lenta (cerca de 1–2 s por exposição).</p>
 
@@ -367,7 +377,7 @@
       </details>
     </section>
 
-    <section id="galeria" class="panel" aria-labelledby="t-gal">
+    <section id="galeria" class="panel page" data-page="galeria" aria-labelledby="t-gal">
       <h2 id="t-gal">Galeria de imagens</h2>
       <p id="galeria-vazio" class="placeholder">
         As imagens da sua busca aparecerão aqui, uma miniatura por data de observação.
@@ -375,7 +385,7 @@
       <ul id="galeria-lista" class="gallery" aria-label="Miniaturas das observações"></ul>
     </section>
 
-    <section class="panel teaser" aria-labelledby="t-ajuda">
+    <section class="panel teaser" data-page="busca" aria-labelledby="t-ajuda">
       <h2 id="t-ajuda">Novo por aqui?</h2>
       <p>RA, Dec, FOV, banda, movimento próprio: se algum termo parecer estranho, a página de termos explica tudo em linguagem simples.</p>
       <p><a class="link-btn" href="termos.html">Aprenda os termos</a></p>
@@ -399,8 +409,12 @@
         </figure>
       </div>
     </section>
+    <div class="footer-meta">
+      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small data-term="irsa">Arquivo científico · IRSA/IPAC</small></div>
+      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
+    </div>
     <p class="rodape-texto">Dados: missão SPHEREx / NASA (JPL-Caltech), arquivo IRSA/IPAC. Protótipo criado para o NASA Space Apps Challenge 2026. O IRSA pede um texto de agradecimento oficial em materiais publicados; copie-o da página da missão no IRSA.</p>
-    <p class="rodape-texto">Imagens da missão: NASA/JPL-Caltech, usadas conforme as diretrizes de mídia da NASA e do JPL (<a href="assets/CREDITS.md">créditos e fontes</a>). Projeto independente, sem endosso da NASA, do JPL ou do Caltech. Ícone e fundo estrelado: criação do projeto.</p>
+    <p class="rodape-texto">Imagens da missão: NASA/JPL-Caltech, usadas conforme as diretrizes de mídia da NASA e do JPL (<a href="assets/CREDITS.md">créditos e fontes</a>). Projeto independente, sem endosso da NASA, do JPL ou do Caltech. Sonda na barra de navegação: render oficial do SPHEREx com fundo transparente, Courtesy NASA/JPL-Caltech (Caltech SPHEREx Science Center), reduzido. Ícone e fundo estrelado: criação do projeto.</p>
   </footer>
   </div>
   </div>

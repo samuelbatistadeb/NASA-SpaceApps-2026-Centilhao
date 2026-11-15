@@ -1,4 +1,5 @@
-// Identidade visual: céu estrelado procedural e menu "tiro de infravermelho".
+// Identidade visual: céu estrelado procedural, barra de navegação formada pelo feixe
+// infravermelho da sonda SPHEREx e, no celular, menu aberto pelo "tiro" da sonda.
 // Independente de app.js. Sem JS, o menu continua visível e o fundo usa só CSS.
 (() => {
   "use strict";
@@ -101,7 +102,28 @@
     celular.addEventListener?.("change", () => definir(false));
   }
 
-  function iniciar() { ceu(); menu(); }
+  /* ---------- Abertura: a sonda dispara e o feixe "desenha" a barra de navegação ----------
+     A classe html.laser-pre (script inline no <head>) mantém a barra escondida até aqui.
+     Clicar na sonda (marca) dispara de novo. Movimento reduzido: barra pronta, sem feixe. */
+  function laser() {
+    const raiz = document.documentElement;
+    const barra = document.querySelector(".navbar");
+    if (!barra) { raiz.classList.remove("laser-pre"); return; }
+    let t = 0;
+    const disparar = () => {
+      raiz.classList.remove("laser-pre");
+      if (reduz.matches || document.body.classList.contains("embed")) return;
+      clearTimeout(t);
+      barra.classList.remove("disparo");
+      void barra.offsetWidth;               // reinicia a animação
+      barra.classList.add("disparo");
+      t = setTimeout(() => barra.classList.remove("disparo"), 2300);
+    };
+    disparar();
+    barra.querySelector(".brand")?.addEventListener("click", disparar);
+  }
+
+  function iniciar() { ceu(); laser(); menu(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
   else iniciar();
 })();
