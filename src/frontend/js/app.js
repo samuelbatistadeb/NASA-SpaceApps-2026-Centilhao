@@ -925,6 +925,45 @@ const sky = { A: null, aladin: null, timer: null };
   el.ceuFundo.replaceChildren(spherex, outros);
 })();
 
+// O CDS publica cada mapa HiPS em dois espelhos (alasky e alaskybis). Em algumas regiões/redes um deles
+// responde 404; então testamos o arquivo "properties" de cada um e usamos o primeiro que responder.
+const HIPS_MIRRORS = ["https://alasky.cds.unistra.fr", "https://alaskybis.cds.unistra.fr"];
+// Servidores alternativos (fora do CDS) indicados pelo próprio CDS em cds.unistra.fr durante o incidente de nov/2026.
+// O SPHEREx só é publicado pelo CDS: não há alternativa confirmada para ele.
+const HIPS_ALT = {
+  "P/DSS2/color": ["https://skies.esac.esa.int/DSSColor"],
+  "P/2MASS/color": ["https://skies.esac.esa.int/2MASSColor"],
+  "P/allWISE/color": ["https://skies.esac.esa.int/AllWISEColor"],
+};
+const hipsCache = new Map();
+async function hipsOk(base) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const r = await fetch(`${base}/properties`, { signal: ctl.signal });
+    if (r.ok) return true;
+    console.warn(`Mapa do céu: ${base} respondeu ${r.status}.`);
+  } catch (err) {
+    console.warn(`Mapa do céu: não consegui falar com ${base}.`, err);
+  } finally { clearTimeout(timer); }
+  return false;
+}
+async function resolveSurvey(value) {
+  if (hipsCache.has(value)) return hipsCache.get(value);
+  let candidatos;
+  if (/^https?:\/\//.test(value)) {
+    const path = new URL(value).pathname;
+    candidatos = HIPS_MIRRORS.map((m) => m + path);
+  } else {
+    // ID (ex.: P/DSS2/color): tenta os servidores alternativos; se nenhum responder, deixa o Aladin usar o CDS
+    candidatos = HIPS_ALT[value] ?? [];
+    for (const c of candidatos) if (await hipsOk(c)) { hipsCache.set(value, c); return c; }
+    return value;
+  }
+  for (const c of candidatos) if (await hipsOk(c)) { hipsCache.set(value, c); return c; }
+  return null;
+}
+
 function setCeuStatus(msg, kind = "") {
   el.ceuStatus.textContent = msg;
   el.ceuStatus.className = "status " + kind;
@@ -1058,15 +1097,24 @@ el.ceuAbrir.addEventListener("click", async () => {
   setCeuStatus("Carregando o mapa…", "carregando");
   try {
     sky.A = await loadAladin();
+    let fundo = await resolveSurvey(el.ceuFundo.value);
+    let aviso = "";
+    if (!fundo) {
+      // Nenhum espelho tem o mapa escolhido: abre com DSS2 (luz visível) para o mapa não ficar vazio
+      console.error("Mapa do céu: nenhum espelho do CDS tem", el.ceuFundo.value);
+      el.ceuFundo.value = "P/DSS2/color";
+      fundo = await resolveSurvey("P/DSS2/color");
+      aviso = " Os mapas do SPHEREx ficam nos servidores do CDS (Estrasburgo), que estão instáveis (incidente de segurança informado por eles em 09/11/2026). Mostrando DSS2 no lugar; tente de novo mais tarde.";
+    }
     el.ceuMapa.hidden = false;
     sky.aladin = sky.A.aladin("#ceu-mapa", {
-      survey: el.ceuFundo.value, target: v ? `${v.ra} ${v.dec}` : "0 0",
+      survey: fundo, target: v ? `${v.ra} ${v.dec}` : "0 0",
       fov: 360, projection: "AIT", showCooGrid: true, showFullscreenControl: true, // AIT: céu inteiro numa elipse
     });
     sky.aladin.on("click", onSkyClick);
     el.ceuAbrir.textContent = "Recentrar na busca";
     el.ceuAbrir.disabled = false;
-    setCeuStatus("Céu inteiro, com mapas do SPHEREx. Clique num ponto para pesquisar aquelas coordenadas.");
+    setCeuStatus("Céu inteiro. Clique num ponto para pesquisar aquelas coordenadas." + aviso, aviso ? "erro" : "");
     drawSkyLayers();
   } catch (err) {
     console.error("Mapa do céu:", err);
@@ -1082,10 +1130,14 @@ el.ceuAbrir.addEventListener("click", async () => {
   }
 });
 
-el.ceuFundo.addEventListener("change", () => {
+el.ceuFundo.addEventListener("change", async () => {
   if (!sky.aladin) return;
-  try { (sky.aladin.setBaseImageLayer ?? sky.aladin.setImageSurvey).call(sky.aladin, el.ceuFundo.value); }
-  catch (err) { console.error("Mapa do céu:", err); }
+  try {
+    const fundo = await resolveSurvey(el.ceuFundo.value);
+    if (!fundo) { setCeuStatus("Esse mapa não está disponível nos servidores do CDS agora. Tente outro fundo.", "erro"); return; }
+    setCeuStatus("Céu inteiro. Clique num ponto para pesquisar aquelas coordenadas.");
+    (sky.aladin.setBaseImageLayer ?? sky.aladin.setImageSurvey).call(sky.aladin, fundo);
+  } catch (err) { console.error("Mapa do céu:", err); }
 });
 el.ceuGaia.addEventListener("change", scheduleSky);
 el.ceuWise.addEventListener("change", scheduleSky);
