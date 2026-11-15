@@ -225,6 +225,8 @@ async function fetchObservations({ ra, dec, fov }, motion = null) {
       .filter((f) => f.date && !Number.isNaN(Date.parse(f.date)))
       .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
     state.omitted = all.length - frames.length;
+    // "stale_cache": o IRSA estava indisponível e o backend usou a última resposta salva.
+    state.dataSource = { status: data.data_source ?? null, cachedAt: data.data_cached_at ?? null };
     return frames;
   } finally {
     clearTimeout(timeout);
@@ -706,7 +708,12 @@ async function onSubmit(e) {
       (motion && frames.some((f) => f.positionSource === "proper_motion")
         ? ` Posição corrigida pelo movimento próprio${motion.name ? " de " + motion.name : ""} em cada data.` : "") +
       (!el.mock.checked && state.motion && !motion
-        ? ` Quadro fixo no céu: ${state.motion.name || "o alvo"} pode aparecer deslocado entre as datas.` : ""));
+        ? ` Quadro fixo no céu: ${state.motion.name || "o alvo"} pode aparecer deslocado entre as datas.` : "") +
+      (!el.mock.checked && state.dataSource?.status === "stale_cache"
+        ? ` Atenção: o arquivo IRSA está indisponível; exibindo a lista salva em ${
+            state.dataSource.cachedAt ? fmtDateTime(state.dataSource.cachedAt) : "uma consulta anterior"
+          } (pode não incluir dados mais recentes).` : ""),
+      !el.mock.checked && state.dataSource?.status === "stale_cache" ? "aviso" : "");
   } catch (err) {
     const timedOut = err === "timeout" || err?.name === "AbortError";
     if (timedOut && state.controller?.signal.reason !== "timeout") return; // busca substituída

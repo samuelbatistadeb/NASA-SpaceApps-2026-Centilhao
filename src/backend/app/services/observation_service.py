@@ -30,6 +30,7 @@ from app.api.errors import (
     InvalidParametersError,
     NoObservationsFoundError,
     ProcessingError,
+    SourceUnavailableError,
 )
 from app.core.config import Settings
 from app.schemas.observation import (
@@ -136,6 +137,20 @@ class ObservationEntry:
         )
 
 
+@dataclass(frozen=True)
+class DataSource:
+    """Where the archive records of an answer came from."""
+
+    status: str  # "live" (IRSA now), "cache" (fresh cache), "stale_cache" (IRSA down)
+    cached_at: float | None = None  # unix time of the cached answer
+
+    @property
+    def cached_at_iso(self) -> str | None:
+        if self.cached_at is None:
+            return None
+        return datetime.fromtimestamp(self.cached_at, tz=timezone.utc).isoformat()
+
+
 @dataclass
 class ImageResult:
     """The processed image of an observation."""
@@ -212,7 +227,7 @@ class ObservationService:
             )
             margin_deg = motion.total_masyr * _MOTION_QUERY_HALF_SPAN_YEARS / 3_600_000.0
 
-        records = self._query_records(query_ra, query_dec, fov_arcmin, margin_deg)
+        records, source = self._query_records(query_ra, query_dec, fov_arcmin, margin_deg)
         if not records:
             raise NoObservationsFoundError(
                 "Nenhuma observação foi encontrada para os parâmetros informados."
@@ -242,6 +257,8 @@ class ObservationService:
             query=QueryParams(fov_arcmin=fov_arcmin),
             total_observations=len(observations),
             observations=observations,
+            data_source=source.status,
+            data_cached_at=source.cached_at_iso,
         )
 
     def coverage(
@@ -263,7 +280,7 @@ class ObservationService:
                 ra_deg, dec_deg, motion, _MOTION_QUERY_EPOCH_JYEAR
             )
             margin_deg = motion.total_masyr * _MOTION_QUERY_HALF_SPAN_YEARS / 3_600_000.0
-        records = self._query_records(query_ra, query_dec, max(fovs), margin_deg)
+        records, source = self._query_records(query_ra, query_dec, max(fovs), margin_deg)
 
         center_of = self._center_function(ra_deg, dec_deg, motion)
         records = self._filter_by_footprint(records, ra_deg, dec_deg, center_of=center_of)
@@ -310,6 +327,8 @@ class ObservationService:
             "recommended_fov_arcmin": recommended,
             "motion_arcsec_over_survey": motion_arcsec,
             "pixel_scale_arcsec": scale,
+            "data_source": source.status,
+            "data_cached_at": source.cached_at_iso,
         }
 
     def composite(
@@ -346,10 +365,10 @@ class ObservationService:
             "composite", op, ",".join(sorted(ids_a)), ",".join(sorted(ids_b)),
             _IMAGE_CACHE_VERSION,
         )
-        cached = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key)
+        cached = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key, allow_stale=True)
         meta_key = f"{cache_key}.meta"
         if cached is not None:
-            metadata = dict(self._cache.get_json(NAMESPACE_OBSERVATIONS, meta_key) or {})
+            metadata = dict(self._cache.get_json(NAMESPACE_OBSERVATIONS, meta_key, allow_stale=True) or {})
             return ImageResult(content=cached, metadata=metadata,
                                headers=self._composite_headers(metadata))
 
@@ -520,7 +539,7 @@ class ObservationService:
         """Find a registered observation (memory, then disk cache)."""
         entry = self._registry.get(observation_id)
         if entry is None:
-            cached = self._cache.get_json(NAMESPACE_OBSERVATIONS, observation_id)
+            cached = self._cache.get_json(NAMESPACE_OBSERVATIONS, observation_id, allow_stale=True)
             if cached:
                 entry = ObservationEntry.from_dict(cached)
                 self._registry[observation_id] = entry
@@ -532,7 +551,7 @@ class ObservationService:
 
     def _cached_frame(self, entry: ObservationEntry, cache_key: str) -> FrameImage | None:
         """Load the common-frame arrays of an observation from the disk cache."""
-        payload = self._cache.get_bytes(NAMESPACE_IMAGES, f"{cache_key}.frame")
+        payload = self._cache.get_bytes(NAMESPACE_IMAGES, f"{cache_key}.frame", allow_stale=True)
         if payload is None:
             return None
         with np.load(io.BytesIO(payload)) as arrays:
@@ -549,10 +568,10 @@ class ObservationService:
 
     def _cached_image(self, observation_id: str, cache_key: str) -> ImageResult | None:
         """Return the image from the disk cache, when present."""
-        content = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key)
+        content = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key, allow_stale=True)
         if content is None:
             return None
-        metadata = self._cache.get_json(NAMESPACE_OBSERVATIONS, f"{observation_id}.meta")
+        metadata = self._cache.get_json(NAMESPACE_OBSERVATIONS, f"{observation_id}.meta", allow_stale=True)
         return ImageResult(
             content=content,
             metadata=dict(metadata or {}),
@@ -633,22 +652,33 @@ class ObservationService:
 
     def _query_records(
         self, ra_deg: float, dec_deg: float, fov_arcmin: float, margin_deg: float = 0.0
-    ) -> list[dict[str, Any]]:
-        """Return the records of the archive, using the cache when possible."""
-        cache_key = self._query_cache_key(ra_deg, dec_deg, fov_arcmin, margin_deg)
-        cached = self._cache.get_json(NAMESPACE_QUERIES, cache_key)
-        if cached is not None:
-            logger.info("Query cache hit for %s", cache_key)
-            return [dict(item) for item in cached]
+    ) -> tuple[list[dict[str, Any]], DataSource]:
+        """Return the records of the archive and where they came from.
 
-        records = self._client.query_by_position(
-            ra_deg,
-            dec_deg,
-            radius_from_fov(fov_arcmin) + margin_deg,
-            fov_arcmin=fov_arcmin,
-        )
+        Order: fresh cache -> archive -> expired cache (only when the archive
+        is unavailable, so a demonstration survives an IRSA outage; the
+        response says the data is stale and since when).
+        """
+        cache_key = self._query_cache_key(ra_deg, dec_deg, fov_arcmin, margin_deg)
+        entry = self._cache.get_json_entry(NAMESPACE_QUERIES, cache_key)
+        if entry is not None and not entry[2]:
+            logger.info("Query cache hit for %s", cache_key)
+            return [dict(item) for item in entry[0]], DataSource("cache", entry[1])
+
+        try:
+            records = self._client.query_by_position(
+                ra_deg,
+                dec_deg,
+                radius_from_fov(fov_arcmin) + margin_deg,
+                fov_arcmin=fov_arcmin,
+            )
+        except SourceUnavailableError:
+            if entry is None:
+                raise
+            logger.warning("IRSA unavailable: serving the expired cache of %s", cache_key)
+            return [dict(item) for item in entry[0]], DataSource("stale_cache", entry[1])
         self._cache.set_json(NAMESPACE_QUERIES, cache_key, records)
-        return records
+        return records, DataSource("live", None)
 
     @staticmethod
     def _query_signature(

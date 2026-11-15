@@ -79,6 +79,7 @@ button { font: inherit; cursor: pointer; }
 /* Visualizador */
 .status { color: var(--muted); }
 .status.erro { color: var(--err); }
+.status.aviso { color: #f0c36d; } /* dados do cache: IRSA indisponível */
 .status.carregando::before {
   content: ""; display: inline-block; width: .9em; height: .9em; margin-right: .5em;
   border: 2px solid var(--line); border-top-color: var(--ir); border-radius: 50%;

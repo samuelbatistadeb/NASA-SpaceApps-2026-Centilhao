@@ -68,12 +68,24 @@ class DiskCache:
         return age > self.ttl_seconds
 
     # -- JSON -------------------------------------------------------------------
-    def get_json(self, namespace: str, key: str) -> Any | None:
-        """Return a cached JSON payload, or ``None`` when missing or expired."""
+    def get_json(self, namespace: str, key: str, *, allow_stale: bool = False) -> Any | None:
+        """Return a cached JSON payload, or ``None`` when missing or expired.
+
+        ``allow_stale`` ignores the time to live (used as a fallback when the
+        archive is unavailable, and for immutable entries).
+        """
+        entry = self.get_json_entry(namespace, key)
+        if entry is None:
+            return None
+        payload, _created_at, expired = entry
+        if expired and not allow_stale:
+            return None
+        return payload
+
+    def get_json_entry(self, namespace: str, key: str) -> tuple[Any, float, bool] | None:
+        """Return ``(payload, created_at, expired)`` or ``None`` when missing."""
         path = self.path(namespace, key)
         if not path.exists():
-            return None
-        if self._is_expired(path):
             return None
         try:
             envelope = json.loads(path.read_text(encoding="utf-8"))
@@ -81,7 +93,8 @@ class DiskCache:
             return None
         if not isinstance(envelope, dict) or "payload" not in envelope:
             return None
-        return envelope["payload"]
+        created_at = float(envelope.get("created_at") or path.stat().st_mtime)
+        return envelope["payload"], created_at, self._is_expired(path)
 
     def set_json(self, namespace: str, key: str, payload: Any) -> None:
         """Store a JSON payload in the cache."""
@@ -93,12 +106,12 @@ class DiskCache:
         os.replace(temporary, path)
 
     # -- bytes ------------------------------------------------------------------
-    def get_bytes(self, namespace: str, key: str) -> bytes | None:
+    def get_bytes(self, namespace: str, key: str, *, allow_stale: bool = False) -> bytes | None:
         """Return cached binary content, or ``None`` when missing or expired."""
         path = self.path(namespace, key)
         if not path.exists():
             return None
-        if self._is_expired(path):
+        if not allow_stale and self._is_expired(path):
             return None
         try:
             return path.read_bytes()

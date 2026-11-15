@@ -210,6 +210,16 @@ class ObservationResponse(BaseModel):
         default_factory=list,
         description="Observations ordered by observation time, oldest first.",
     )
+    data_source: str | None = Field(
+        None,
+        description=(
+            "'live' (queried now), 'cache' (recent cached answer) or "
+            "'stale_cache' (IRSA unavailable: last cached answer, possibly outdated)."
+        ),
+    )
+    data_cached_at: str | None = Field(
+        None, description="When the cached answer was obtained (UTC ISO 8601)."
+    )
 
 
 class ErrorDetail(BaseModel):
