@@ -30,7 +30,13 @@ Erros chegam como `{ error: { code, message } }`. A conversão para o formato in
 `normalizeObservation()` (`js/app.js`).
 
 Cada imagem é recortada no IRSA sob demanda (~10–15 s na primeira vez, depois fica em cache);
-por isso a galeria mostra só as `CONFIG.GALLERY_MAX` primeiras.
+por isso a galeria mostra só as `CONFIG.GALLERY_MAX` primeiras e as baixa em fila:
+- no máximo `CONFIG.THUMB_CONCURRENCY` (2) miniaturas por vez (o IRSA responde 503 com muitos pedidos simultâneos);
+- a fila só avança quando a imagem principal termina de carregar (ou falha); ao trocar de quadro ela volta a ter prioridade.
+  Miniaturas já em download não são interrompidas;
+- nova busca ou filtro descarta a fila anterior: miniaturas antigas que ainda não começaram nunca são pedidas;
+- miniatura com erro mostra "falha ao carregar" e a fila segue;
+- no modo fictício (imagens `data:`) as miniaturas carregam direto, sem fila.
 
 ## Link por coordenadas e incorporação
 - `index.html?ra=133.79513&dec=-7.24515&fov=3`: abre e já executa a busca.
