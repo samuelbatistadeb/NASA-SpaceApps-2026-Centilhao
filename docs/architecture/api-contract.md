@@ -223,3 +223,69 @@ Alterações neste contrato deverão ser comunicadas às lideranças técnica e 
 Mudanças relevantes deverão ser registradas em `docs/decisions.md`.
 
 O contrato deverá ser atualizado após a primeira integração com dados reais do IRSA.
+## 13. Contrato implementado (atualizado em 15/11/2026)
+
+> Esta seção descreve a API **como implementada e validada com dados reais**. Onde ela divergir das seções anteriores, vale esta. Decisões: DECISÕES 009–015 em `docs/decisions.md`.
+
+Base local: `http://localhost:8000`. Erros sempre em `{ "error": { "code", "message" } }` (códigos da seção 8).
+
+### 13.1 `GET /api/observations`
+
+Parâmetros: `ra_deg` (0 ≤ ra < 360), `dec_deg` (−90 a 90), `fov_arcmin` (0,1 a 120).
+
+Opcionais, **os três juntos**: `pm_ra_cosdec_masyr`, `pm_dec_masyr`, `ref_epoch_jyear`. Com eles, `ra_deg`/`dec_deg` são a posição na época de referência, e cada observação é filtrada e recortada na posição propagada para a sua data (DECISÃO 014).
+
+Retorna as observações em ordem cronológica. Cada observação é **uma exposição de um detector**:
+
+| Campo | Significado |
+|---|---|
+| `id` | Identificador interno (inclui a assinatura da consulta) |
+| `observed_at` | UTC, de `t_min` (MJD) |
+| `detector` | `"D1"` … `"D6"` |
+| `band` | Ex.: `"SPHEREx-D3"` |
+| `image_url` | `/api/images/{id}` |
+| `metadata.product_id` | `obs_publisher_did` do IRSA |
+| `metadata.wavelength_min_nm` / `wavelength_max_nm` | Faixa do detector, em nm |
+| `metadata.exposure_time_s` | Tempo de exposição |
+| `metadata.data_release` | Coleção (ex. `spherex_dr1`) |
+| `metadata.original_file_url` | FITS original no IRSA |
+| `metadata.cutout_center_ra_deg` / `cutout_center_dec_deg` | Centro do quadro |
+| `metadata.position_source` | `requested` ou `proper_motion` |
+| `metadata.coverage_fraction` | Fração do quadro dentro do detector (0–1) |
+| `metadata.frame` | `common_north_up` |
+
+Produtos cujo detector não contém a posição pedida não são listados (DECISÃO 013).
+
+### 13.2 `GET /api/images/{id}`
+
+PNG 600×600 (pixels SPHEREx ampliados sem interpolação):
+- norte para cima, leste à esquerda, centrado no alvo, lado igual ao FOV;
+- área fora do detector **transparente**;
+- pixel inválido dentro do detector (saturação, defeito) na cor `#B03060`.
+
+Cabeçalhos: `X-SpherEx-Image-Type`, `X-SpherEx-Frame`, `X-SpherEx-Normalization`, `X-SpherEx-Cutout-Strategy`.
+
+### 13.3 `GET /api/targets`
+
+`{ targets: [{ name, ra, dec, fov, position_epoch, note, source, pm_ra_cosdec_masyr, pm_dec_masyr, ref_epoch_jyear }] }`. São os 5 alvos de `docs/science/target-catalog.md`, com posição na época `ref_epoch_jyear`.
+
+### 13.4 `GET /api/coverage`
+
+Parâmetros: `ra_deg`, `dec_deg` e, opcionalmente, o movimento próprio (os três parâmetros juntos).
+
+Retorna, para 1, 2, 3, 5, 10, 15 e 30′:
+- `fovs[]` com `fov_arcmin`, `pixels` (lado), `observations`, `complete`, `partial` e `estimated_kb_per_image`;
+- `recommended_fov_arcmin`;
+- `motion_arcsec_over_survey`;
+- `pixel_scale_arcsec`.
+
+Tudo é calculado pelos polígonos dos detectores, sem baixar imagens.
+
+### 13.5 `GET /api/composite`
+
+- `op=mean&a=id1,id2,…`: média de até 40 quadros do **mesmo detector**, para melhorar o sinal-ruído.
+- `op=diff&a=…&b=…`: média(A) − média(B), em cinza simétrico (cinza médio = sem mudança).
+
+A mediana de cada quadro é subtraída antes de combinar. Misturar detectores retorna `INVALID_PARAMETERS`.
+
+Retorna PNG, com metadados nos cabeçalhos `X-SpherEx-Composite-Op`, `-Frames-A`, `-Frames-B` e `-Detector`.

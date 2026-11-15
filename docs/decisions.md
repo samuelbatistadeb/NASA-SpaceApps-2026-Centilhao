@@ -275,6 +275,39 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 015 — Quadro comum, cobertura por FOV e combinação de épocas
+
+**Data:** 15/11/2026
+
+**Assunto:** Base para comparar, somar e subtrair épocas (desafio: "somar dados de cada detector para melhorar o sinal-ruído", "somar ou subtrair imagens de momentos diferentes", "usuário escolhe o FOV").
+
+**Contexto:** Cada exposição SPHEREx tem orientação própria (o detector gira no céu), e o recorte IBE é cortado nos eixos do detector e na borda dele. Sem uma grade comum, não é possível combinar épocas pixel a pixel, e a animação "gira".
+
+**Decisão tomada:**
+
+1. **Quadro comum:** projeção TAN centrada no alvo (na posição propagada, quando há movimento próprio), norte para cima e leste à esquerda, escala nativa de 6,15″/px, sem superamostragem, com lado igual ao FOV.
+   - Reamostragem bilinear quando os 4 vizinhos são válidos; caso contrário, o pixel mais próximo.
+   - O recorte IBE é pedido com 1,5× o FOV (mais que √2), para cobrir o quadro em qualquer rotação do detector.
+2. **Sem dados ≠ céu escuro:** a área fora do detector fica transparente no PNG; pixels inválidos dentro do detector (núcleo saturado, pixel defeituoso) recebem a cor #B03060.
+3. **Cobertura prevista:** `metadata.coverage_fraction` é a fração do quadro dentro do polígono `s_region`, calculada sem baixar a imagem.
+4. **`GET /api/coverage`:** quadros completos e parciais para 1, 2, 3, 5, 10, 15 e 30′, com pixels por lado, custo estimado (KB da extensão IMAGE), FOV recomendado e deslocamento do alvo na janela observada.
+   - Regra do FOV recomendado: o menor da lista que seja ≥ max(3′, 4× o deslocamento do alvo).
+5. **`GET /api/composite`:**
+   - `op=mean` faz a média de até 40 quadros do **mesmo detector**, para melhorar o sinal-ruído.
+   - `op=diff` calcula média(A) − média(B).
+   - A mediana de cada quadro é subtraída antes, porque o fundo zodiacal muda entre épocas.
+   - Misturar detectores é recusado: cada detector vê outra faixa do infravermelho.
+
+**Limitações:**
+
+- Dentro de um detector o comprimento de onda varia com a posição (filtro linear variável). Como a posição do alvo no detector muda de uma exposição para outra, a média "por detector" mistura bandas vizinhas desse detector: é uma imagem de banda larga, não de uma única banda.
+- A diferença mostra mudança aparente. Variações de PSF entre exposições e resíduos de fundo também aparecem nela, então não é uma detecção automática de movimento.
+- A reamostragem suaviza levemente o ruído.
+
+**Responsável:** Liderança técnica.
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026
