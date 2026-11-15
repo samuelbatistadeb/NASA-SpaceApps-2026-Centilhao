@@ -227,6 +227,28 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 012 — Leitura parcial do FITS e limite de concorrência no IRSA
+
+**Data:** 14/11/2026
+
+**Assunto:** Lentidão das imagens: a galeria disparava ~25 recortes simultâneos e cada um levava 11–18 s.
+
+**Contexto (medido ao vivo):** O IBE começa a responder em ~1 s, mas cada recorte de 29×29 px tem **4,05 MB**. A extensão `IMAGE`, a única que o app usa, ocupa 3,4 KB; a tabela `EPSF` (modelo de PSF) ocupa **3,95 MB (97,5%)** e vem por último. Com `gzip=true` o tempo piorou (32 s). Sob muitos pedidos simultâneos, o IRSA responde `503 Server busy`.
+
+**Decisão tomada:**
+
+1. **Leitura parcial:** o corpo é lido em streaming e a conexão é fechada assim que a extensão `IMAGE` termina (`fits_bytes_through_extension`, que analisa os cabeçalhos FITS sequenciais). Vale para o recorte IBE e para o download completo (65 MB → ~16,6 MB). Se a extensão não for encontrada, o arquivo é lido inteiro.
+2. **Limite de concorrência:** no máximo `SPHEREX_MAX_CONCURRENT_PRODUCT_REQUESTS` (padrão 3) pedidos de produto simultâneos ao IRSA, em todas as threads.
+3. **Deduplicação:** pedidos simultâneos da mesma imagem (por exemplo, visualizador e 1ª miniatura) esperam um único recorte e reutilizam o cache.
+
+**Evidência:** um recorte real caiu de 17,7 s e 4.049.280 bytes para **1,2 s e 31.680 bytes**, com pixels **idênticos** aos do arquivo completo.
+
+**Consequências:** `FLAGS`, `VARIANCE`, `ZODI`, `EPSF` e `WCS-WAVE` deixam de ser baixados. Se o app passar a usá-los (máscaras de qualidade, espectro), a extensão-alvo deverá ser a última necessária.
+
+**Responsável:** Liderança técnica.
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026

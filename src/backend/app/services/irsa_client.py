@@ -21,6 +21,7 @@ import json
 import logging
 import math
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Protocol, Sequence
@@ -54,6 +55,9 @@ IBE_NO_OVERLAP_STATUS_CODES = frozenset({422, 500})
 DEFAULT_TIMEOUT_SECONDS = 30.0
 #: Default number of attempts for transient failures.
 DEFAULT_MAX_ATTEMPTS = 3
+#: Default maximum number of simultaneous product requests (cutouts and
+#: downloads). IRSA answers 503 "Server busy" under many parallel requests.
+DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS = 3
 #: Default user agent identifying the project.
 DEFAULT_USER_AGENT = "SPHERExExplorer/0.1 (NASA Space Apps Challenge 2026)"
 
@@ -112,6 +116,68 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
+#: Size of a FITS block and of a header card.
+_FITS_BLOCK = 2880
+_FITS_CARD = 80
+
+
+def _fits_card_value(card: str) -> str:
+    """Return the raw value of a FITS header card (``KEY = value / comment``)."""
+    value = card[10:] if card[8:10] == "= " else ""
+    if value.lstrip().startswith("'"):
+        text = value.lstrip()[1:]
+        return text.split("'", 1)[0].strip()
+    return value.split("/", 1)[0].strip()
+
+
+def fits_bytes_through_extension(
+    buffer: bytes | bytearray, extname: str = "IMAGE"
+) -> int | None:
+    """Return how many bytes of ``buffer`` hold every HDU up to ``extname``.
+
+    FITS files are sequential (header blocks, then data padded to 2880 bytes),
+    so a client may stop reading once the wanted extension is complete. SPHEREx
+    Level 2 products store ``IMAGE`` right after the primary HDU, while the
+    large ``EPSF`` table (~3.9 MB, unused here) comes last (verified on a real
+    IBE cutout, 2026-11-14). Returns ``None`` while the buffer is not enough
+    (or the extension is not found), which means "keep reading".
+    """
+    position = 0
+    size = len(buffer)
+    while position + _FITS_BLOCK <= size:
+        cards: dict[str, str] = {}
+        header_end = None
+        cursor = position
+        while cursor + _FITS_BLOCK <= size and header_end is None:
+            block = buffer[cursor:cursor + _FITS_BLOCK].decode("ascii", errors="replace")
+            cursor += _FITS_BLOCK
+            for offset in range(0, _FITS_BLOCK, _FITS_CARD):
+                card = block[offset:offset + _FITS_CARD]
+                key = card[:8].strip()
+                if key == "END":
+                    header_end = cursor
+                    break
+                if key and key not in cards:
+                    cards[key] = _fits_card_value(card)
+        if header_end is None:
+            return None
+        try:
+            bitpix = abs(int(cards.get("BITPIX", "8")))
+            naxis = int(cards.get("NAXIS", "0"))
+            pcount = int(cards.get("PCOUNT", "0"))
+            gcount = int(cards.get("GCOUNT", "1"))
+            axes = [int(cards.get(f"NAXIS{i}", "0")) for i in range(1, naxis + 1)]
+        except ValueError:
+            return None
+        elements = math.prod(axes) if axes else 0
+        data_bytes = (bitpix // 8) * gcount * (pcount + elements) if naxis else 0
+        data_end = header_end + math.ceil(data_bytes / _FITS_BLOCK) * _FITS_BLOCK
+        if cards.get("EXTNAME", "").upper() == extname.upper():
+            return data_end if data_end <= size else None
+        position = data_end
+    return None
+
+
 @dataclass(frozen=True)
 class HttpResponse:
     """Minimal HTTP response returned by a transport."""
@@ -151,8 +217,13 @@ class HttpTransport(Protocol):
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
         max_bytes: int | None = None,
+        stop_when: Callable[[bytes], int | None] | None = None,
     ) -> HttpResponse:
-        """Perform an HTTP request and return the response."""
+        """Perform an HTTP request and return the response.
+
+        ``stop_when`` (optional) receives the body read so far and returns the
+        number of bytes that are enough; the transport may then stop reading.
+        """
         ...
 
 
@@ -172,9 +243,14 @@ class HttpxTransport:
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
         max_bytes: int | None = None,
+        stop_when: Callable[[bytes], int | None] | None = None,
     ) -> HttpResponse:
-        """Perform an HTTP request, optionally aborting above ``max_bytes``."""
-        if max_bytes is None:
+        """Perform an HTTP request, optionally aborting above ``max_bytes``.
+
+        With ``stop_when`` the body is streamed and the connection is closed as
+        soon as the callback says the bytes read so far are enough.
+        """
+        if max_bytes is None and stop_when is None:
             response = self._client.request(
                 method, url, params=params, headers=headers, timeout=timeout
             )
@@ -185,22 +261,26 @@ class HttpxTransport:
                 url=str(response.url),
             )
 
-        chunks: list[bytes] = []
-        total = 0
+        body = bytearray()
         with self._client.stream(
             method, url, params=params, headers=headers, timeout=timeout
         ) as response:
+            watch = stop_when is not None and response.status_code == 200
             for chunk in response.iter_bytes():
-                total += len(chunk)
-                if total > max_bytes:
+                body.extend(chunk)
+                if max_bytes is not None and len(body) > max_bytes:
                     raise SourceUnavailableError(
                         "O arquivo excede o tamanho máximo permitido pelo aplicativo.",
                         detail=f"download above {max_bytes} bytes aborted",
                     )
-                chunks.append(chunk)
+                if watch:
+                    enough = stop_when(body)  # no copy: only headers are parsed
+                    if enough is not None and len(body) >= enough:
+                        del body[enough:]
+                        break  # leaving the context manager closes the stream
             return HttpResponse(
                 status_code=response.status_code,
-                content=b"".join(chunks),
+                content=bytes(body),
                 headers=dict(response.headers),
                 url=str(response.url),
             )
@@ -315,7 +395,12 @@ class IrsaClient:
         max_fits_bytes: int = 512 * 1024 * 1024,
         sleep: Callable[[float], None] = time.sleep,
         allowed_download_hosts: Sequence[str] = (),
+        max_concurrent_product_requests: int = DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS,
     ) -> None:
+        #: Limits simultaneous cutouts/downloads across all request threads.
+        self._product_slots = threading.BoundedSemaphore(
+            max(1, int(max_concurrent_product_requests))
+        )
         self.sia2_base_url = (sia2_base_url or "").strip()
         self.cutout_base_url = (cutout_base_url or "").strip()
         self.data_base_url = (data_base_url or "").strip()
@@ -453,13 +538,15 @@ class IrsaClient:
             "center": f"{ra_deg:.6f},{dec_deg:.6f}d",
             "size": f"{size_deg:.6f}",
         }
-        response = self._request_with_retry(
-            "GET",
-            access_url,
-            params=params,
-            max_bytes=self.max_fits_bytes,
-            terminal_statuses=IBE_NO_OVERLAP_STATUS_CODES,
-        )
+        with self._product_slots:
+            response = self._request_with_retry(
+                "GET",
+                access_url,
+                params=params,
+                max_bytes=self.max_fits_bytes,
+                terminal_statuses=IBE_NO_OVERLAP_STATUS_CODES,
+                stop_when=fits_bytes_through_extension,
+            )
         if response.status_code in IBE_NO_OVERLAP_STATUS_CODES:
             raise ImageNotFoundError(
                 "Este produto não cobre a posição solicitada.",
@@ -476,9 +563,13 @@ class IrsaClient:
         """
         target = self._resolve_data_url(url)
         self._validate_download_url(target)
-        response = self._request_with_retry(
-            "GET", target, max_bytes=self.max_fits_bytes
-        )
+        with self._product_slots:
+            response = self._request_with_retry(
+                "GET",
+                target,
+                max_bytes=self.max_fits_bytes,
+                stop_when=fits_bytes_through_extension,
+            )
         return response.content
 
     # -- internals --------------------------------------------------------------
@@ -543,6 +634,7 @@ class IrsaClient:
         params: Mapping[str, Any] | None = None,
         max_bytes: int | None = None,
         terminal_statuses: frozenset[int] = frozenset(),
+        stop_when: Callable[[bytes], int | None] | None = None,
     ) -> HttpResponse:
         """Execute a request, retrying transient failures.
 
@@ -552,6 +644,7 @@ class IrsaClient:
         headers = {"User-Agent": self.user_agent, "Accept": "*/*"}
         last_error: Exception | None = None
 
+        extra: dict[str, Any] = {"stop_when": stop_when} if stop_when is not None else {}
         for attempt in range(1, self.max_attempts + 1):
             try:
                 response = self._transport.request(
@@ -561,6 +654,7 @@ class IrsaClient:
                     headers=headers,
                     timeout=self.timeout,
                     max_bytes=max_bytes,
+                    **extra,
                 )
             except SourceUnavailableError:
                 raise

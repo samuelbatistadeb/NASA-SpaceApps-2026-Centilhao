@@ -44,6 +44,10 @@ ENV_CORS_ORIGINS = "SPHEREX_CORS_ORIGINS"
 ENV_PORT = "SPHEREX_PORT"
 ENV_CUTOUT_MODE = "SPHEREX_CUTOUT_MODE"
 ENV_ALLOWED_DOWNLOAD_HOSTS = "SPHEREX_ALLOWED_DOWNLOAD_HOSTS"
+ENV_MAX_CONCURRENT_PRODUCT_REQUESTS = "SPHEREX_MAX_CONCURRENT_PRODUCT_REQUESTS"
+
+#: Simultaneous cutouts/downloads sent to IRSA (it answers 503 when overloaded).
+DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS = 3
 
 #: SIA v2 endpoint of IRSA, verified on 2026-11-14 (DECISÃO 007 / 009).
 VERIFIED_IRSA_SIA_URL = "https://irsa.ipac.caltech.edu/SIA"
@@ -163,6 +167,7 @@ class Settings:
     http_timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     http_max_attempts: int = DEFAULT_MAX_ATTEMPTS
     user_agent: str = DEFAULT_USER_AGENT
+    max_concurrent_product_requests: int = DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS
 
     # --- Processing guards ---
     max_cutout_pixels: int = DEFAULT_MAX_CUTOUT_PIXELS
@@ -198,6 +203,8 @@ class Settings:
             raise ConfigurationError("http_timeout_seconds must be greater than zero")
         if self.http_max_attempts < 1:
             raise ConfigurationError("http_max_attempts must be >= 1")
+        if self.max_concurrent_product_requests < 1:
+            raise ConfigurationError("max_concurrent_product_requests must be >= 1")
         if self.max_fits_bytes <= 0:
             raise ConfigurationError("max_fits_bytes must be greater than zero")
         if self.default_cutout_pixels <= 0:
@@ -268,6 +275,11 @@ class Settings:
                 environment, ENV_HTTP_MAX_ATTEMPTS, DEFAULT_MAX_ATTEMPTS
             ),
             user_agent=_get_str(environment, ENV_USER_AGENT, DEFAULT_USER_AGENT),
+            max_concurrent_product_requests=_get_int(
+                environment,
+                ENV_MAX_CONCURRENT_PRODUCT_REQUESTS,
+                DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS,
+            ),
             max_cutout_pixels=_get_int(
                 environment, ENV_MAX_CUTOUT_PIXELS, DEFAULT_MAX_CUTOUT_PIXELS
             ),

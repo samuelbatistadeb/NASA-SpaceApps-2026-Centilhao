@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
@@ -122,6 +123,10 @@ class ObservationService:
         self._cutout_service = cutout_service
         self._settings = settings
         self._registry: dict[str, ObservationEntry] = {}
+        # One lock per image cache key: concurrent requests for the same image
+        # (e.g. main viewer + first thumbnail) wait for a single cutout.
+        self._image_locks: dict[str, threading.Lock] = {}
+        self._image_locks_guard = threading.Lock()
 
     # -- public API -------------------------------------------------------------
     def search(self, ra_deg: float, dec_deg: float, fov_arcmin: float) -> ObservationResponse:
@@ -176,15 +181,38 @@ class ObservationService:
 
         request = self._build_cutout_request(entry)
         cache_key = self._image_cache_key(entry)
-        content = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key)
-        if content is not None:
-            metadata = self._cache.get_json(NAMESPACE_OBSERVATIONS, f"{observation_id}.meta")
-            return ImageResult(
-                content=content,
-                metadata=dict(metadata or {}),
-                headers=self._image_headers(dict(metadata or {})),
-            )
+        cached = self._cached_image(observation_id, cache_key)
+        if cached is not None:
+            return cached
 
+        with self._image_lock(cache_key):
+            # Another request may have produced the image while we waited.
+            cached = self._cached_image(observation_id, cache_key)
+            if cached is not None:
+                return cached
+            return self._build_image(observation_id, cache_key, request)
+
+    def _image_lock(self, cache_key: str) -> threading.Lock:
+        """Return the lock that serialises the generation of one image."""
+        with self._image_locks_guard:
+            return self._image_locks.setdefault(cache_key, threading.Lock())
+
+    def _cached_image(self, observation_id: str, cache_key: str) -> ImageResult | None:
+        """Return the image from the disk cache, when present."""
+        content = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key)
+        if content is None:
+            return None
+        metadata = self._cache.get_json(NAMESPACE_OBSERVATIONS, f"{observation_id}.meta")
+        return ImageResult(
+            content=content,
+            metadata=dict(metadata or {}),
+            headers=self._image_headers(dict(metadata or {})),
+        )
+
+    def _build_image(
+        self, observation_id: str, cache_key: str, request: CutoutRequest
+    ) -> ImageResult:
+        """Retrieve, cut, render and cache the image of an observation."""
         result = self._cutout_service.build_cutout(request)
         from app.services.fits_processor import render_png
 
