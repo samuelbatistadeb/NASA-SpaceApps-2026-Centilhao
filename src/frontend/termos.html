@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Aprenda os termos — SPHEREx Explorer</title>
   <meta name="description" content="Glossário em linguagem simples para entender RA, Dec, FOV, bandas e outros termos do SPHEREx Explorer.">
-  <meta name="theme-color" content="#080d1b">
+  <meta name="theme-color" content="#03050b">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -17,28 +17,22 @@
   <a class="skip" href="#conteudo">Ir para o conteúdo</a>
 
   <div class="layout">
-  <aside class="sidebar">
-    <div>
-      <div class="sidebar-head">
-        <button type="button" class="probe-toggle" aria-expanded="false" aria-controls="menu-principal" hidden><img src="assets/favicon.svg" alt="" width="34" height="34"><span class="sr-only">Menu de navegação</span></button>
-        <a class="brand" href="index.html#busca"><span class="brand-mark"><img src="assets/favicon.svg" alt="" width="36" height="36"></span><span>SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
-      </div>
-      <div class="nav-label">EXPLORE</div>
-      <nav id="menu-principal" aria-label="Menu principal"><ul>
-        <li><a href="index.html#busca" ><span class="nav-icon">⌕</span>Explorar o céu</a></li>
-        <li><a href="index.html#observacoes"><span class="nav-icon">◉</span>Observações</a></li>
-        <li><a href="index.html#ceu"><span class="nav-icon">✧</span>Mapa do céu</a></li>
-        <li><a href="index.html#mapa"><span class="nav-icon">⌖</span>Mapa de observações</a></li>
-        <li><a href="index.html#espectro"><span class="nav-icon">∿</span>Espectro</a></li>
-        <li><a href="index.html#galeria"><span class="nav-icon">▦</span>Galeria</a></li>
-        <li><a href="termos.html"><span class="nav-icon">⌁</span>Guia de termos</a></li>
-      </ul></nav>
+  <header class="sidebar navbar">
+    <div class="sidebar-head">
+      <button type="button" class="probe-toggle" aria-expanded="false" aria-controls="menu-principal" hidden><img class="probe-img" src="assets/nasa/spherex-probe-cutout.png" srcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x" alt="" width="40" height="30"><span class="sr-only">Menu de navegação</span></button>
+      <a class="brand" href="index.html#busca"><span class="brand-probe" aria-hidden="true"><img class="probe-img" src="assets/nasa/spherex-probe-cutout.png" srcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x" alt="" width="72" height="54"></span><span class="brand-txt">SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
     </div>
-    <div class="sidebar-bottom">
-      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small>Arquivo científico · IRSA/IPAC</small></div>
-      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
-    </div>
-  </aside>
+    <span class="feixe" aria-hidden="true"></span>
+    <nav id="menu-principal" aria-label="Menu principal"><ul>
+      <li style="--i:0"><a href="index.html#busca"><span class="nav-icon" aria-hidden="true">⌕</span>Explorar o céu</a></li>
+      <li style="--i:1"><a href="index.html#observacoes"><span class="nav-icon" aria-hidden="true">◉</span>Observações</a></li>
+      <li style="--i:2"><a href="index.html#ceu"><span class="nav-icon" aria-hidden="true">✧</span>Mapa do céu</a></li>
+      <li style="--i:3"><a href="index.html#mapa"><span class="nav-icon" aria-hidden="true">⌖</span>Mapa de observações</a></li>
+      <li style="--i:4"><a href="index.html#espectro"><span class="nav-icon" aria-hidden="true">∿</span>Espectro</a></li>
+      <li style="--i:5"><a href="index.html#galeria"><span class="nav-icon" aria-hidden="true">▦</span>Galeria</a></li>
+      <li style="--i:6"><a href="termos.html" aria-current="page"><span class="nav-icon" aria-hidden="true">⌁</span>Guia de termos</a></li>
+    </ul></nav>
+  </header>
 
   <div class="content">
   <header class="top">
@@ -168,8 +162,12 @@
         </figure>
       </div>
     </section>
+    <div class="footer-meta">
+      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small>Arquivo científico · IRSA/IPAC</small></div>
+      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
+    </div>
     <p class="rodape-texto">As explicações têm fins educativos. Para detalhes científicos, consulte a documentação oficial da missão SPHEREx e do IRSA.</p>
-    <p class="rodape-texto">Imagens da missão: NASA/JPL-Caltech, usadas conforme as diretrizes de mídia da NASA e do JPL (<a href="assets/CREDITS.md">créditos e fontes</a>). Projeto independente, sem endosso da NASA, do JPL ou do Caltech. Ícone e fundo estrelado: criação do projeto.</p>
+    <p class="rodape-texto">Imagens da missão: NASA/JPL-Caltech, usadas conforme as diretrizes de mídia da NASA e do JPL (<a href="assets/CREDITS.md">créditos e fontes</a>). Projeto independente, sem endosso da NASA, do JPL ou do Caltech. Sonda na barra de navegação: render oficial do SPHEREx com fundo transparente, Courtesy NASA/JPL-Caltech (Caltech SPHEREx Science Center), reduzido. Ícone e fundo estrelado: criação do projeto.</p>
   </footer>
   </div>
   </div>

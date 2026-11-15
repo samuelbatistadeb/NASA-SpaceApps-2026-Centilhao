@@ -49,6 +49,46 @@ O site exibe o crédito "NASA/JPL-Caltech" junto de cada imagem, com link
 para a página de origem. O projeto não é endossado pela NASA, pelo JPL
 nem pelo Caltech.
 
+## Sonda SPHEREx da barra de navegação (`nasa/spherex-probe-cutout.png` e `@2x`)
+
+| Item | Valor |
+|---|---|
+| Arquivos | `nasa/spherex-probe-cutout.png` (256×193, ~15 KB) e `nasa/spherex-probe-cutout@2x.png` (512×386, ~40 KB) |
+| Título oficial | Sectional View of the SPHEREx Spacecraft (Transparent), arte de 2 jun. 2022 (id `spherex02062022b`) |
+| Página de origem | https://spherex.caltech.edu/image/spherex02062022b-sectional-view-of-the-spherex-spacecraft-transparent |
+| Arquivo baixado | https://spherex.caltech.edu/system/avm_images/binaries/4/original/SPHEREx_March2022_Update_Still01_R08_TransparentBackground_5760x3240.png (PNG RGBA 5760×3240, 5,96 MB) |
+| Crédito | Courtesy NASA/JPL-Caltech (linha de crédito padrão da política do site; a página não traz outro crédito) |
+| Acesso | 2026-11-15 |
+
+O que é: render oficial da equipe do SPHEREx (Caltech SPHEREx Science
+Center), em **vista em corte** ("sectional view"): parte dos escudos
+fotônicos aparece aberta para mostrar o telescópio. Não é foto. É a versão
+oficial já publicada **com fundo transparente**, então não foi preciso
+recortar o fundo à mão.
+
+Processo (Pillow + numpy, script fora do repositório):
+
+1. leitura do PNG original (canal alfa original, nenhuma máscara criada por nós);
+2. corte na caixa delimitadora dos pixels com alfa > 8, com margem de 8 px
+   (caixa 918,521–4057,2890 → 3139×2369 px);
+3. redução por Lanczos para 256 e 512 px de largura;
+4. quantização para 256 cores com alfa (FASTOCTREE, sem pontilhado) e
+   gravação PNG otimizada.
+
+Nenhuma alteração de cor ou de conteúdo. A rotação (telescópio apontando
+para a direita no computador e para baixo no celular) é feita só por CSS.
+O "feixe infravermelho" é um efeito de interface: o SPHEREx não emite
+laser; ele só recebe luz.
+
+Condições de uso: política de imagens do Caltech SPHEREx Science Center
+(https://spherex.caltech.edu/page/image-use-policy, consultada em
+2026-11-15): imagens do site podem ser usadas para qualquer fim sem
+permissão prévia, com a linha de crédito "Courtesy NASA/JPL-Caltech"
+salvo indicação em contrário; logotipos da NASA e do JPL exigem
+aprovação; não se pode sugerir endosso de NASA, JPL ou Caltech. A imagem
+não contém logotipo da NASA nem da missão (conferido visualmente). O
+crédito aparece no rodapé do site.
+
 ## Ícone do site (`favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`)
 
 Desenho original do projeto, uma estilização da forma da sonda SPHEREx

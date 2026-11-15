@@ -96,6 +96,16 @@
     ui.nomeStatus.className = "nome-status " + kind;
   }
 
+  /* Páginas (js/router.js): depois de um submit, o router leva a "Observações". Quando o resultado
+   * fica na busca (outra base ou nome não encontrado), volta para "Explorar o céu" e mostra o elemento.
+   * O setTimeout roda depois do do router (registrado antes, no mesmo submit). */
+  function stayOnSearch(target) {
+    setTimeout(() => {
+      if (window.spxRouter && window.spxRouter.current !== "busca") window.spxRouter.go("busca", { replace: true, focus: false });
+      requestAnimationFrame(() => target?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }, 0);
+  }
+
   function setObStatus(msg, kind = "") {
     ui.status.textContent = msg;
     ui.status.className = "status " + kind;
@@ -134,7 +144,8 @@
       const r = await sesame(name);
       if (!r.found || !Number.isFinite(r.ra) || !Number.isFinite(r.dec)) {
         setNomeStatus(`Não encontrei “${name}” nos catálogos SIMBAD, NED e VizieR. Confira a grafia (ex.: M42, NGC 1976, Barnard's Star) ou informe RA e Dec.`, "aviso");
-        ui.nome.focus();
+        stayOnSearch(ui.nome.closest(".field"));
+        ui.nome.focus({ preventScroll: true });
         return false;
       }
       el.ra.value = r.ra.toFixed(6);
@@ -148,6 +159,7 @@
       return true;
     } catch {
       setNomeStatus("O serviço de nomes do CDS não respondeu agora. Tente de novo em instantes ou informe RA e Dec diretamente.", "aviso");
+      stayOnSearch(ui.nome.closest(".field"));
       return false;
     } finally {
       ui.localizar.disabled = false;
@@ -244,6 +256,7 @@
         acoes.append(a);
       } else {
         img.removeAttribute("src");
+        img.remove(); // sem a imagem quebrada (e o texto alternativo) por cima do hachurado
         wrap.classList.add("vazio");
         msg.textContent = "Esta banda não chegou agora (o serviço do IRSA pode estar ocupado).";
         const retry = document.createElement("button");
@@ -289,7 +302,7 @@
       }
       ob.overlay.removeAll();
       ob.overlay.addFootprints([fovPolygon(A, v, v.fov)]);
-      ui.viewerLegenda.textContent = `${legenda}. Arraste e use a roda do mouse para navegar; o quadrado rosa é a área (FOV) escolhida.`;
+      ui.viewerLegenda.textContent = `${legenda.replace(/\.$/, "")}. Arraste e use a roda do mouse para navegar; o quadrado rosa é a área (FOV) escolhida.`;
     } catch (err) {
       console.error("Outras bases (visualizador):", err);
       if (seq !== ob.seq) return;
@@ -328,8 +341,8 @@
     if (camada) showViewer(camada.url, s.cor, v);
     else ui.viewerLegenda.textContent = s.cor;
 
-    if (sky.aladin) setCeuStatus(`Região RA ${fmtGraus(v.ra)}°, Dec ${fmtGraus(v.dec)}° mostrada no ${s.nome}, na seção de busca. Use “Abrir esta posição no mapa interativo” para vê-la aqui.`);
-    ui.box.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (sky.aladin) setCeuStatus(`Região RA ${fmtGraus(v.ra)}°, Dec ${fmtGraus(v.dec)}° mostrada no ${s.nome}, na página “Explorar o céu”. Use “Abrir esta posição no mapa interativo” para vê-la aqui.`);
+    stayOnSearch(ui.box);
   }
 
   function hide() {
@@ -354,7 +367,8 @@
     const camada = mapLayer(s.camada);
     if (camada && [...el.ceuFundo.options].some((o) => o.value === camada.url)) el.ceuFundo.value = camada.url;
     ob.mark = { v, nome: s.nome };
-    $id("ceu").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (window.spxRouter) window.spxRouter.go("ceu");
+    else $id("ceu").scrollIntoView({ behavior: "smooth", block: "start" });
     await openSky(); // se falhar, o próprio mapa mostra a mensagem
     if (!sky.aladin) return;
     await applyBackground(el.ceuFundo.value);
