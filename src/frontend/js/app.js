@@ -18,9 +18,14 @@ const CONFIG = {
   ],
   // Espelhos do VizieR (catálogos Gaia/AllWISE no mapa do céu), tentados em ordem. O da CfA tem CORS liberado.
   VIZIER_HOSTS: ["https://vizier.cds.unistra.fr", "https://vizier.cfa.harvard.edu"],
-  SPECTRUM_PATH: "/api/spectrum", // ASSUMIDO: GET ?ra=&dec=&radius= (raio em segundos de arco)
-  SPECTRUM_TIMEOUT_MS: 30000,
-  IMAGE_EAST_LEFT: true, // ASSUMIDO: imagem com norte para cima e leste à esquerda (confirmar com o backend)
+  // GET ?ra_deg=&dec_deg=[&pm_ra_cosdec_masyr=&pm_dec_masyr=&ref_epoch_jyear=][&aperture_arcsec=][&max_exposures=]
+  // → { unit, points: [{ wavelength_um, bandwidth_um, flux, flux_err, detector, observed_at, observation_id, flagged, flags }], ... }
+  SPECTRUM_PATH: "/api/spectrum",
+  SPECTRUM_TIMEOUT_MS: 240000, // sem cache: ~1–2 s por exposição, até max_exposures
+  SPECTRUM_MAX_EXPOSURES: 60,
+  APERTURE_MIN: 3, APERTURE_MAX: 30, APERTURE_DEFAULT: 9, // segundos de arco
+  // GET /api/observations/{id}/quality (depois que a imagem do quadro foi gerada)
+  QUALITY_PATH: (id) => `/api/observations/${encodeURIComponent(id)}/quality`,
   TARGETS_PATH: "/api/targets", // GET → { targets: [{ name, ra, dec, fov, note }] }
   TIMEOUT_MS: 120000, // a primeira consulta ao IRSA pode levar dezenas de segundos
   EXTRA_PARAMS: {}, // parâmetros extras repassados ao backend
@@ -78,7 +83,8 @@ const el = {
   ceuMapa: $("ceu-mapa"), ceuStatus: $("ceu-status"),
   mapaGraf: $("mapa-grafico"), mapaVazio: $("mapa-vazio"), mapaMock: $("mapa-mock"),
   espStatus: $("esp-status"), espGraf: $("esp-grafico"), espTabBox: $("esp-tabela-box"),
-  espTabela: $("esp-tabela"), raio: $("raio"), espCentro: $("esp-centro"), espLimpar: $("esp-limpar"), espCsv: $("esp-csv"), filtroVazio: $("filtro-vazio"), reset: $("filtro-reset"), galeria: $("galeria-lista"), galeriaVazio: $("galeria-vazio"), tIni: $("t-ini"), tFim: $("t-fim"), meta: $("meta"),
+  espTabela: $("esp-tabela"), raio: $("raio"), espCentro: $("esp-centro"), espAlvo: $("esp-alvo"),
+  espOcultar: $("esp-ocultar"), espProgresso: $("esp-progresso"), espNota: $("esp-nota"), espLimpar: $("esp-limpar"), espCsv: $("esp-csv"), filtroVazio: $("filtro-vazio"), reset: $("filtro-reset"), galeria: $("galeria-lista"), galeriaVazio: $("galeria-vazio"), tIni: $("t-ini"), tFim: $("t-fim"), meta: $("meta"),
   fovRegua: $("fov-regua"), fovParadas: $("fov-paradas"), fovInfo: $("fov-info"),
   seguirBox: $("seguir-box"), seguir: $("seguir"),
   soCompletos: $("so-completos"), soCompletosBox: $("so-completos-box"), soCompletosInfo: $("so-completos-info"),
@@ -91,7 +97,9 @@ const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, ac
   // Só vale para as coordenadas exatas do alvo; qualquer outra mudança de RA/Dec o descarta.
   motion: null,
   // Última resposta válida de /api/coverage para as coordenadas atuais (ou null).
-  coverage: null, coverageLoading: false };
+  coverage: null, coverageLoading: false,
+  // Qualidade por observação (/api/observations/{id}/quality): id → resposta normalizada.
+  quality: new Map(), qualityReq: new Set() };
 
 // Movimento efetivamente enviado ao backend: só quando o usuário escolhe seguir o alvo.
 const activeMotion = () => (state.motion && el.seguir.checked ? state.motion : null);
@@ -303,17 +311,74 @@ function showFrame(i) {
       ? [["Cobertura do quadro", isPartial(f)
           ? `${fmtPct(f.coverage)} (o restante fica fora do detector, sem dados)` : "Completa"]]
       : []),
+    ...(state.quality.has(f.id) ? [["Contaminação no alvo", qualityText(state.quality.get(f.id))]] : []),
     ["Coleção", f.product],
     ["Fonte dos dados", state.isMock ? "Fictícia (teste)" : "SPHEREx / IRSA-IPAC"],
   ];
   el.meta.replaceChildren(
     ...rows.flatMap(([k, v]) => {
       const dt = document.createElement("dt"); dt.textContent = k;
-      const dd = document.createElement("dd"); dd.textContent = v;
+      const dd = document.createElement("dd");
+      if (typeof v === "string") dd.textContent = v;
+      else { dd.textContent = v.text; if (v.title) dd.title = v.title; }
       return [dt, dd];
     })
   );
+  positionMarkers();
 }
+
+/* ---------- Qualidade do quadro (máscara de flags do SPHEREx) ---------- */
+// Nomes das flags (bits da extensão FLAGS) em português; a descrição do backend vai na dica (title).
+const FLAG_NAMES = {
+  TRANSIENT: "raio cósmico/transiente", OVERFLOW: "saturação", NONFUNC: "pixel morto",
+  HOT: "pixel quente", COLD: "pixel frio", PERSIST: "persistência", OUTLIER: "valor anômalo",
+  CROSSTALK: "diafonia", STREAK: "rastro de satélite", BLOOM: "transbordamento de fonte",
+  SNOWBALL: "snowball", HALO: "halo de transiente", MISSING_DATA: "dado perdido",
+  NONLINEAR: "não linearidade", SUR_ERROR: "erro de leitura a bordo",
+  DICHROIC: "baixa eficiência (dicroico)", PHANMISS: "correção de pixel fantasma ausente",
+};
+const flagName = (n) => {
+  const s = String(n ?? "").toUpperCase();
+  return FLAG_NAMES[s] ?? (s.startsWith("GHOST") ? "reflexo (ghost)" : s || "?");
+};
+
+function normalizeQuality(d) {
+  const info = new Set((d?.informational ?? []).map((s) => String(s).toUpperCase()));
+  // "SOURCE" (pixel de fonte conhecida) é informativo, não contaminação.
+  const flags = (d?.flags_at_target ?? [])
+    .filter((f) => f && !info.has(String(f.name).toUpperCase()))
+    .map((f) => ({ name: String(f.name), label: flagName(f.name), description: f.description ?? "" }));
+  return { contaminated: Boolean(d?.contaminated_at_target) && flags.length > 0, flags,
+           frameFraction: d?.frame_flagged_fraction ?? {} };
+}
+
+function qualityText(q) {
+  const frac = Object.entries(q.frameFraction)
+    .filter(([, v]) => Number.isFinite(v) && v > 0)
+    .sort((a, b) => b[1] - a[1]).slice(0, 4)
+    .map(([k, v]) => `${flagName(k)} ${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`);
+  const fracTxt = frac.length ? `Pixels sinalizados no quadro inteiro: ${frac.join(", ")}.` : "";
+  if (!q.contaminated) return { text: "nenhuma", title: fracTxt };
+  const labels = [...new Set(q.flags.map((f) => f.label))];
+  const desc = q.flags.map((f) => `${f.name}: ${f.description || f.label}`).join("\n");
+  return { text: labels.join(", "), title: [desc, fracTxt].filter(Boolean).join("\n") };
+}
+
+// Pedida depois que a imagem principal carregou (o backend só tem a máscara após gerar a imagem).
+// Sem bloquear: erros e 404 são ignorados (a linha simplesmente não aparece).
+async function fetchQuality(f) {
+  if (state.isMock || !f?.id || state.quality.has(f.id) || state.qualityReq.has(f.id)) return;
+  state.qualityReq.add(f.id);
+  try {
+    const res = await fetch(new URL(CONFIG.QUALITY_PATH(f.id), CONFIG.API_BASE), { signal: AbortSignal.timeout(30000) });
+    if (!res.ok) return;
+    state.quality.set(f.id, normalizeQuality(await res.json()));
+    if (state.frames[state.index]?.id === f.id) showFrame(state.index);
+  } catch { /* ignorado */ } finally {
+    state.qualityReq.delete(f.id);
+  }
+}
+el.img.addEventListener("load", () => fetchQuality(state.frames[state.index]));
 
 /* ---------- Fila de miniaturas ----------
  * Cada miniatura real é um recorte pedido ao IRSA (~10–15 s). As <img> nascem sem src
@@ -999,20 +1064,38 @@ function setEspStatus(msg, kind = "") {
   el.espStatus.className = "status " + kind;
 }
 
+// Raio da abertura (aperture_arcsec do backend), limitado a CONFIG.APERTURE_MIN..MAX.
 const radius = () => {
-  const v = Number(el.raio.value);
-  return Number.isFinite(v) ? Math.min(60, Math.max(3, v)) : 12;
+  const v = Number(String(el.raio.value).replace(",", "."));
+  return Number.isFinite(v) && v > 0
+    ? Math.min(CONFIG.APERTURE_MAX, Math.max(CONFIG.APERTURE_MIN, v)) : CONFIG.APERTURE_DEFAULT;
 };
 
-// Converte a posição na imagem (frações 0..1) em RA/Dec.
-// Assume que a imagem mostra um quadrado de lado FOV centrado em (ra, dec).
+/* Geometria do quadro comum (backend: services/common_frame.py): projeção TAN, norte para cima,
+ * leste à esquerda, lado = FOV, centrado em metadata.cutout_center_* (posição propagada pelo
+ * movimento próprio quando "Seguir" está ativo). Para campos de poucos minutos de arco a
+ * aproximação plana abaixo difere da TAN exata por muito menos que um pixel (6,15″). */
+const frameCenter = () => state.frames[state.index]?.cutoutCenter ?? { ra: state.values.ra, dec: state.values.dec };
+const pixelFrac = () => pixelScale() / (state.values.fov * 60); // 1 pixel em fração do lado
+
 function coordFromFrac(fx, fy) {
-  const { ra, dec, fov } = state.values;
-  const dx = (fx - 0.5) * fov * 60; // segundos de arco para a direita
-  const dy = (0.5 - fy) * fov * 60; // segundos de arco para cima (norte)
-  const sinal = CONFIG.IMAGE_EAST_LEFT ? -1 : 1;
-  const raPt = ra + (sinal * dx) / 3600 / Math.cos((dec * Math.PI) / 180);
-  return { ra: ((raPt % 360) + 360) % 360, dec: Math.max(-90, Math.min(90, dec + dy / 3600)) };
+  const c = frameCenter();
+  const lado = state.values.fov * 60; // segundos de arco
+  const leste = (0.5 - fx) * lado; // leste à esquerda
+  const norte = (0.5 - fy) * lado; // norte para cima
+  const dec = Math.max(-90, Math.min(90, c.dec + norte / 3600));
+  const ra = c.ra + leste / 3600 / Math.cos((c.dec * Math.PI) / 180);
+  return { ra: ((ra % 360) + 360) % 360, dec };
+}
+
+function fracFromCoord(ra, dec) {
+  const c = frameCenter();
+  const lado = state.values.fov * 60;
+  let dra = ra - c.ra;
+  if (dra > 180) dra -= 360;
+  if (dra < -180) dra += 360;
+  const leste = dra * 3600 * Math.cos((c.dec * Math.PI) / 180);
+  return { fx: 0.5 - leste / lado, fy: 0.5 - ((dec - c.dec) * 3600) / lado };
 }
 
 /* Marcadores sobre a imagem */
@@ -1026,26 +1109,50 @@ for (const k of ["A", "B"]) {
   markers[k] = m;
 }
 
-function renderMarkers() {
+// Posição do marcador no quadro em exibição. O alvo com movimento fica no centro de cada quadro
+// (o backend recentra nele); os demais pontos são fixos no céu e são reprojetados por quadro.
+function markerFrac(p) {
+  if (p.target && p.motion && activeMotion()) return { fx: 0.5, fy: 0.5 };
+  if (state.isMock || !state.frames.length) return { fx: p.fx, fy: p.fy };
+  return fracFromCoord(p.ra, p.dec);
+}
+
+function positionMarkers() {
   const lado = state.values ? Math.max(4, ((2 * radius()) / (state.values.fov * 60)) * 100) : 6;
   for (const k of ["A", "B"]) {
     const p = state.pts[k];
     markers[k].hidden = !p;
     if (!p) continue;
-    markers[k].style.left = p.fx * 100 + "%";
-    markers[k].style.top = p.fy * 100 + "%";
+    const { fx, fy } = markerFrac(p);
+    const fora = fx < 0 || fx > 1 || fy < 0 || fy > 1;
+    markers[k].hidden = fora;
+    markers[k].style.left = fx * 100 + "%";
+    markers[k].style.top = fy * 100 + "%";
     markers[k].style.width = `max(14px, ${lado}%)`;
   }
+}
+
+function renderMarkers() {
+  positionMarkers();
   scheduleSky();
 }
 
-function placePoint(key, fx, fy, { defer = false } = {}) {
+// Marca um ponto. Um clique a ≤ 1 pixel do centro com "Seguir" ativo (ou o botão
+// "Espectro do alvo") é o próprio alvo: envia também o movimento próprio ao backend.
+function placePoint(key, fx, fy, { defer = false, target = false } = {}) {
   if (!state.values) return;
   fx = Math.min(1, Math.max(0, fx));
   fy = Math.min(1, Math.max(0, fy));
+  const motion = state.isMock ? null : activeMotion();
+  const noCentro = Math.hypot(fx - 0.5, fy - 0.5) <= pixelFrac();
+  const isTarget = target || (motion !== null && noCentro);
   const old = state.pts[key];
-  const pt = { fx, fy, ...coordFromFrac(fx, fy), data: null, req: null, timer: null };
+  // O alvo usa as coordenadas informadas (época ref_epoch_jyear); o backend propaga para cada exposição.
+  const coords = isTarget ? { ra: state.values.ra, dec: state.values.dec } : coordFromFrac(fx, fy);
+  const pt = { fx: isTarget ? 0.5 : fx, fy: isTarget ? 0.5 : fy, ...coords,
+               target: isTarget, motion: isTarget ? motion : null, data: null, req: null, timer: null };
   clearTimeout(old?.timer);
+  state.specCtl[key]?.abort();
   state.pts[key] = pt;
   renderMarkers();
   renderChart();
@@ -1059,43 +1166,51 @@ function clearPoints() {
     state.specCtl[k]?.abort();
     state.pts[k] = null;
   }
+  updateProgress();
   renderMarkers();
   renderChart();
   setEspStatus("Faça uma busca e marque um ponto na imagem.");
-  if (state.values) setEspStatus("Clique na imagem para marcar o ponto A (alvo).");
+  if (state.values) setEspStatus("Clique na imagem para marcar o ponto A, ou use “Espectro do alvo”.");
 }
 
 /* Dados: API ou, no modo de teste, espectro fictício */
 function normalizeSpectrum(data) {
-  const list = Array.isArray(data) ? data : data.points ?? data.spectrum ?? [];
-  const points = list
+  const num = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+  const points = (data?.points ?? [])
     .map((o) => {
-      const det = parseInt(String(o.detector ?? o.detector_id ?? "").replace(/\D/g, ""), 10);
+      const det = parseInt(String(o.detector ?? "").replace(/\D/g, ""), 10);
+      const flags = Array.isArray(o.flags) ? o.flags.map(String) : [];
       return {
-        wl: Number(o.wavelength_um ?? o.wavelength ?? o.wl),
-        flux: Number(o.flux ?? o.brightness ?? o.value),
-        err: o.flux_err ?? o.error ?? null,
+        wl: num(o.wavelength_um), bw: num(o.bandwidth_um),
+        flux: num(o.flux), err: num(o.flux_err),
         det: det >= 1 && det <= 6 ? det : null,
-        band: o.band_index ?? o.band ?? null,
+        date: o.observed_at ?? null, obsId: o.observation_id ?? null,
+        flagged: Boolean(o.flagged), flags,
       };
     })
-    .filter((p) => Number.isFinite(p.wl) && Number.isFinite(p.flux))
-    .map((p) => ({ ...p, err: p.err === null || p.err === "" || !Number.isFinite(Number(p.err)) ? null : Number(p.err) }))
+    .filter((p) => p.wl !== null && p.flux !== null)
     .sort((a, b) => a.wl - b.wl);
-  return { unit: data.unit ?? null, points };
+  return {
+    unit: data?.unit ?? null, points,
+    nExposures: num(data?.n_exposures), aperture: num(data?.aperture_arcsec),
+    wlSource: data?.wavelength_source ?? null, dataSource: data?.data_source ?? null,
+  };
 }
 
 async function fetchSpectrum(key, pt) {
   state.specCtl[key]?.abort();
   const ctl = (state.specCtl[key] = new AbortController());
-  const timer = setTimeout(() => ctl.abort(), CONFIG.SPECTRUM_TIMEOUT_MS);
+  const timer = setTimeout(() => ctl.abort("timeout"), CONFIG.SPECTRUM_TIMEOUT_MS);
   try {
     const url = new URL(CONFIG.SPECTRUM_PATH, CONFIG.API_BASE);
     url.search = new URLSearchParams({
-      ra: pt.ra.toFixed(6), dec: pt.dec.toFixed(6), radius: radius(), ...CONFIG.EXTRA_PARAMS,
+      ra_deg: pt.ra.toFixed(6), dec_deg: pt.dec.toFixed(6),
+      ...motionParams(pt.motion), // só para o próprio alvo; pontos do fundo do céu são fixos
+      aperture_arcsec: radius(), max_exposures: CONFIG.SPECTRUM_MAX_EXPOSURES,
+      ...CONFIG.EXTRA_PARAMS,
     }).toString();
     const res = await fetch(url, { signal: ctl.signal });
-    if (!res.ok) throw new Error("http-" + res.status);
+    if (!res.ok) throw await apiError(res);
     return normalizeSpectrum(await res.json());
   } finally {
     clearTimeout(timer);
@@ -1103,50 +1218,82 @@ async function fetchSpectrum(key, pt) {
 }
 
 // Espectro inventado, só para testar a interface (o centro da imagem é mais brilhante).
+// Mesmo formato do backend: um ponto por exposição, alguns marcados como contaminados.
 function mockSpectrum(pt) {
   const r = Math.hypot(pt.fx - 0.5, pt.fy - 0.5);
   const ganho = 0.15 + 1.85 * Math.exp(-((r / 0.15) ** 2));
   const points = [];
-  DET_RANGES.forEach(([lo, hi], d) => {
-    for (let k = 0; k < BANDS_PER_DETECTOR; k++) {
-      const wl = lo + ((hi - lo) * (k + 0.5)) / BANDS_PER_DETECTOR;
-      const flux = (40 * Math.exp(-wl / 1.6) + 6 + 3 * Math.sin(wl * 5)) * ganho;
-      points.push({ wl, flux, err: 0.06 * flux + 0.4, det: d + 1, band: d * BANDS_PER_DETECTOR + k + 1 });
-    }
-  });
-  return { unit: "valor fictício", points };
+  const n = 54, inicio = Date.UTC(2025, 4, 1);
+  for (let i = 0; i < n; i++) {
+    const wl = 0.75 + (4.25 * (i + 0.5)) / n;
+    const d = DET_RANGES.findIndex(([lo, hi]) => wl >= lo && wl < hi);
+    const flux = (40 * Math.exp(-wl / 1.6) + 6 + 3 * Math.sin(wl * 5)) * ganho;
+    const flagged = i % 11 === 4;
+    points.push({
+      wavelength_um: wl, bandwidth_um: wl / (d >= 4 ? 120 : 40), // R aproximado, valor fictício
+      flux: flagged ? flux * 1.8 : flux, flux_err: 0.06 * flux + 0.4,
+      detector: "D" + (d + 1), observed_at: new Date(inicio + i * 3 * 864e5).toISOString(),
+      observation_id: "FICTICIO-" + String(i + 1).padStart(2, "0"),
+      flagged, flags: flagged ? ["TRANSIENT"] : [],
+    });
+  }
+  return normalizeSpectrum({ unit: "valor fictício", points, n_exposures: n, aperture_arcsec: radius(),
+    wavelength_source: "fictício (teste de interface)", data_source: "mock" });
 }
+
+// Barra de progresso indeterminada enquanto algum ponto espera o backend.
+const updateProgress = () => { el.espProgresso.hidden = !["A", "B"].some((k) => state.pts[k]?.loading); };
+
+const ptLabel = (key, pt) => `ponto ${key}${pt.target ? " (alvo" + (pt.motion ? ", seguindo o movimento próprio)" : ")") : ""}`;
 
 async function loadSpectrum(key) {
   const pt = state.pts[key];
   if (!pt) return;
   const req = (pt.req = {});
   pt.data = null;
+  pt.loading = !state.isMock;
   renderChart();
-  setEspStatus(`Calculando o espectro do ponto ${key}…`, "carregando");
+  updateProgress();
+  setEspStatus(state.isMock
+    ? `Calculando o espectro do ${ptLabel(key, pt)}…`
+    : `Medindo o ${ptLabel(key, pt)} em até ${CONFIG.SPECTRUM_MAX_EXPOSURES} exposições… A primeira vez é lenta ` +
+      "(cerca de 1–2 s por exposição, podendo passar de um minuto); depois o resultado fica em cache.", "carregando");
   try {
     const data = state.isMock ? mockSpectrum(pt) : await fetchSpectrum(key, pt);
     if (pt.req !== req || state.pts[key] !== pt) return;
     if (!data.points.length) {
-      setEspStatus(`Sem dados espectrais para o ponto ${key}. Tente aumentar o raio ou escolher outro ponto.`);
+      setEspStatus(`Sem medidas para o ponto ${key}: nenhuma exposição cobre esse ponto. Tente outro ponto.`);
       return;
     }
     pt.data = data;
     renderChart();
+    const nFlag = data.points.filter((p) => p.flagged).length;
     setEspStatus(
-      `Ponto ${key}: ${data.points.length} bandas, raio de ${radius()}″, RA ${pt.ra.toFixed(4)}°, Dec ${pt.dec.toFixed(4)}°.` +
-        (state.isMock ? " (dados fictícios)" : "")
+      `${ptLabel(key, pt).replace(/^p/, "P")}: ${data.points.length} medidas` +
+        (data.nExposures !== null ? ` de ${data.nExposures} exposições` : "") +
+        `, abertura de ${data.aperture ?? radius()}″, RA ${pt.ra.toFixed(4)}°, Dec ${pt.dec.toFixed(4)}°.` +
+        (nFlag ? ` ${nFlag} com contaminação na abertura (símbolo vazado).` : "") +
+        (data.dataSource === "stale_cache" ? " Atenção: IRSA indisponível, usando resultado salvo." : "") +
+        (state.isMock ? " (dados fictícios)" : ""),
+      data.dataSource === "stale_cache" ? "aviso" : ""
     );
   } catch (err) {
     if (pt.req !== req || state.pts[key] !== pt) return;
+    const timedOut = err === "timeout" || err?.name === "AbortError";
+    if (timedOut && state.specCtl[key]?.signal.reason !== "timeout") return; // pedido substituído
     setEspStatus(
-      err?.name === "AbortError"
-        ? "O cálculo do espectro demorou demais. Tente novamente."
-        : err?.message === "http-404"
-          ? "O espectro de um ponto com dados reais ainda não está disponível no backend. Use os dados fictícios para testar esta seção."
+      timedOut
+        ? "O cálculo do espectro demorou demais. Tente novamente: as exposições já processadas ficam em cache."
+        : err instanceof ApiError
+          ? (err.status === 404 && !err.code
+              ? "O espectro de um ponto ainda não está disponível neste backend. Use os dados fictícios para testar esta seção."
+              : API_ERRORS[err.code] ?? err.message)
           : "Não foi possível obter o espectro. Verifique se o backend está em execução.",
       "erro"
     );
+  } finally {
+    if (pt.req === req) pt.loading = false;
+    updateProgress();
   }
 }
 
@@ -1159,28 +1306,43 @@ function niceStep(range, n = 5) {
 }
 
 function renderChart() {
+  const ocultar = el.espOcultar.checked;
   const series = ["A", "B"]
     .filter((k) => state.pts[k]?.data?.points.length)
-    .map((k) => ({ key: k, pts: state.pts[k].data.points, unit: state.pts[k].data.unit }));
+    .map((k) => ({ key: k, all: state.pts[k].data.points, unit: state.pts[k].data.unit, data: state.pts[k].data }))
+    .map((s) => ({ ...s, pts: ocultar ? s.all.filter((p) => !p.flagged) : s.all }));
   el.espGraf.hidden = el.espTabBox.hidden = !series.length;
+  const fontes = [...new Set(series.map((s) => s.data.wlSource).filter(Boolean))];
+  el.espNota.hidden = !series.length;
+  el.espNota.textContent = series.length
+    ? "Cada ponto é uma exposição: o SPHEREx mede o espectro porque o ponto cai em posições diferentes do detector " +
+      "(filtro linear variável). Fluxo = média na abertura menos o fundo local (anel). " +
+      `Comprimento de onda: ${fontes.join("; ") || "fonte não informada"}.`
+    : "";
   if (!series.length) return;
 
   const W = 720, H = 360, m = { l: 64, r: 16, t: 16, b: 48 };
   const xmin = 0.7, xmax = 5.05;
   const all = series.flatMap((s) => s.pts);
+  if (!all.length) {
+    el.espGraf.replaceChildren(Object.assign(document.createElement("p"), {
+      className: "placeholder", textContent: "Todas as medidas estão marcadas como contaminadas. Desmarque “Ocultar contaminados” para vê-las." }));
+    renderTable(series);
+    return;
+  }
   let ymin = Math.min(0, ...all.map((p) => p.flux - (p.err ?? 0)));
   let ymax = Math.max(...all.map((p) => p.flux + (p.err ?? 0)));
   if (ymax <= ymin) ymax = ymin + 1;
   const step = niceStep(ymax - ymin);
   ymin = Math.floor(ymin / step) * step;
   ymax = Math.ceil(ymax / step) * step;
-  const X = (w) => m.l + ((w - xmin) / (xmax - xmin)) * (W - m.l - m.r);
+  const X = (w) => m.l + ((Math.min(xmax, Math.max(xmin, w)) - xmin) / (xmax - xmin)) * (W - m.l - m.r);
   const Y = (v) => H - m.b - ((v - ymin) / (ymax - ymin)) * (H - m.t - m.b);
   const unit = series.find((s) => s.unit)?.unit ?? "unidades do backend";
 
   const svg = svgEl("svg", {
     viewBox: `0 0 ${W} ${H}`, role: "img",
-    "aria-label": `Gráfico de brilho por comprimento de onda para ${series.map((s) => "o ponto " + s.key).join(" e ")}. Os mesmos dados estão na tabela abaixo.`,
+    "aria-label": `Gráfico de fluxo por comprimento de onda para ${series.map((s) => "o ponto " + s.key).join(" e ")}. Os mesmos dados estão na tabela abaixo.`,
   });
 
   DET_RANGES.forEach(([a, b], i) => {
@@ -1197,24 +1359,33 @@ function renderChart() {
     svg.append(svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: "var(--line)" }));
     svg.append(svgEl("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end", fill: "var(--muted)", "font-size": 12 }, fmtNum(v)));
   }
-  svg.append(svgEl("text", { x: (m.l + W - m.r) / 2, y: H - 8, "text-anchor": "middle", fill: "var(--text)", "font-size": 13 }, "Comprimento de onda (µm)"));
-  svg.append(svgEl("text", { transform: `translate(14 ${(m.t + H - m.b) / 2}) rotate(-90)`, "text-anchor": "middle", fill: "var(--text)", "font-size": 13 }, `Brilho (${unit})`));
+  svg.append(svgEl("text", { x: (m.l + W - m.r) / 2, y: H - 8, "text-anchor": "middle", fill: "var(--text)", "font-size": 13 }, "Comprimento de onda λ (µm)"));
+  svg.append(svgEl("text", { transform: `translate(14 ${(m.t + H - m.b) / 2}) rotate(-90)`, "text-anchor": "middle", fill: "var(--text)", "font-size": 13 }, `Fluxo (${unit})`));
 
   for (const s of series) {
     const cor = s.key === "A" ? "var(--ir)" : "var(--cool)";
-    svg.append(svgEl("polyline", {
-      points: s.pts.map((p) => `${X(p.wl)},${Y(p.flux)}`).join(" "),
-      fill: "none", stroke: cor, "stroke-width": 1.5, opacity: 0.7,
+    const limpos = s.pts.filter((p) => !p.flagged); // a linha liga só as medidas sem contaminação
+    if (limpos.length > 1) svg.append(svgEl("polyline", {
+      points: limpos.map((p) => `${X(p.wl)},${Y(p.flux)}`).join(" "),
+      fill: "none", stroke: cor, "stroke-width": 1.2, opacity: 0.5,
       "stroke-dasharray": s.key === "B" ? "6 4" : "none",
     }));
     for (const p of s.pts) {
       const x = X(p.wl), y = Y(p.flux);
-      const fill = p.det ? DET_COLORS[p.det - 1] : "#ffffff";
+      const corDet = p.det ? DET_COLORS[p.det - 1] : "#ffffff";
       if (p.err) svg.append(svgEl("line", { x1: x, x2: x, y1: Y(p.flux - p.err), y2: Y(p.flux + p.err), stroke: cor, opacity: 0.6 }));
+      // Contaminado: símbolo vazado (só contorno, na cor do detector).
+      const estilo = p.flagged
+        ? { fill: "none", stroke: corDet, "stroke-width": 1.6 }
+        : { fill: corDet, stroke: "#fff", "stroke-width": 0.8 };
       const forma = s.key === "A"
-        ? svgEl("circle", { cx: x, cy: y, r: 3.5, fill, stroke: "#fff", "stroke-width": 0.8 })
-        : svgEl("polygon", { points: `${x},${y - 4.5} ${x + 4.5},${y} ${x},${y + 4.5} ${x - 4.5},${y}`, fill, stroke: "#fff", "stroke-width": 0.8 });
-      forma.append(svgEl("title", {}, `${s.key} · ${fmtNum(p.wl)} µm · ${p.det ? "D" + p.det : "detector ?"} · banda ${p.band ?? "?"} · brilho ${fmtNum(p.flux)}`));
+        ? svgEl("circle", { cx: x, cy: y, r: 3.5, ...estilo })
+        : svgEl("polygon", { points: `${x},${y - 4.5} ${x + 4.5},${y} ${x},${y + 4.5} ${x - 4.5},${y}`, ...estilo });
+      forma.append(svgEl("title", {},
+        `${s.key} · λ ${fmtNum(p.wl)} µm` + (p.bw !== null ? ` (largura ${fmtNum(p.bw)} µm)` : "") +
+        ` · ${p.det ? "D" + p.det : "detector ?"} · fluxo ${fmtNum(p.flux)}` + (p.err !== null ? ` ± ${fmtNum(p.err)}` : "") +
+        ` ${unit}` + (p.date ? ` · ${fmtDateTime(p.date)}` : "") +
+        (p.flagged ? ` · contaminado: ${p.flags.map(flagName).join(", ") || "sim"}` : "")));
       svg.append(forma);
     }
   }
@@ -1235,24 +1406,23 @@ function renderChart() {
     li.textContent = s.key === "A" ? "A: círculos, linha contínua" : "B: losangos, linha tracejada";
     legenda.append(li);
   }
+  if (series.some((s) => s.pts.some((p) => p.flagged))) {
+    const li = document.createElement("li");
+    const sw = document.createElement("span");
+    sw.className = "sw sw-vazado";
+    li.append(sw, "contaminado (símbolo vazado)");
+    legenda.append(li);
+  }
   el.espGraf.replaceChildren(svg, legenda);
   renderTable(series);
 }
 
+// Uma linha por medida (exposição); A e B vêm de exposições diferentes, então não são pareados.
 function renderTable(series) {
-  const rows = new Map();
-  for (const s of series) {
-    for (const p of s.pts) {
-      const id = `${p.band ?? ""}|${p.wl.toFixed(4)}`;
-      const r = rows.get(id) ?? { wl: p.wl, det: p.det, band: p.band };
-      r[s.key] = p;
-      rows.set(id, r);
-    }
-  }
-  const keys = series.map((s) => s.key);
-  const list = [...rows.values()].sort((a, b) => a.wl - b.wl);
+  const list = series.flatMap((s) => s.all.map((p) => ({ key: s.key, unit: s.unit, pt: state.pts[s.key], ...p })))
+    .sort((a, b) => a.key.localeCompare(b.key) || a.wl - b.wl);
   state.rows = list;
-  state.keys = keys;
+  state.keys = series.map((s) => s.key);
 
   const tr = (cells, tag = "td") => {
     const row = document.createElement("tr");
@@ -1265,28 +1435,30 @@ function renderTable(series) {
     return row;
   };
   const cap = document.createElement("caption");
-  cap.textContent = "Brilho por comprimento de onda";
+  cap.textContent = `Fluxo por comprimento de onda (${series.find((s) => s.unit)?.unit ?? "unidades do backend"})`;
   const thead = document.createElement("thead");
-  thead.append(tr(["Banda", "Detector", "Comprimento de onda (µm)", ...keys.map((k) => "Brilho " + k)], "th"));
+  thead.append(tr(["Ponto", "λ (µm)", "Largura (µm)", "Detector", "Fluxo", "Erro", "Data (UTC)", "Contaminação"], "th"));
   const tbody = document.createElement("tbody");
   for (const r of list) {
     tbody.append(tr([
-      r.band ?? "—", r.det ? "D" + r.det : "—", fmtNum(r.wl),
-      ...keys.map((k) => (r[k] ? fmtNum(r[k].flux) : "—")),
+      r.key, fmtNum(r.wl), r.bw === null ? "—" : fmtNum(r.bw), r.det ? "D" + r.det : "—",
+      fmtNum(r.flux), r.err === null ? "—" : fmtNum(r.err), r.date ? fmtDateTime(r.date) : "—",
+      r.flagged ? r.flags.map(flagName).join(", ") || "sim" : "não",
     ]));
   }
   el.espTabela.replaceChildren(cap, thead, tbody);
 }
 
 function downloadCsv() {
-  const keys = state.keys;
-  const linhas = [["banda", "detector", "comprimento_de_onda_um", ...keys.map((k) => "brilho_" + k), ...keys.map((k) => "erro_" + k)].join(",")];
+  const q = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const linhas = [["ponto", "ra_deg", "dec_deg", "abertura_arcsec", "comprimento_de_onda_um", "largura_banda_um",
+    "detector", "fluxo", "erro_fluxo", "unidade", "observado_em", "observation_id", "contaminado", "flags"].join(",")];
   for (const r of state.rows) {
     linhas.push([
-      r.band ?? "", r.det ?? "", r.wl,
-      ...keys.map((k) => r[k]?.flux ?? ""),
-      ...keys.map((k) => r[k]?.err ?? ""),
-    ].join(","));
+      r.key, r.pt?.ra ?? "", r.pt?.dec ?? "", r.pt?.data?.aperture ?? "", r.wl, r.bw ?? "",
+      r.det ? "D" + r.det : "", r.flux, r.err ?? "", r.unit ?? "", r.date ?? "", r.obsId ?? "",
+      r.flagged, r.flags.join(";"),
+    ].map(q).join(","));
   }
   const url = URL.createObjectURL(new Blob([linhas.join("\n")], { type: "text/csv" }));
   const a = Object.assign(document.createElement("a"), { href: url, download: "espectro.csv" });
@@ -1305,7 +1477,7 @@ el.imgwrap.addEventListener("click", (e) => {
 el.imgwrap.addEventListener("keydown", (e) => {
   const key = activeKey();
   const passo = e.shiftKey ? 0.01 : 0.04;
-  const p = state.pts[key] ?? { fx: 0.5, fy: 0.5 };
+  const p = state.pts[key] ? markerFrac(state.pts[key]) : { fx: 0.5, fy: 0.5 };
   const mov = { ArrowLeft: [-passo, 0], ArrowRight: [passo, 0], ArrowUp: [0, -passo], ArrowDown: [0, passo] }[e.key];
   if (mov) {
     e.preventDefault();
@@ -1314,16 +1486,25 @@ el.imgwrap.addEventListener("keydown", (e) => {
     e.preventDefault();
     placePoint(key, p.fx, p.fy);
   } else if (e.key === "Escape" && state.pts[key]) {
+    state.specCtl[key]?.abort();
     state.pts[key] = null;
+    updateProgress();
     renderMarkers();
     renderChart();
   }
 });
 
 el.espCentro.addEventListener("click", () => placePoint(activeKey(), 0.5, 0.5));
+el.espAlvo.addEventListener("click", () => {
+  if (!state.values) { setEspStatus("Faça uma busca primeiro."); return; }
+  document.querySelector('input[name="ponto"][value="A"]').checked = true;
+  placePoint("A", 0.5, 0.5, { target: true });
+});
 el.espLimpar.addEventListener("click", clearPoints);
 el.espCsv.addEventListener("click", downloadCsv);
+el.espOcultar.addEventListener("change", renderChart);
 el.raio.addEventListener("change", () => {
+  el.raio.value = radius();
   renderMarkers();
   for (const k of ["A", "B"]) if (state.pts[k]) loadSpectrum(k);
 });
