@@ -99,12 +99,39 @@
         Preencha as coordenadas ou escolha um alvo de exemplo para começar.
       </div>
 
+      <div id="alternativas" class="alternativas" role="region" aria-labelledby="alt-titulo" hidden>
+        <h3 id="alt-titulo">Não foi possível buscar as observações</h3>
+        <p id="alt-msg"></p>
+        <div class="alt-opcoes">
+          <div id="alt-demo" class="alt-opcao" hidden>
+            <div id="alt-demo-lista" class="alt-botoes"></div>
+            <small></small>
+          </div>
+          <div class="alt-opcao">
+            <div class="alt-botoes">
+              <button type="button" id="alt-retry" class="chip">Tentar de novo agora</button>
+              <button type="button" id="alt-cancelar" class="chip" hidden>Cancelar nova tentativa</button>
+            </div>
+            <small id="alt-contagem" aria-live="polite"></small>
+          </div>
+          <div class="alt-opcao">
+            <div class="alt-botoes">
+              <button type="button" id="alt-mapa" class="chip">Explorar o mapa do céu enquanto isso</button>
+              <button type="button" id="alt-mock" class="chip">Testar a interface com dados fictícios</button>
+            </div>
+            <small>Os dados fictícios servem só para conhecer os controles: não são observações reais.</small>
+          </div>
+        </div>
+      </div>
+
       <div id="player" hidden>
         <p id="aviso-mock" class="mock" hidden>Dados fictícios: não representam observações científicas.</p>
+        <p id="aviso-demo" class="mock demo" hidden><span></span> <button type="button" id="demo-sair" class="chip">Tentar a busca ao vivo</button></p>
 
         <fieldset class="filtros" id="filtros">
           <legend>Filtrar por detector e comprimento de onda</legend>
-          <div id="detectores" class="detectores" role="group" aria-label="Detectores"></div>
+          <div id="detectores" class="detectores" role="group" aria-label="Detectores: clique para ver só um; Ctrl, ⌘ ou Shift + clique para somar"></div>
+          <label class="check vis det-modo" id="det-modo" hidden><input type="checkbox" id="det-somar"> Combinar detectores (cada clique soma ou tira um; atalho: Ctrl/⌘/Shift + clique)</label>
           <div id="faixa-wl" class="faixa" hidden>
             <label for="wl-min">Mínimo: <output id="wl-min-out" for="wl-min"></output></label>
             <input type="range" id="wl-min" min="0" max="0" value="0">
@@ -112,7 +139,7 @@
             <input type="range" id="wl-max" min="0" max="0" value="0">
           </div>
           <label class="check vis" id="so-completos-box" hidden><input type="checkbox" id="so-completos"> Só quadros completos <small id="so-completos-info"></small></label>
-          <p class="dica">Dica: para ver só a mudança ao longo do tempo, deixe um detector e uma faixa estreita de comprimento de onda.</p>
+          <p class="dica">Dica: clique num detector para ver só ele — assim a linha do tempo mostra só a mudança ao longo do tempo. O número em cada botão é a quantidade de observações; a faixa vem dos metadados das observações (≈ = aproximada).</p>
           <div class="filtro-rodape">
             <span id="contagem" role="status" aria-live="polite"></span>
             <button type="button" id="filtro-reset" class="chip">Limpar filtros</button>
@@ -128,6 +155,13 @@
           <div class="imgwrap" id="imgwrap" tabindex="0"
                aria-label="Imagem da região. Clique para marcar um ponto, ou use as setas do teclado. Enter marca o centro.">
             <img id="imagem" alt="">
+          </div>
+          <div id="img-falha" class="img-falha" role="alert" hidden>
+            <p id="img-falha-msg"></p>
+            <div class="alt-botoes">
+              <button type="button" id="img-retry" class="chip">Tentar de novo</button>
+              <button type="button" id="img-prox" class="chip">Próxima observação</button>
+            </div>
           </div>
           <figcaption id="legenda"></figcaption>
           <p class="legenda-sem-dados"><span class="sw-sem-dados" aria-hidden="true"></span>Hachurado = fora do detector (sem dados), não céu escuro. <span class="sw-invalido" aria-hidden="true"></span>Vinho (#B03060) = pixel inválido dentro do detector (núcleo saturado de estrela brilhante ou pixel defeituoso). Norte para cima, leste à esquerda.</p>
@@ -150,7 +184,31 @@
           <label for="slider">Linha do tempo</label>
           <input type="range" id="slider" min="0" max="0" value="0">
           <div class="ends"><span id="t-ini"></span><span id="t-fim"></span></div>
+          <small class="atalhos">Atalhos: <kbd>←</kbd> <kbd>→</kbd> trocam o quadro · <kbd>Espaço</kbd> reproduz/pausa.</small>
         </div>
+
+        <details class="comparar" id="comparar" hidden>
+          <summary>Comparar duas datas (cortina deslizante ou piscar)</summary>
+          <div class="cmp-controles">
+            <label>Data A <select id="cmp-a"></select></label>
+            <label>Data B <select id="cmp-b"></select></label>
+            <button type="button" id="cmp-trocar" class="chip">Trocar A ↔ B</button>
+            <fieldset class="cmp-modos">
+              <legend>Modo</legend>
+              <label><input type="radio" name="cmp-modo" value="cortina" checked> Cortina deslizante</label>
+              <label><input type="radio" name="cmp-modo" value="piscar"> Piscar A/B</label>
+            </fieldset>
+            <button type="button" id="cmp-piscar" class="chip" aria-pressed="false" hidden>Piscar</button>
+          </div>
+          <p id="cmp-aviso" class="dica" aria-live="polite"></p>
+          <div class="cmp-stage" id="cmp-stage" data-modo="cortina">
+            <img id="cmp-img-b" alt="">
+            <img id="cmp-img-a" alt="">
+            <div class="cmp-linha" aria-hidden="true"></div>
+            <input type="range" id="cmp-divisor" min="0" max="100" value="50" aria-label="Posição da cortina: à esquerda a data A, à direita a data B">
+          </div>
+          <p id="cmp-rotulo" class="cmp-rotulo" aria-live="polite"></p>
+        </details>
 
         <dl id="meta" class="meta"></dl>
         <div class="share">
@@ -185,10 +243,11 @@
 
     <section id="ceu" class="panel" aria-labelledby="t-ceu">
       <h2 id="t-ceu">Mapa do céu</h2>
-      <p class="dica">O mapa abre mostrando o céu todo, com imagens da própria missão SPHEREx (uma por detector). Regiões que o telescópio ainda não observou aparecem vazias. Clique em qualquer ponto para pesquisar aquelas coordenadas: elas são preenchidas no formulário e a busca é feita. Para mais precisão, aproxime o zoom e clique de novo. O retângulo rosa é a área (FOV) da busca. O mapa usa a biblioteca Aladin Lite, do Centro de Dados Astronômicos de Estrasburgo (CDS), e só é carregado quando você pedir.</p>
+      <p class="dica">O mapa abre mostrando o céu todo, de preferência com imagens da própria missão SPHEREx (uma por detector); se esse mapa estiver fora do ar, o aviso abaixo diz qual fundo está em uso. Clique em qualquer ponto para pesquisar aquelas coordenadas: elas são preenchidas no formulário e a busca é feita. Para mais precisão, aproxime o zoom e clique de novo. O retângulo rosa é a área (FOV) do quadro em exibição e o círculo rosa é o alvo naquela data. O mapa usa a biblioteca Aladin Lite, do Centro de Dados Astronômicos de Estrasburgo (CDS), e é carregado quando esta seção aparece na tela.</p>
 
       <div class="ceu-controles">
         <button type="button" id="ceu-abrir" class="primary">Carregar mapa interativo</button>
+        <button type="button" id="ceu-centro" class="chip">Centralizar no alvo</button>
         <button type="button" id="ceu-tudo" class="chip">Ver o céu todo</button>
         <label for="ceu-fundo">Imagem de fundo</label>
         <select id="ceu-fundo"></select>
@@ -196,9 +255,10 @@
         <label class="check vis"><input type="checkbox" id="ceu-wise"> Fontes WISE</label>
       </div>
 
-      <p id="ceu-status" class="status" role="status" aria-live="polite">Clique em “Carregar mapa interativo” para ver o céu todo e escolher um ponto.</p>
+      <p id="ceu-fundo-info" class="note" aria-live="polite"></p>
+      <p id="ceu-status" class="status" role="status" aria-live="polite">O mapa abre sozinho quando esta seção aparece na tela (ou clique em “Carregar mapa interativo”).</p>
       <div id="ceu-mapa" class="ceu-mapa" hidden></div>
-      <p class="note">Mapas SPHEREx: NASA/JPL-Caltech, dados do IRSA/IPAC, ladrilhos HiPS do CDS (versão QR2). DSS2, 2MASS, AllWISE e os catálogos Gaia DR3 e AllWISE são de outros telescópios, só para comparação. Marcas: cruz = centro da busca, A e B = pontos do espectro.</p>
+      <p class="note">Mapas SPHEREx: NASA/JPL-Caltech, dados do IRSA/IPAC, ladrilhos HiPS do CDS (versão QR2). DSS2, 2MASS, AllWISE e os catálogos Gaia DR3 e AllWISE são de outros telescópios, só para comparação. Marcas: cruz = centro da busca, círculo rosa = alvo no quadro em exibição, A e B = pontos do espectro.</p>
     </section>
 
     <section id="mapa" class="panel" aria-labelledby="t-mapa">
@@ -230,6 +290,7 @@
       </div>
 
       <p id="esp-status" class="status" role="status" aria-live="polite">Faça uma busca e marque um ponto na imagem.</p>
+      <div id="esp-acoes" class="alt-botoes" hidden><button type="button" id="esp-retry" class="chip">Tentar de novo</button></div>
       <progress id="esp-progresso" class="esp-progresso" hidden aria-label="Calculando o espectro"></progress>
       <div id="esp-grafico" class="grafico" hidden></div>
       <p id="esp-nota" class="note" hidden></p>
