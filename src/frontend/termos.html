@@ -46,23 +46,23 @@
     <section id="missao" class="panel" aria-labelledby="t-missao">
       <h2 id="t-missao">A missão e os dados</h2>
       <dl class="glossary">
-        <dt>SPHEREx</dt>
+        <dt id="termo-spherex">SPHEREx</dt>
         <dd>Telescópio espacial da NASA que mapeia o céu inteiro em infravermelho. Ele observa a mesma região do céu em momentos diferentes, e isso permite ver o que muda com o tempo.</dd>
-        <dt>Infravermelho</dt>
+        <dt id="termo-infravermelho">Infravermelho</dt>
         <dd>Luz que nossos olhos não enxergam. Ela revela objetos frios ou escondidos por poeira. As imagens que você vê aqui são convertidas para tons que a tela consegue mostrar.</dd>
-        <dt>IRSA/IPAC</dt>
+        <dt id="termo-irsa">IRSA/IPAC</dt>
         <dd>O arquivo científico oficial onde os dados do SPHEREx ficam guardados. É de lá que o projeto busca as observações.</dd>
-        <dt>Produto de dados e identificador</dt>
+        <dt id="termo-produto">Produto de dados e identificador</dt>
         <dd>Cada observação é um arquivo (produto) com um identificador próprio. Esse código permite conferir a origem de qualquer imagem no arquivo científico.</dd>
-        <dt>DR1 e QR3</dt>
+        <dt id="termo-dr1-qr3">DR1 e QR3</dt>
         <dd>Nomes de conjuntos de produtos de dados do SPHEREx. Eles podem ter processamentos diferentes, então não devem ser misturados sem cuidado ao comparar imagens.</dd>
-        <dt>HiPS</dt>
+        <dt id="termo-hips">HiPS</dt>
         <dd>Um formato de mapa do céu em “ladrilhos”, que permite dar zoom do céu inteiro até regiões pequenas sem baixar tudo de uma vez. O mapa do SPHEREx neste site usa esse formato.</dd>
-        <dt>Mapa do céu, Gaia e WISE</dt>
+        <dt id="termo-gaia-wise">Mapa do céu, Gaia e WISE</dt>
         <dd>O mapa do céu mostra onde fica a sua região sobre imagens de outros telescópios. Gaia (missão europeia que mede posição e movimento de estrelas) e WISE (telescópio infravermelho da NASA) têm catálogos que ajudam a ver se algo que aparece no SPHEREx já é um objeto conhecido.</dd>
         <dt>FITS</dt>
         <dd>Formato de arquivo usado na astronomia. Guarda a imagem e muitas informações sobre ela. O sistema converte o FITS para uma imagem comum antes de mostrá-la.</dd>
-        <dt>Dados fictícios</dt>
+        <dt id="termo-ficticios">Dados fictícios</dt>
         <dd>Imagens inventadas, usadas só para testar a interface. Elas sempre aparecem com um aviso e nunca representam observações científicas.</dd>
       </dl>
     </section>
@@ -72,15 +72,15 @@
       <dl class="glossary">
         <dt>Coordenadas celestes</dt>
         <dd>Um endereço para pontos do céu, como latitude e longitude na Terra. Aqui usamos dois números: RA e Dec.</dd>
-        <dt>Ascensão reta (RA)</dt>
+        <dt id="termo-ra">Ascensão reta (RA)</dt>
         <dd>É a “longitude” do céu. Neste site é informada em graus, de 0 a 360. Em catálogos ela também aparece em horas (0 a 24 h), onde 1 hora equivale a 15 graus. O site aceita os dois formatos, por exemplo 133.795 ou 08h55m10.831s.</dd>
-        <dt>Declinação (Dec)</dt>
+        <dt id="termo-dec">Declinação (Dec)</dt>
         <dd>É a “latitude” do céu, em graus. Vai de −90 (polo sul celeste) a +90 (polo norte celeste), e 0 é o equador celeste.</dd>
-        <dt>Campo de visão (FOV)</dt>
+        <dt id="termo-fov">Campo de visão (FOV)</dt>
         <dd>O tamanho da região recortada ao redor do ponto escolhido. Aqui é medido em minutos de arco. Quanto maior o valor, mais céu aparece e menos detalhe cabe em cada ponto.</dd>
-        <dt>Minuto de arco</dt>
+        <dt id="termo-arcmin">Minuto de arco</dt>
         <dd>Unidade de ângulo: 1 grau tem 60 minutos de arco. Como referência, a Lua cheia vista da Terra tem cerca de 30 minutos de arco de largura.</dd>
-        <dt>Recorte</dt>
+        <dt id="termo-recorte">Recorte</dt>
         <dd>Um pedaço da imagem original do SPHEREx, centrado nas coordenadas que você informou. Os recortes são menores e mais rápidos de carregar do que a imagem inteira.</dd>
       </dl>
     </section>
@@ -88,33 +88,33 @@
     <section id="tempo" class="panel" aria-labelledby="t-tempo">
       <h2 id="t-tempo">Como ler a sequência</h2>
       <dl class="glossary">
-        <dt>Época de observação</dt>
+        <dt id="termo-epoca">Época de observação</dt>
         <dd>A data em que a imagem foi registrada. Cada quadro da sequência é uma época diferente, ordenada da mais antiga para a mais recente.</dd>
-        <dt>Comprimento de onda</dt>
+        <dt id="termo-comprimento-onda">Comprimento de onda</dt>
         <dd>A “cor” da luz infravermelha, medida em micrômetros (µm). O SPHEREx cobre aproximadamente de 0,75 a 5 µm, dividido em 102 bandas.</dd>
-        <dt>Banda espectral</dt>
+        <dt id="termo-banda">Banda espectral</dt>
         <dd>Uma faixa de cor (comprimento de onda) em que o telescópio observa. Bandas diferentes não são momentos diferentes: por isso o site nunca as trata como passagem de tempo.</dd>
-        <dt>Detector</dt>
+        <dt id="termo-detector">Detector</dt>
         <dd>O sensor do telescópio que registrou a imagem. O SPHEREx tem seis conjuntos de detectores, e cada um cobre uma parte do espectro. Neste site eles aparecem como D1 a D6. As 102 bandas se dividem em 17 por detector, e os detectores 1 a 6 cobrem, em ordem, do menor ao maior comprimento de onda.</dd>
-        <dt>Movimento próprio</dt>
+        <dt id="termo-movimento-proprio">Movimento próprio</dt>
         <dd>Algumas estrelas e objetos mudam de posição no céu ao longo dos anos. Em poucos meses o deslocamento é pequeno, mas pode ser notado entre quadros.</dd>
-        <dt>Mapa de observações</dt>
+        <dt id="termo-mapa-observacoes">Mapa de observações</dt>
         <dd>Um gráfico em plano cartesiano: cada ponto é uma observação, com a data no eixo horizontal e o comprimento de onda no vertical. Mostra de uma vez quando e em que “cores” a região foi observada.</dd>
-        <dt>Espectro</dt>
+        <dt id="termo-espectro">Espectro</dt>
         <dd>Um gráfico do brilho de um ponto em cada comprimento de onda. Mostra “de que cores infravermelhas” o objeto é feito e ajuda a distinguir tipos de objeto. No SPHEREx, cada imagem registra comprimentos de onda diferentes em partes diferentes do detector (filtro linear variável); por isso cada ponto do gráfico vem de uma exposição diferente, em que o objeto caiu numa posição diferente do detector. O comprimento de onda de cada medida é aproximado.</dd>
-        <dt>Abertura (raio)</dt>
+        <dt id="termo-abertura">Abertura (raio)</dt>
         <dd>O tamanho do círculo, em segundos de arco, ao redor do ponto clicado (padrão 9″, de 3″ a 30″). O fluxo é a média dentro do círculo menos o fundo local, medido num anel em volta. Um círculo maior capta mais luz, mas também mais ruído e mais estrelas vizinhas.</dd>
-        <dt>Contaminação (flags)</dt>
+        <dt id="termo-contaminacao">Contaminação (flags)</dt>
         <dd>Cada imagem do SPHEREx vem com uma máscara que marca pixels problemáticos: raio cósmico, saturação, pixel morto ou quente, reflexo (ghost), rastro de satélite e outros. Uma medida “contaminada” tem algum desses pixels dentro da abertura e merece desconfiança; no gráfico ela aparece com símbolo vazado. A marca “fonte conhecida” (SOURCE) é só informativa e não conta como contaminação.</dd>
-        <dt>Quadro comum</dt>
+        <dt id="termo-quadro-comum">Quadro comum</dt>
         <dd>Todas as imagens são reprojetadas para a mesma grade: norte para cima, leste à esquerda, pixel de 6,15″ e lado igual ao FOV. Assim, o mesmo pixel corresponde ao mesmo ponto do céu em todas as datas. Com “Seguir o movimento do alvo”, o centro de cada quadro acompanha a posição do alvo naquela data.</dd>
-        <dt>Cobertura</dt>
+        <dt id="termo-cobertura">Cobertura</dt>
         <dd>A fração do quadro que caiu dentro do detector naquela exposição. Um quadro com cobertura parcial tem uma parte sem dados (hachurada), que não é céu escuro.</dd>
-        <dt>Fundo do céu</dt>
+        <dt id="termo-fundo-ceu">Fundo do céu</dt>
         <dd>Uma região sem o objeto de interesse. Comparar o alvo (A) com o fundo (B) mostra o que vem do objeto e o que vem do céu ao redor.</dd>
-        <dt>Resolução espacial</dt>
+        <dt id="termo-resolucao">Resolução espacial</dt>
         <dd>O nível de detalhe da imagem. As imagens do SPHEREx mostram os objetos com poucos pontos, então não espere fotos nítidas como as de câmeras comuns.</dd>
-        <dt>Brilho e comparação</dt>
+        <dt id="termo-brilho">Brilho e comparação</dt>
         <dd>Um objeto parecer mais claro ou escuro entre dois quadros não prova que ele mudou. A comparação de brilho exige análise científica e está fora deste protótipo.</dd>
       </dl>
     </section>
