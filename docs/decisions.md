@@ -249,6 +249,32 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 014 — Recorte na posição propagada pelo movimento próprio
+
+**Data:** 14/11/2026
+
+**Assunto:** Pendência 2: alvos de alto movimento próprio saem do centro do recorte ao longo da janela SPHEREx (DECISÃO 007, item 8).
+
+**Decisão tomada:**
+
+- `GET /api/observations` aceita `pm_ra_cosdec_masyr`, `pm_dec_masyr` e `ref_epoch_jyear`, sempre os três juntos. `ra_deg`/`dec_deg` passam a ser a posição na época de referência.
+- Cada observação é filtrada pelo `s_region` (DECISÃO 013) e recortada na posição propagada para o seu próprio `t_min`. Os campos `metadata.cutout_center_ra_deg/dec_deg` e `position_source` (`requested` ou `proper_motion`) registram o que foi feito.
+- Modelo: movimento linear no plano tangente (projeção gnomônica inversa), em `services/astrometry.py`. Paralaxe e velocidade radial são ignoradas: a oscilação paralática dos alvos é ≤ 0,55″ (< 0,1 px).
+- A consulta SIA de um alvo móvel é centrada em 2026.0, com o raio ampliado pelo deslocamento de 1,5 ano.
+- `GET /api/targets` publica o movimento próprio de cada alvo (valores de `docs/science/target-catalog.md`), e o frontend o envia ao clicar num alvo. Editar RA/Dec ou clicar no mapa descarta o movimento.
+- O id da observação passa a incluir a assinatura da consulta (centro, FOV, movimento), para que o mesmo produto em consultas diferentes não colida.
+
+**Evidência:**
+
+- A propagação confere com as posições do catálogo científico (≤ 0,015″) e com o astropy (< 0,001″).
+- Ao vivo, Estrela de Barnard no detector D1: sem correção a estrela se afasta até **2,18 px** (~13″) do centro em ago–set/2026; com correção ela fica a **≤ 0,73 px** em todas as datas amostradas (0,18–0,73 px). Nessa medição, o núcleo saturado (pixels `NaN`) foi tratado como o mais brilhante.
+
+**Limitações:** a correção vale apenas para alvos com movimento próprio conhecido (os 5 de exemplo); uma coordenada digitada manualmente não é corrigida. Os recortes ainda não estão reprojetados para uma orientação comum (pendência 3).
+
+**Responsável:** Liderança técnica.
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026
