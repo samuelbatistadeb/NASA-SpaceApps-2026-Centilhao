@@ -528,3 +528,62 @@ def render_png(data: np.ndarray) -> bytes:
         figure.clear()
 
     return buffer.getvalue()
+
+
+#: Colour (RGB) of pixels inside the detector without a valid value
+#: (saturated cores, bad pixels). Distinct from "no data" (transparent).
+INVALID_PIXEL_RGB = (176, 48, 96)
+
+#: Side (pixels) of the PNG sent to the browser; small frames are enlarged
+#: with nearest-neighbour so the SPHEREx pixels stay visible.
+FRAME_PNG_SIDE = 600
+
+
+def render_frame_png(
+    data: np.ndarray,
+    outside: np.ndarray,
+    *,
+    limits: tuple[float, float] | None = None,
+    side: int = FRAME_PNG_SIDE,
+) -> bytes:
+    """Render a common-frame image as an RGBA PNG (north up, east left).
+
+    * ``outside`` (no data, outside the detector) -> transparent;
+    * NaN inside the detector -> :data:`INVALID_PIXEL_RGB`;
+    * finite values -> grayscale with the visual normalisation (1-99%), or
+      with ``limits`` when given (e.g. symmetric limits of a difference image).
+
+    Row 0 of ``data`` is the south edge (FITS convention); it is flipped so
+    that north is at the top of the PNG.
+    """
+    from PIL import Image
+
+    array = np.asarray(data, dtype=float)
+    valid = np.isfinite(array) & ~outside
+    if limits is None:
+        if not valid.any():
+            raise ProcessingError(
+                "A imagem não contém valores válidos para visualização.",
+                detail="no finite pixel inside the detector",
+            )
+        vmin, vmax = (float(v) for v in np.percentile(array[valid], [1.0, 99.0]))
+    else:
+        vmin, vmax = limits
+    if not vmax > vmin:
+        vmax = vmin + 1.0
+
+    gray = np.clip((np.nan_to_num(array, nan=vmin) - vmin) / (vmax - vmin), 0.0, 1.0)
+    gray = (gray * 255.0 + 0.5).astype(np.uint8)
+    rgba = np.zeros(array.shape + (4,), dtype=np.uint8)
+    rgba[..., 0] = rgba[..., 1] = rgba[..., 2] = gray
+    rgba[..., 3] = 255
+    invalid = ~np.isfinite(array) & ~outside
+    rgba[invalid, 0], rgba[invalid, 1], rgba[invalid, 2] = INVALID_PIXEL_RGB
+    rgba[outside] = 0
+
+    image = Image.fromarray(np.flipud(rgba), mode="RGBA")
+    if image.width < side:
+        image = image.resize((side, side), Image.NEAREST)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()

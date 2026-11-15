@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
 from astropy.wcs import WCS
 
 
@@ -117,3 +118,56 @@ def polygon_contains_position(
             if crossing_x > 0.0:
                 inside = not inside
     return inside
+
+
+def _gnomonic_vertices(
+    vertices: list[tuple[float, float]], ra_deg: float, dec_deg: float
+) -> np.ndarray | None:
+    """Project polygon vertices on the plane tangent at (ra, dec), in arcmin.
+
+    x grows to the east, y to the north. Returns ``None`` when a vertex is
+    90 degrees or more away (it cannot be projected).
+    """
+    ra0 = math.radians(ra_deg)
+    dec0 = math.radians(dec_deg)
+    ra = np.radians([v[0] for v in vertices])
+    dec = np.radians([v[1] for v in vertices])
+    cos_c = np.sin(dec0) * np.sin(dec) + np.cos(dec0) * np.cos(dec) * np.cos(ra - ra0)
+    if np.any(cos_c <= 1e-9):
+        return None
+    x = np.cos(dec) * np.sin(ra - ra0) / cos_c
+    y = (np.cos(dec0) * np.sin(dec) - np.sin(dec0) * np.cos(dec) * np.cos(ra - ra0)) / cos_c
+    return np.degrees(np.column_stack([x, y])) * 60.0
+
+
+def footprint_coverage(
+    vertices: list[tuple[float, float]],
+    ra_deg: float,
+    dec_deg: float,
+    fov_arcmin: float,
+    samples: int = 21,
+) -> float:
+    """Fraction of a square field (side ``fov_arcmin``, north up) inside a footprint.
+
+    The square is centred on (ra, dec) in the tangent plane, the same frame
+    used by :mod:`app.services.common_frame`. The fraction is estimated on a
+    ``samples`` x ``samples`` grid of points (even-odd rule, vectorised).
+    """
+    polygon = _gnomonic_vertices(vertices, ra_deg, dec_deg)
+    if polygon is None:
+        return 0.0
+    half = fov_arcmin / 2.0
+    axis = (np.arange(samples) + 0.5) / samples * fov_arcmin - half
+    px, py = np.meshgrid(axis, axis)
+    px = px.ravel()
+    py = py.ravel()
+    inside = np.zeros(px.shape, dtype=bool)
+    x1, y1 = polygon[:, 0], polygon[:, 1]
+    x2, y2 = np.roll(x1, -1), np.roll(y1, -1)
+    for ax, ay, bx, by in zip(x1, y1, x2, y2):
+        crosses = (ay > py) != (by > py)
+        if not crosses.any():
+            continue
+        x_at = ax + (py - ay) * (bx - ax) / (by - ay if by != ay else 1e-300)
+        inside ^= crosses & (px < x_at)
+    return float(inside.mean())

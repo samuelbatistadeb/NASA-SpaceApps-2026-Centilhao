@@ -135,6 +135,22 @@ class ObservationMetadata(BaseModel):
     cutout_center_dec_deg: float | None = Field(
         None, description="Declination (ICRS, degrees) at the centre of the cutout."
     )
+    coverage_fraction: float | None = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Fraction of the requested square field that lies inside the "
+            "detector footprint (from s_region); 1 = complete frame."
+        ),
+    )
+    frame: str | None = Field(
+        None,
+        description=(
+            "Geometry of the image: 'common_north_up' (resampled onto a TAN "
+            "grid centred on the target, north up, east left)."
+        ),
+    )
     position_source: str | None = Field(
         None,
         description=(

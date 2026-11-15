@@ -116,7 +116,8 @@ def test_auto_mode_uses_the_ibe_cutout(tmp_path) -> None:
     assert result.data.ndim == 2
     sent = transport.requests[0]
     assert sent["url"] == IBE_URL
-    assert sent["params"]["size"] == "0.020000"  # 1.2 arcmin = 0.02 deg
+    # 1.2 arcmin = 0.02 deg, x1.5 so the north-up frame fits at any detector angle
+    assert sent["params"]["size"] == "0.030000"
 
 
 def test_local_mode_keeps_the_full_download(tmp_path) -> None:

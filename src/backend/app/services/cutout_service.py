@@ -34,6 +34,10 @@ from app.services.irsa_client import IrsaClient
 logger = logging.getLogger(__name__)
 
 
+#: Side of the IBE cutout relative to the field of view (see _build_remote_cutout).
+IBE_SIZE_FACTOR = 1.5
+
+
 class CutoutStrategy(str, Enum):
     """How the displayed pixels were obtained."""
 
@@ -63,6 +67,10 @@ class CutoutResult:
     metadata: dict[str, Any] = field(default_factory=dict)
     header: dict[str, Any] = field(default_factory=dict)
     observed_at: datetime | None = None
+    #: Pixels and celestial WCS of the source (IBE cutout or full detector),
+    #: used to resample onto the common frame. ``None`` when unavailable.
+    source_data: np.ndarray | None = None
+    source_wcs: Any = None
 
 
 class CutoutService:
@@ -116,11 +124,13 @@ class CutoutService:
         """Ask IRSA for the region (IBE cutout of the product, when possible)."""
         size_arcsec = max(request.fov_arcmin * 60.0, 1.0)
         if self._client.supports_ibe_cutout(request.access_url):
+            # The IBE cuts along the detector axes; the common frame is north
+            # up. A side 1.5x the FOV (> sqrt 2) covers the frame at any angle.
             content = self._client.fetch_ibe_cutout(
                 request.access_url,
                 request.ra_deg,
                 request.dec_deg,
-                size_arcsec / 3600.0,
+                size_arcsec * IBE_SIZE_FACTOR / 3600.0,
             )
             center_source = "ibe_cutout"
         else:
@@ -145,6 +155,8 @@ class CutoutService:
             metadata=metadata,
             header=fits_processor.extract_header_metadata(image.header),
             observed_at=fits_processor.extract_observation_datetime(image.header),
+            source_data=image.data,
+            source_wcs=fits_processor.extract_wcs(image.header),
         )
 
     def _build_local_cutout(
@@ -192,4 +204,6 @@ class CutoutService:
             metadata=metadata,
             header=header_metadata,
             observed_at=fits_processor.extract_observation_datetime(image.header),
+            source_data=image.data,
+            source_wcs=wcs,
         )

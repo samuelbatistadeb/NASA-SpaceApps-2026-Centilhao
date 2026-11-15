@@ -15,16 +15,21 @@ It never invents a value: a field that the archive does not publish stays
 from __future__ import annotations
 
 import hashlib
+import io
 import logging
+import math
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Mapping
 
+import numpy as np
+
 from app.api.errors import (
     ImageNotFoundError,
     InvalidParametersError,
     NoObservationsFoundError,
+    ProcessingError,
 )
 from app.core.config import Settings
 from app.schemas.observation import (
@@ -56,9 +61,34 @@ from app.services.astrometry import (
     jyear_from_datetime,
     propagate_position,
 )
-from app.services.sky_coverage import parse_s_region, polygon_contains_position
+from app.services import fits_processor
+from app.services.common_frame import (
+    SPHEREX_PIXEL_SCALE_ARCSEC,
+    FrameImage,
+    frame_side_pixels,
+    frame_wcs,
+    project_to_frame,
+)
+from app.services.sky_coverage import (
+    footprint_coverage,
+    parse_s_region,
+    polygon_contains_position,
+)
 
 logger = logging.getLogger(__name__)
+
+#: Display frame of the images: TAN, north up, east left, centred on the target.
+FRAME_COMMON = "common_north_up"
+#: Bumped whenever the rendering of the cached images changes.
+_IMAGE_CACHE_VERSION = "frame-v1"
+
+#: Fields of view (arcmin) evaluated by :meth:`ObservationService.coverage`.
+COVERAGE_FOVS_ARCMIN: tuple[float, ...] = (1.0, 2.0, 3.0, 5.0, 10.0, 15.0, 30.0)
+#: Coverage from which a frame counts as complete (sampling tolerance).
+COMPLETE_COVERAGE = 0.999
+#: Maximum number of observations combined in one composite (cost guard:
+#: each uncached frame is one IBE cutout).
+MAX_COMPOSITE_FRAMES = 40
 
 #: ``position_source`` values published in the metadata of each observation.
 POSITION_REQUESTED = "requested"
@@ -188,17 +218,7 @@ class ObservationService:
                 "Nenhuma observação foi encontrada para os parâmetros informados."
             )
 
-        def center_of(record: Mapping[str, Any]) -> tuple[float, float, str]:
-            if motion is None:
-                return ra_deg, dec_deg, POSITION_REQUESTED
-            observed_at = self._extract_observed_at(record)[0]
-            if observed_at is None:
-                return ra_deg, dec_deg, POSITION_REQUESTED
-            ra, dec = propagate_position(
-                ra_deg, dec_deg, motion, jyear_from_datetime(observed_at)
-            )
-            return ra, dec, POSITION_PROPER_MOTION
-
+        center_of = self._center_function(ra_deg, dec_deg, motion)
         records = self._filter_by_footprint(records, ra_deg, dec_deg, center_of=center_of)
         if not records:
             raise NoObservationsFoundError(
@@ -224,6 +244,234 @@ class ObservationService:
             observations=observations,
         )
 
+    def coverage(
+        self,
+        ra_deg: float,
+        dec_deg: float,
+        motion: ProperMotion | None = None,
+        fovs: tuple[float, ...] = COVERAGE_FOVS_ARCMIN,
+    ) -> dict[str, Any]:
+        """How many frames are complete/partial for each field of view.
+
+        Computed from the detector polygons only (no image is downloaded), so
+        the interface can show the cost/benefit of each FOV before searching.
+        """
+        self._validate(ra_deg, dec_deg, max(fovs))
+        query_ra, query_dec, margin_deg = ra_deg, dec_deg, 0.0
+        if motion is not None:
+            query_ra, query_dec = propagate_position(
+                ra_deg, dec_deg, motion, _MOTION_QUERY_EPOCH_JYEAR
+            )
+            margin_deg = motion.total_masyr * _MOTION_QUERY_HALF_SPAN_YEARS / 3_600_000.0
+        records = self._query_records(query_ra, query_dec, max(fovs), margin_deg)
+
+        center_of = self._center_function(ra_deg, dec_deg, motion)
+        records = self._filter_by_footprint(records, ra_deg, dec_deg, center_of=center_of)
+        records = self._unique_products(records)
+        prepared = []
+        epochs = []
+        for record in records:
+            ra, dec, _ = center_of(record)
+            prepared.append((parse_s_region(record.get("s_region")), ra, dec))
+            observed_at = self._extract_observed_at(record)[0]
+            if observed_at is not None:
+                epochs.append(jyear_from_datetime(observed_at))
+
+        scale = SPHEREX_PIXEL_SCALE_ARCSEC
+        rows = []
+        for fov in fovs:
+            complete = partial = 0
+            for polygon, ra, dec in prepared:
+                if polygon is None:
+                    continue
+                if footprint_coverage(polygon, ra, dec, fov) >= COMPLETE_COVERAGE:
+                    complete += 1
+                else:
+                    partial += 1
+            side = frame_side_pixels(fov, scale)
+            ibe_side = math.ceil(fov * 60.0 * 1.5 / scale)
+            rows.append({
+                "fov_arcmin": fov,
+                "pixels": side,
+                "observations": len(prepared),
+                "complete": complete,
+                "partial": partial,
+                # IMAGE HDU only (DECISÃO 012): float32 pixels + ~3 header blocks.
+                "estimated_kb_per_image": round((ibe_side**2 * 4 + 3 * 2880) / 1024, 1),
+            })
+
+        motion_arcsec = None
+        if motion is not None and len(epochs) >= 2:
+            motion_arcsec = round(motion.total_masyr * (max(epochs) - min(epochs)) / 1000.0, 2)
+        minimum = max(3.0, 4.0 * (motion_arcsec or 0.0) / 60.0)
+        recommended = next((f for f in fovs if f >= minimum), fovs[-1])
+        return {
+            "fovs": rows,
+            "recommended_fov_arcmin": recommended,
+            "motion_arcsec_over_survey": motion_arcsec,
+            "pixel_scale_arcsec": scale,
+        }
+
+    def composite(
+        self, op: str, ids_a: list[str], ids_b: list[str] | None = None
+    ) -> ImageResult:
+        """Combine observations already aligned on the common frame.
+
+        * ``mean``: average of the frames of group A (same detector only), to
+          raise the signal-to-noise ratio. Units stay MJy/sr.
+        * ``diff``: mean(A) - mean(B), e.g. early vs late epochs, so that a
+          source that moved shows up as a bright/dark pair.
+
+        Each frame has its median (sky background, which changes with the
+        zodiacal light between epochs) subtracted before combining. Pixels
+        without data in a frame do not contribute; a pixel is "no data" only
+        when no frame covers it.
+        """
+        ids_b = ids_b or []
+        if op not in ("mean", "diff"):
+            raise InvalidParametersError("A operação deve ser 'mean' ou 'diff'.")
+        if not ids_a or (op == "diff" and not ids_b):
+            raise InvalidParametersError(
+                "Informe as observações do grupo A (e do grupo B para a diferença)."
+            )
+        if op == "mean" and ids_b:
+            raise InvalidParametersError("A média usa apenas o grupo A.")
+        total = len(ids_a) + len(ids_b)
+        if total > MAX_COMPOSITE_FRAMES:
+            raise InvalidParametersError(
+                f"Combine no máximo {MAX_COMPOSITE_FRAMES} observações por vez."
+            )
+
+        cache_key = DiskCache.make_key(
+            "composite", op, ",".join(sorted(ids_a)), ",".join(sorted(ids_b)),
+            _IMAGE_CACHE_VERSION,
+        )
+        cached = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key)
+        meta_key = f"{cache_key}.meta"
+        if cached is not None:
+            metadata = dict(self._cache.get_json(NAMESPACE_OBSERVATIONS, meta_key) or {})
+            return ImageResult(content=cached, metadata=metadata,
+                               headers=self._composite_headers(metadata))
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=self._settings.max_concurrent_product_requests) as pool:
+            frames_a = list(pool.map(self.get_frame, ids_a))
+            frames_b = list(pool.map(self.get_frame, ids_b))
+
+        all_frames = frames_a + frames_b
+        shapes = {frame.data.shape for frame, _ in all_frames}
+        if len(shapes) != 1:
+            raise InvalidParametersError(
+                "As observações combinadas precisam ter o mesmo campo de visão."
+            )
+        detectors = sorted({str(extract_detector(entry.record) or "?") for _, entry in all_frames})
+        if len(detectors) > 1:
+            raise InvalidParametersError(
+                "Combine observações de um único detector: cada detector vê outra "
+                f"faixa do infravermelho (recebido: {', '.join(detectors)})."
+            )
+
+        def stack(group):
+            arrays = []
+            for frame, _ in group:
+                data = np.where(frame.outside, np.nan, frame.data)
+                background = np.nanmedian(data) if np.isfinite(data).any() else 0.0
+                arrays.append(data - background)
+            cube = np.stack(arrays)
+            counts = np.isfinite(cube).sum(axis=0)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                mean = np.nansum(cube, axis=0) / np.where(counts == 0, 1, counts)
+            mean[counts == 0] = np.nan
+            no_data = np.stack([frame.outside for frame, _ in group]).all(axis=0)
+            return mean, no_data, counts
+
+        mean_a, outside_a, counts_a = stack(frames_a)
+        if op == "mean":
+            result, outside = mean_a, outside_a
+            limits = None
+        else:
+            mean_b, outside_b, _ = stack(frames_b)
+            result = mean_a - mean_b
+            outside = outside_a | outside_b
+            valid = np.isfinite(result) & ~outside
+            spread = float(np.percentile(np.abs(result[valid]), 99.0)) if valid.any() else 1.0
+            limits = (-spread or -1.0, spread or 1.0)
+
+        content = fits_processor.render_frame_png(result, outside, limits=limits)
+        epochs = sorted(
+            jyear_from_datetime(t) for t in (
+                self._extract_observed_at(entry.record)[0] for _, entry in all_frames
+            ) if t is not None
+        )
+        metadata = {
+            "composite_op": op,
+            "frames_a": len(frames_a),
+            "frames_b": len(frames_b),
+            "detector": detectors[0],
+            "frame": FRAME_COMMON,
+            "background": "median of each frame subtracted",
+            "epoch_span_jyear": [round(epochs[0], 4), round(epochs[-1], 4)] if epochs else None,
+            "max_frames_per_pixel": int(counts_a.max()) if counts_a.size else 0,
+            "difference_limits": list(limits) if limits else None,
+        }
+        self._cache.set_bytes(NAMESPACE_IMAGES, cache_key, content)
+        self._cache.set_json(NAMESPACE_OBSERVATIONS, meta_key, metadata)
+        return ImageResult(content=content, metadata=metadata,
+                           headers=self._composite_headers(metadata))
+
+    @staticmethod
+    def _composite_headers(metadata: Mapping[str, Any]) -> dict[str, str]:
+        headers = {
+            "X-SpherEx-Image-Type": "composite-visual-representation",
+            "X-SpherEx-Frame": "common-north-up",
+            "Cache-Control": "no-store",
+        }
+        for key, header in (
+            ("composite_op", "X-SpherEx-Composite-Op"),
+            ("frames_a", "X-SpherEx-Frames-A"),
+            ("frames_b", "X-SpherEx-Frames-B"),
+            ("detector", "X-SpherEx-Detector"),
+        ):
+            if metadata.get(key) is not None:
+                headers[header] = str(metadata[key])
+        return headers
+
+    def _center_function(
+        self, ra_deg: float, dec_deg: float, motion: ProperMotion | None
+    ) -> Callable[[Mapping[str, Any]], tuple[float, float, str]]:
+        """Return ``record -> (ra, dec, position_source)`` for this query."""
+
+        def center_of(record: Mapping[str, Any]) -> tuple[float, float, str]:
+            if motion is None:
+                return ra_deg, dec_deg, POSITION_REQUESTED
+            observed_at = self._extract_observed_at(record)[0]
+            if observed_at is None:
+                return ra_deg, dec_deg, POSITION_REQUESTED
+            ra, dec = propagate_position(
+                ra_deg, dec_deg, motion, jyear_from_datetime(observed_at)
+            )
+            return ra, dec, POSITION_PROPER_MOTION
+
+        return center_of
+
+    @staticmethod
+    def _unique_products(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Drop repeated products (same identifier, band and detector)."""
+        seen: set[tuple[str, str, str]] = set()
+        unique = []
+        for record in records:
+            key = (
+                str(pick(record, "product_id") or ""),
+                str(pick(record, "band") or ""),
+                str(extract_detector(record) or ""),
+            )
+            if key[0] and key in seen:
+                continue
+            seen.add(key)
+            unique.append(record)
+        return unique
+
     def get_image(self, observation_id: str) -> ImageResult:
         """Return the processed image of an observation.
 
@@ -232,18 +480,7 @@ class ObservationService:
             SourceUnavailableError: The product could not be retrieved.
             ProcessingError: The product could not be processed.
         """
-        entry = self._registry.get(observation_id)
-        if entry is None:
-            cached = self._cache.get_json(NAMESPACE_OBSERVATIONS, observation_id)
-            if cached:
-                entry = ObservationEntry.from_dict(cached)
-                self._registry[observation_id] = entry
-        if entry is None:
-            raise ImageNotFoundError(
-                "Nenhuma imagem processada está disponível para esta observação."
-            )
-
-        request = self._build_cutout_request(entry)
+        entry = self._entry(observation_id)
         cache_key = self._image_cache_key(entry)
         cached = self._cached_image(observation_id, cache_key)
         if cached is not None:
@@ -254,7 +491,56 @@ class ObservationService:
             cached = self._cached_image(observation_id, cache_key)
             if cached is not None:
                 return cached
-            return self._build_image(observation_id, cache_key, request)
+            return self._build_image(observation_id, cache_key, entry)
+
+    def get_frame(self, observation_id: str) -> tuple[FrameImage, ObservationEntry]:
+        """Return the observation resampled onto the common frame (cached).
+
+        Used to combine epochs (sum, difference). Raises
+        :class:`ProcessingError` when the product has no celestial WCS.
+        """
+        entry = self._entry(observation_id)
+        cache_key = self._image_cache_key(entry)
+        frame = self._cached_frame(entry, cache_key)
+        if frame is not None:
+            return frame, entry
+        with self._image_lock(cache_key):
+            frame = self._cached_frame(entry, cache_key)
+            if frame is None:
+                self._build_image(observation_id, cache_key, entry)
+                frame = self._cached_frame(entry, cache_key)
+        if frame is None:
+            raise ProcessingError(
+                "Esta observação não pode ser alinhada ao quadro comum.",
+                detail=f"no celestial WCS for {observation_id}",
+            )
+        return frame, entry
+
+    def _entry(self, observation_id: str) -> ObservationEntry:
+        """Find a registered observation (memory, then disk cache)."""
+        entry = self._registry.get(observation_id)
+        if entry is None:
+            cached = self._cache.get_json(NAMESPACE_OBSERVATIONS, observation_id)
+            if cached:
+                entry = ObservationEntry.from_dict(cached)
+                self._registry[observation_id] = entry
+        if entry is None:
+            raise ImageNotFoundError(
+                "Nenhuma imagem processada está disponível para esta observação."
+            )
+        return entry
+
+    def _cached_frame(self, entry: ObservationEntry, cache_key: str) -> FrameImage | None:
+        """Load the common-frame arrays of an observation from the disk cache."""
+        payload = self._cache.get_bytes(NAMESPACE_IMAGES, f"{cache_key}.frame")
+        if payload is None:
+            return None
+        with np.load(io.BytesIO(payload)) as arrays:
+            data = arrays["data"].astype(float)
+            outside = arrays["outside"].astype(bool)
+            scale = float(arrays["scale"])
+        wcs = frame_wcs(entry.ra_deg, entry.dec_deg, data.shape[0], scale)
+        return FrameImage(data=data, outside=outside, wcs=wcs, pixel_scale_arcsec=scale)
 
     def _image_lock(self, cache_key: str) -> threading.Lock:
         """Return the lock that serialises the generation of one image."""
@@ -274,16 +560,45 @@ class ObservationService:
         )
 
     def _build_image(
-        self, observation_id: str, cache_key: str, request: CutoutRequest
+        self, observation_id: str, cache_key: str, entry: ObservationEntry
     ) -> ImageResult:
-        """Retrieve, cut, render and cache the image of an observation."""
+        """Retrieve, cut, resample onto the common frame, render and cache."""
+        request = self._build_cutout_request(entry)
         result = self._cutout_service.build_cutout(request)
-        from app.services.fits_processor import render_png
-
-        content = render_png(result.data)
         metadata = dict(result.metadata)
         metadata.setdefault("visual_normalization", VISUAL_NORMALIZATION_DESCRIPTION)
         metadata.setdefault("cutout_strategy", result.strategy.value)
+
+        wcs = result.source_wcs
+        if result.source_data is not None and wcs is not None and wcs.has_celestial:
+            frame = project_to_frame(
+                result.source_data,
+                wcs,
+                entry.ra_deg,
+                entry.dec_deg,
+                entry.fov_arcmin,
+                scale_arcsec=fits_processor.pixel_scale_arcsec(wcs) or SPHEREX_PIXEL_SCALE_ARCSEC,
+                max_pixels=self._settings.max_cutout_pixels,
+            )
+            content = fits_processor.render_frame_png(frame.data, frame.outside)
+            buffer = io.BytesIO()
+            np.savez_compressed(
+                buffer,
+                data=frame.data.astype(np.float32),
+                outside=frame.outside,
+                scale=np.float64(frame.pixel_scale_arcsec),
+            )
+            self._cache.set_bytes(NAMESPACE_IMAGES, f"{cache_key}.frame", buffer.getvalue())
+            metadata.update(
+                frame=FRAME_COMMON,
+                frame_side_pixels=int(frame.data.shape[0]),
+                frame_pixel_scale_arcsec=round(frame.pixel_scale_arcsec, 4),
+                frame_coverage_fraction=round(frame.coverage_fraction, 4),
+            )
+        else:
+            # No celestial WCS (synthetic products only): legacy rendering.
+            content = fits_processor.render_png(result.data)
+            metadata["frame"] = "native"
 
         self._cache.set_bytes(NAMESPACE_IMAGES, cache_key, content)
         self._cache.set_json(NAMESPACE_OBSERVATIONS, f"{observation_id}.meta", metadata)
@@ -403,6 +718,7 @@ class ObservationService:
             f"{entry.dec_deg:.6f}",
             f"{entry.fov_arcmin:.6f}",
             self._settings.cutout_mode,
+            _IMAGE_CACHE_VERSION,
         )
 
     def _build_observations(
@@ -448,6 +764,10 @@ class ObservationService:
                 cutout_center_ra_deg=round(center_ra, 7),
                 cutout_center_dec_deg=round(center_dec, 7),
                 position_source=position_source,
+                coverage_fraction=self._predicted_coverage(
+                    record, center_ra, center_dec, fov_arcmin
+                ),
+                frame=FRAME_COMMON,
             )
 
             observation_id = self._build_observation_id(
@@ -469,6 +789,19 @@ class ObservationService:
                 )
             )
         return built
+
+    @staticmethod
+    def _predicted_coverage(
+        record: Mapping[str, Any], ra_deg: float, dec_deg: float, fov_arcmin: float
+    ) -> float | None:
+        """Fraction of the frame inside the detector footprint (``s_region``).
+
+        ``None`` when the archive publishes no readable polygon.
+        """
+        polygon = parse_s_region(record.get("s_region"))
+        if polygon is None:
+            return None
+        return round(footprint_coverage(polygon, ra_deg, dec_deg, fov_arcmin), 4)
 
     def _strategy_value(self, record: Mapping[str, Any]) -> str | None:
         """Return the cutout strategy that would be applied to the product."""
@@ -661,6 +994,9 @@ class ObservationService:
         strategy = metadata.get("cutout_strategy")
         if strategy:
             headers["X-SpherEx-Cutout-Strategy"] = str(strategy)
+        frame = metadata.get("frame")
+        if frame:
+            headers["X-SpherEx-Frame"] = str(frame).replace("_", "-")
         return headers
 
 
