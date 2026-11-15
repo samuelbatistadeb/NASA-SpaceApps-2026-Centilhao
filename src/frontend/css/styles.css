@@ -356,3 +356,47 @@ details summary{cursor:pointer;padding:12px;border:1px solid var(--line);border-
 .combinar-acoes{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}.comb-selecao{font-size:11px;color:#9bb0c5}
 #comb-gerar:disabled{opacity:.45;cursor:not-allowed}
 #comb-resultado img{image-rendering:pixelated}
+/* Detectores em pílulas: "Todos" + D1..D6, com contagem e faixa real (cor = mesma do gráfico). */
+.detectores .det{--det:#81dce0;border-radius:999px;padding:6px 12px 6px 8px;gap:6px;border-color:#2a4058;font-size:11px;line-height:1.2}
+.detectores .det strong{font-size:12px;color:inherit}
+.detectores .det .sw{width:10px;height:10px;background:var(--det)}
+.detectores .det .cnt{font:10px var(--mono);background:#1a2a40;border-radius:999px;padding:1px 6px;color:#cfe0ee}
+.detectores .det:hover:not(:disabled){border-color:var(--det)}
+.detectores .det[aria-pressed=true]{border-color:var(--det);background:#13283a;background:color-mix(in srgb,var(--det) 18%,#0b1728);color:#fff;box-shadow:inset 0 0 0 1px var(--det)}
+.detectores .det[aria-pressed=true]::after{content:none}
+.detectores .det-todos{padding-left:12px}
+.det-modo{margin:-4px 0 10px}
+/* Alternativas quando a busca falha */
+.alternativas{margin:14px 0;border:1px solid #2b4f63;border-radius:10px;background:linear-gradient(145deg,#0f2436,#0b1626);padding:16px 18px}
+.alternativas h3{margin:0 0 6px;font-size:15px}
+.alternativas>p{margin:0 0 12px;color:#a9bdd0;font-size:12px}
+.alt-opcoes{display:grid;gap:12px}
+.alt-opcao{display:grid;gap:4px}.alt-opcao small{font-size:10px;color:#7f94a9}
+.alt-botoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.alt-botoes .primary{justify-content:center}
+.mock.demo{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:#13283a;color:#cfeff2;border-color:#2b5565}
+/* Falha de imagem */
+.img-falha{width:min(100%,500px);border:1px solid #78434b;border-radius:8px;background:#1d1220;padding:10px 12px;display:grid;gap:8px}
+.img-falha p{margin:0;font-size:12px;color:#ffc9c9}
+#esp-acoes{margin:8px 0}
+.note.aviso{color:#f0c36d}
+/* Atalhos */
+.atalhos{display:block;margin-top:4px;font-size:10px;color:#72869d}
+kbd{font:10px var(--mono);border:1px solid #2b425c;border-bottom-width:2px;border-radius:4px;padding:0 4px;background:#0b1728;color:#c4d5e5}
+/* Comparar duas datas */
+.comparar{margin:6px 0 16px}
+.comparar>summary{font-size:12px;font-weight:700}
+.cmp-controles{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:12px 0 6px}
+.cmp-controles>label{display:flex;gap:6px;align-items:center;font-size:11px;color:#9cb1c6}
+.cmp-controles select{background:#0b1728;color:#c4d5e5;border:1px solid #2a4058;border-radius:6px;padding:6px;font-size:11px;max-width:15rem}
+.cmp-modos{display:flex;gap:10px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;margin:0}
+.cmp-modos legend{font-size:10px;color:var(--muted);padding:0 4px}.cmp-modos label{font-size:11px;display:flex;gap:5px;align-items:center}
+.cmp-modos input{accent-color:var(--cyan)}
+.cmp-stage{--pos:50%;position:relative;width:min(100%,500px);aspect-ratio:1;margin:8px auto 0;border:1px solid #26384e;border-radius:6px;overflow:hidden;background-color:#0b1320;background-image:repeating-linear-gradient(45deg,#24324a 0 2px,transparent 2px 7px)}
+.cmp-stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+#cmp-img-a{clip-path:inset(0 calc(100% - var(--pos)) 0 0)}
+.cmp-linha{position:absolute;top:0;bottom:0;left:var(--pos);width:2px;margin-left:-1px;background:var(--cyan);box-shadow:0 0 6px #000;pointer-events:none}
+.cmp-stage[data-modo=piscar] .cmp-linha{display:none}
+#cmp-divisor{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize}
+.cmp-stage:focus-within{outline:2px solid var(--cyan);outline-offset:2px}
+.cmp-rotulo{text-align:center;font:11px var(--mono);color:#a6bbcf;margin:6px 0 0;white-space:pre-wrap}

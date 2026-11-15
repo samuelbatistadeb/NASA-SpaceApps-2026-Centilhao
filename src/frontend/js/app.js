@@ -8,14 +8,33 @@
 const CONFIG = {
   API_BASE: "http://localhost:8000",
   OBSERVATIONS_PATH: "/api/observations", // GET ?ra_deg=&dec_deg=&fov_arcmin= (src/backend/app/api/observations.py)
-  SPHEREX_HIPS_BASE: "https://alasky.cds.unistra.fr/SPHEREx/D", // + número do detector (1 a 6). Mapas HiPS do CDS, versão QR2: atualizar quando houver HiPS do DR1
-  // Fontes do Aladin Lite, tentadas em ordem até uma funcionar. Versão fixa primeiro (mais previsível que "latest").
+  // Mapas HiPS do SPHEREx no CDS (versão QR2), + número do detector (1 a 6), em ordem de preferência.
+  // IDs CDS/P/SPHEREx/QR2/D1..D6 no MocServer. Atualizar quando houver HiPS do DR1.
+  SPHEREX_HIPS_MIRRORS: ["https://alasky.cds.unistra.fr/SPHEREx/D", "https://alaskybis.cds.unistra.fr/SPHEREx/D"],
+  // Fundos do mapa do céu usados quando o SPHEREx não responde, em ordem de preferência. Antes de usar
+  // qualquer fundo o app baixa o arquivo "properties" do HiPS (com tempo limite) e pula os indisponíveis.
+  // Espelhos do IRSA (NASA) dos HiPS do CDS.
+  HIPS_FALLBACK: [
+    { name: "AllWISE (WISE)", why: "também infravermelho", url: "https://irsa.ipac.caltech.edu/data/hips/CDS/AllWISE/RGB-W4-W2-W1" },
+    { name: "2MASS", why: "infravermelho próximo", url: "https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color" },
+    { name: "DSS2", why: "luz visível", url: "https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color" },
+  ],
+  HIPS_PROBE_TIMEOUT_MS: 6000,
+  // Fontes do Aladin Lite, tentadas em ordem, cada uma com tempo limite curto. jsdelivr primeiro:
+  // em 2026-11-15 o aladin.cds.unistra.fr falhava devagar (ERR_NAME_NOT_RESOLVED / indisponível).
   // "script" = <script> clássico (define window.A); "module" = pacote npm (ES module) via import().
   ALADIN_SOURCES: [
+    { type: "module", url: "https://cdn.jsdelivr.net/npm/aladin-lite@3.8.1/dist/aladin.js" },
+    { type: "module", url: "https://unpkg.com/aladin-lite@3.8.1/dist/aladin.js" },
     { type: "script", url: "https://aladin.cds.unistra.fr/AladinLite/api/v3/3.8.1/aladin.js" },
     { type: "script", url: "https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" },
-    { type: "module", url: "https://cdn.jsdelivr.net/npm/aladin-lite@3.8.1/dist/aladin.js" },
   ],
+  ALADIN_SOURCE_TIMEOUT_MS: 8000, // por fonte (download do código)
+  ALADIN_INIT_TIMEOUT_MS: 25000, // inicialização (WebAssembly) depois do download
+  // Modo demonstração: dados reais pré-gerados, servidos como arquivos estáticos (sem backend).
+  DEMO_MANIFEST: "demo/manifest.json",
+  // Nova tentativa automática da busca (SOURCE_UNAVAILABLE / falha de rede): esperas, em segundos.
+  RETRY_DELAYS_S: [10, 20, 40, 60, 60],
   // Espelhos do VizieR (catálogos Gaia/AllWISE no mapa do céu), tentados em ordem. O da CfA tem CORS liberado.
   VIZIER_HOSTS: ["https://vizier.cds.unistra.fr", "https://vizier.cfa.harvard.edu"],
   // GET ?ra_deg=&dec_deg=[&pm_ra_cosdec_masyr=&pm_dec_masyr=&ref_epoch_jyear=][&aperture_arcsec=][&max_exposures=]
@@ -90,6 +109,17 @@ const el = {
   soCompletos: $("so-completos"), soCompletosBox: $("so-completos-box"), soCompletosInfo: $("so-completos-info"),
   combGerar: $("comb-gerar"), combSelecao: $("comb-selecao"), combStatus: $("comb-status"),
   combResultado: $("comb-resultado"), combImg: $("comb-img"), combLegenda: $("comb-legenda"),
+  detModo: $("det-modo"), detSomar: $("det-somar"),
+  imgFalha: $("img-falha"), imgFalhaMsg: $("img-falha-msg"), imgRetry: $("img-retry"), imgProx: $("img-prox"),
+  alt: $("alternativas"), altTitulo: $("alt-titulo"), altMsg: $("alt-msg"), altDemo: $("alt-demo"),
+  altDemoLista: $("alt-demo-lista"), altRetry: $("alt-retry"), altCancelar: $("alt-cancelar"),
+  altContagem: $("alt-contagem"), altMapa: $("alt-mapa"), altMock: $("alt-mock"),
+  avisoDemo: $("aviso-demo"), demoSair: $("demo-sair"),
+  ceuCentro: $("ceu-centro"), ceuFundoInfo: $("ceu-fundo-info"),
+  espAcoes: $("esp-acoes"), espRetry: $("esp-retry"),
+  cmp: $("comparar"), cmpA: $("cmp-a"), cmpB: $("cmp-b"), cmpStage: $("cmp-stage"), cmpImgA: $("cmp-img-a"),
+  cmpImgB: $("cmp-img-b"), cmpDivisor: $("cmp-divisor"), cmpRotulo: $("cmp-rotulo"),
+  cmpPiscar: $("cmp-piscar"), cmpTrocar: $("cmp-trocar"), cmpAviso: $("cmp-aviso"),
 };
 
 const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, active: "A", specCtl: {}, rows: [], keys: [], values: null, all: [], wls: [], detectors: new Set(), frames: [], index: 0, timer: null, isMock: false, controller: null, omitted: 0,
@@ -99,7 +129,11 @@ const state = { mapDots: new Map(), mapRing: null, pts: { A: null, B: null }, ac
   // Última resposta válida de /api/coverage para as coordenadas atuais (ou null).
   coverage: null, coverageLoading: false,
   // Qualidade por observação (/api/observations/{id}/quality): id → resposta normalizada.
-  quality: new Map(), qualityReq: new Set() };
+  quality: new Map(), qualityReq: new Set(),
+  // Detectores presentes na busca e estatísticas por detector (contagem, faixa real).
+  detPresent: new Set(), detStats: new Map(),
+  // Modo demonstração (dados reais salvos, arquivos estáticos) ou null.
+  demo: null };
 
 // Movimento efetivamente enviado ao backend: só quando o usuário escolhe seguir o alvo.
 const activeMotion = () => (state.motion && el.seguir.checked ? state.motion : null);
@@ -194,7 +228,8 @@ function normalizeObservation(o) {
     id: o.id, // identificador interno da observação (usado em /api/images/{id})
     productId: m.product_id ?? "—",
     date: o.observed_at ?? null, // ISO 8601 UTC, vindo de t_min (MJD) do IRSA
-    imageUrl: img ? (/^(https?:|data:)/.test(img) ? img : CONFIG.API_BASE + img) : "",
+    // "/api/..." vem do backend; caminhos relativos ("demo/...") são arquivos estáticos do próprio site.
+    imageUrl: img ? (/^(https?:|data:|blob:)/.test(img) ? img : img.startsWith("/") ? CONFIG.API_BASE + img : img) : "",
     detector: detOk ? det : null,
     detectorLabel: detOk ? "D" + det : String(o.detector ?? "—"),
     wavelength: null, // não há um único comprimento de onda por imagem
@@ -226,19 +261,24 @@ async function fetchObservations({ ra, dec, fov }, motion = null) {
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw await apiError(res);
-    const data = await res.json();
-    const all = (data.observations ?? []).map(normalizeObservation);
-    // Observações sem data resolvível ficam fora da sequência temporal (e são contadas).
-    const frames = all
-      .filter((f) => f.date && !Number.isNaN(Date.parse(f.date)))
-      .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-    state.omitted = all.length - frames.length;
-    // "stale_cache": o IRSA estava indisponível e o backend usou a última resposta salva.
-    state.dataSource = { status: data.data_source ?? null, cachedAt: data.data_cached_at ?? null };
-    return frames;
+    return parseObservations(await res.json());
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// Resposta de GET /api/observations (ou o observations.json do modo demonstração) → quadros ordenados.
+function parseObservations(data) {
+  const all = (data.observations ?? []).map(normalizeObservation);
+  // Observações sem data resolvível ficam fora da sequência temporal (e são contadas).
+  const frames = all
+    .filter((f) => f.date && !Number.isNaN(Date.parse(f.date)))
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  state.omitted = all.length - frames.length;
+  // "stale_cache": o IRSA estava indisponível e o backend usou a última resposta salva.
+  // "demo_snapshot": arquivo estático do modo demonstração.
+  state.dataSource = { status: data.data_source ?? null, cachedAt: data.data_cached_at ?? null };
+  return frames;
 }
 
 /* ---------- Dados fictícios (apenas teste de interface) ---------- */
@@ -282,7 +322,8 @@ function showFrame(i) {
   const f = state.frames[i];
   if (!f) return;
   state.index = i;
-  el.img.src = f.imageUrl;
+  el.imgFalha.hidden = true;
+  if (el.img.getAttribute("src") !== f.imageUrl) el.img.src = f.imageUrl;
   el.img.alt = `Região do céu observada em ${fmtDateTime(f.date)}, detector ${f.detectorLabel}`;
   el.legenda.textContent =
     `${fmtDateTime(f.date)} · detector ${f.detectorLabel} — quadro ${i + 1} de ${state.frames.length}` +
@@ -313,7 +354,9 @@ function showFrame(i) {
       : []),
     ...(state.quality.has(f.id) ? [["Contaminação no alvo", qualityText(state.quality.get(f.id))]] : []),
     ["Coleção", f.product],
-    ["Fonte dos dados", state.isMock ? "Fictícia (teste)" : "SPHEREx / IRSA-IPAC"],
+    ["Fonte dos dados", state.isMock ? "Fictícia (teste)"
+      : state.demo ? `SPHEREx / IRSA-IPAC (exemplo real salvo${state.demo.cachedAt ? " em " + fmtDateTime(state.demo.cachedAt) : ""})`
+      : "SPHEREx / IRSA-IPAC"],
   ];
   el.meta.replaceChildren(
     ...rows.flatMap(([k, v]) => {
@@ -325,6 +368,7 @@ function showFrame(i) {
     })
   );
   positionMarkers();
+  scheduleSkyFrame(); // marcador do alvo e FOV no mapa do céu acompanham o quadro
 }
 
 /* ---------- Qualidade do quadro (máscara de flags do SPHEREx) ---------- */
@@ -367,7 +411,7 @@ function qualityText(q) {
 // Pedida depois que a imagem principal carregou (o backend só tem a máscara após gerar a imagem).
 // Sem bloquear: erros e 404 são ignorados (a linha simplesmente não aparece).
 async function fetchQuality(f) {
-  if (state.isMock || !f?.id || state.quality.has(f.id) || state.qualityReq.has(f.id)) return;
+  if (state.isMock || state.demo || !f?.id || state.quality.has(f.id) || state.qualityReq.has(f.id)) return;
   state.qualityReq.add(f.id);
   try {
     const res = await fetch(new URL(CONFIG.QUALITY_PATH(f.id), CONFIG.API_BASE), { signal: AbortSignal.timeout(30000) });
@@ -517,36 +561,96 @@ const fmtRange = ([a, b]) => `${a.toFixed(2).replace(".", ",")}–${b.toFixed(2)
 
 const DET_COLORS = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"]; // paleta Okabe-Ito
 
+/* Faixa espectral REAL de cada detector nesta busca: mínimo e máximo de metadata.wavelength_*_nm
+ * (em µm). Sem esses metadados, cai para DET_RANGES, marcada como aproximada. */
+function detectorStats(frames) {
+  const st = new Map();
+  for (let d = 1; d <= 6; d++) st.set(d, { n: 0, lo: Infinity, hi: -Infinity });
+  for (const f of frames) {
+    const s = st.get(f.detector);
+    if (!s) continue;
+    s.n++;
+    if (f.wlRange) { s.lo = Math.min(s.lo, f.wlRange[0]); s.hi = Math.max(s.hi, f.wlRange[1]); }
+  }
+  for (const [d, s] of st) {
+    s.real = Number.isFinite(s.lo) && Number.isFinite(s.hi);
+    s.range = s.real ? [s.lo, s.hi] : DET_RANGES[d - 1];
+  }
+  return st;
+}
+
+// Clique simples = só aquele detector; Ctrl/⌘/Shift+clique ou o modo "combinar" = adiciona/remove.
+function pickDetector(d, additive) {
+  const present = state.detPresent;
+  if (d === "all") state.detectors = new Set(present);
+  else if (additive) {
+    const s = new Set(state.detectors);
+    s.has(d) ? s.delete(d) : s.add(d);
+    state.detectors = s.size ? s : new Set([d]); // nunca deixa nenhum ativo
+  } else state.detectors = new Set([d]);
+  syncDetectorButtons();
+  applyFilters();
+}
+
+function syncDetectorButtons() {
+  const all = state.detPresent.size > 0 && [...state.detPresent].every((d) => state.detectors.has(d));
+  for (const b of el.detBox.querySelectorAll("button.det")) {
+    const d = b.dataset.det;
+    b.setAttribute("aria-pressed", String(d === "all" ? all : !all && state.detectors.has(Number(d))));
+  }
+}
+
 function setupFilters(frames) {
   const present = new Set(frames.map((f) => f.detector).filter(Boolean));
+  const stats = detectorStats(frames);
+  state.detPresent = present;
+  state.detStats = stats;
   state.detectors = new Set(present);
   el.detBox.hidden = present.size === 0;
-  el.detBox.replaceChildren(
-    ...[1, 2, 3, 4, 5, 6].map((d) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "det";
+  el.detModo.hidden = present.size < 2;
+  const mk = (d) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "det";
+    b.dataset.det = d;
+    if (d === "all") {
+      b.classList.add("det-todos");
+      const n = document.createElement("small");
+      n.className = "cnt";
+      n.textContent = String(frames.filter((f) => f.detector).length);
+      b.append(document.createTextNode("Todos"), n);
+      b.title = "Mostrar as observações de todos os detectores (faixas diferentes do infravermelho intercaladas)";
+      b.setAttribute("aria-label", `Todos os detectores, ${n.textContent} observações`);
+    } else {
+      const s = stats.get(d);
+      b.style.setProperty("--det", DET_COLORS[d - 1]);
       const sw = document.createElement("span");
       sw.className = "sw";
-      sw.style.background = DET_COLORS[d - 1];
       sw.setAttribute("aria-hidden", "true");
-      const first = (d - 1) * BANDS_PER_DETECTOR + 1;
+      const nome = document.createElement("strong");
+      nome.textContent = "D" + d;
+      const cnt = document.createElement("small");
+      cnt.className = "cnt";
+      cnt.textContent = String(s.n);
       const rng = document.createElement("small");
       rng.className = "rng";
-      rng.textContent = fmtRange(DET_RANGES[d - 1]);
-      b.append(sw, document.createTextNode("Detector " + d), rng);
-      b.dataset.info = `Bandas ${first} a ${first + BANDS_PER_DETECTOR - 1}`;
+      rng.textContent = (s.real ? "" : "≈ ") + fmtRange(s.range);
+      b.append(sw, nome, cnt, rng);
+      const first = (d - 1) * BANDS_PER_DETECTOR + 1;
       b.disabled = !present.has(d);
-      b.setAttribute("aria-pressed", String(present.has(d)));
-      b.title = present.has(d) ? b.dataset.info : "Sem observações deste detector nesta busca";
-      b.addEventListener("click", () => {
-        state.detectors.has(d) ? state.detectors.delete(d) : state.detectors.add(d);
-        b.setAttribute("aria-pressed", String(state.detectors.has(d)));
-        applyFilters();
-      });
-      return b;
-    })
-  );
+      b.title = present.has(d)
+        ? `Detector ${d}: ${s.n} observações · ${fmtRange(s.range)}` +
+          (s.real ? " (faixa dos metadados destas observações)" : " (faixa aproximada, da página da missão)") +
+          ` · bandas ${first} a ${first + BANDS_PER_DETECTOR - 1}. Clique: só este detector. Ctrl/⌘/Shift+clique: somar.`
+        : "Sem observações deste detector nesta busca";
+      b.setAttribute("aria-label", `Detector ${d}, ${s.n} observações, ${s.real ? "" : "aproximadamente "}${fmtRange(s.range).replace("–", " a ")}`);
+    }
+    b.addEventListener("click", (e) =>
+      pickDetector(d, d !== "all" && (e.ctrlKey || e.metaKey || e.shiftKey || el.detSomar.checked)));
+    return b;
+  };
+  el.detBox.replaceChildren(mk("all"), ...[1, 2, 3, 4, 5, 6].map(mk));
+  syncDetectorButtons();
 
   state.wls = [...new Set(frames.map((f) => f.wavelength).filter((w) => w !== null))].sort((a, b) => a - b);
   const last = Math.max(state.wls.length - 1, 0);
@@ -600,7 +704,7 @@ function applyFilters() {
   renderMap();
   el.visor.hidden = !frames.length;
   el.filtroVazio.hidden = !!frames.length;
-  if (!frames.length) { clearGallery(); return; }
+  if (!frames.length) { clearGallery(); resetCompare(); return; }
 
   el.slider.max = frames.length - 1;
   el.tIni.textContent = fmtDate(frames[0].date);
@@ -609,6 +713,9 @@ function applyFilters() {
   const idx = frames.findIndex((f) => f.id === keepId);
   showFrame(idx >= 0 ? idx : 0);
   pumpThumbs(); // só começa se a imagem principal já estiver pronta; senão, espera o load/error dela
+  // Mudou o detector: A/B voltam para a primeira e a última dele; senão, mantém a escolha.
+  resetCompare({ keep: state.cmpDetKey === [...state.detectors].join() });
+  state.cmpDetKey = [...state.detectors].join();
 }
 
 el.wlMin.addEventListener("input", () => {
@@ -645,7 +752,27 @@ function compositeSelection() {
   return { det, op: "diff", b: frames.slice(0, half), a: frames.slice(-half), total: frames.length };
 }
 
+// Modo demonstração: só há as combinações pré-geradas listadas no manifest.
+const OP_NAMES = { mean: "soma de épocas", diff: "diferença entre épocas" };
+function demoComposite() {
+  const det = state.detectors.size === 1 ? [...state.detectors][0] : null;
+  const list = state.demo?.composites ?? [];
+  const disp = list.length
+    ? `Pré-calculadas neste exemplo: ${list.map((c) => `${c.detector} (${OP_NAMES[c.op] ?? c.op})`).join(", ")}.`
+    : "Este exemplo salvo não traz combinações pré-calculadas.";
+  if (det === null) return { erro: `Escolha um detector para combinar épocas. ${disp}` };
+  const c = list.find((x) => x.detector === "D" + det && x.op === combMode());
+  if (!c) return { erro: `Sem o servidor, só dá para ver combinações já calculadas. ${disp}` };
+  return { demo: c, det };
+}
+
 function renderCompositeUi() {
+  if (state.demo) {
+    const d = demoComposite();
+    el.combGerar.disabled = !!d.erro;
+    el.combSelecao.textContent = d.erro ?? `Exemplo salvo: ${d.demo.description || `${d.demo.detector}, ${OP_NAMES[d.demo.op] ?? d.demo.op}`}`;
+    return;
+  }
   const s = compositeSelection();
   el.combGerar.disabled = !!s.erro;
   if (s.erro) { el.combSelecao.textContent = s.erro; return; }
@@ -667,12 +794,27 @@ function resetComposite() {
   if (comb.url) URL.revokeObjectURL(comb.url);
   comb.url = null;
   el.combResultado.hidden = true;
+  el.combImg.onerror = null;
   el.combImg.removeAttribute("src");
   setCombStatus("");
   renderCompositeUi();
 }
 
+function showDemoComposite() {
+  const d = demoComposite();
+  if (d.erro) { setCombStatus(d.erro); return; }
+  resetComposite();
+  el.combImg.onerror = () => { el.combResultado.hidden = true; setCombStatus("Não foi possível abrir a imagem pré-calculada deste exemplo.", "erro"); };
+  el.combImg.src = d.demo.file;
+  el.combImg.alt = `${OP_NAMES[d.demo.op] ?? d.demo.op}, detector ${d.demo.detector} (pré-calculada)`;
+  el.combLegenda.textContent = `${(d.demo.description || "").replace(/([^.])$/, "$1.")} Imagem pré-calculada pelo servidor quando o exemplo foi salvo` +
+    (state.demo.cachedAt ? ` (${fmtDateTime(state.demo.cachedAt)})` : "") + "." +
+    (d.demo.op === "diff" ? " Claro = mais brilho nas épocas recentes; escuro = nas antigas; cinza médio = sem mudança." : "");
+  el.combResultado.hidden = false;
+}
+
 async function runComposite() {
+  if (state.demo) { showDemoComposite(); return; }
   const s = compositeSelection();
   if (s.erro) { setCombStatus(s.erro); return; }
   resetComposite();
@@ -731,19 +873,104 @@ function loadFrames(frames, isMock) {
   state.all = frames;
   state.isMock = isMock;
   el.avisoMock.hidden = !isMock;
+  el.avisoDemo.hidden = !state.demo;
+  if (state.demo) {
+    el.avisoDemo.querySelector("span").textContent =
+      `Exemplo real salvo${state.demo.cachedAt ? " em " + fmtDateTime(state.demo.cachedAt) : ""}` +
+      ` (${state.demo.target.name}) — o arquivo IRSA ou o servidor do SPHEREx Explorer está indisponível agora. ` +
+      "Imagens, linha do tempo, filtros e cobertura vêm de arquivos salvos; nada é calculado ao vivo.";
+    // Atalho para a imagem de diferença pré-calculada (o jeito mais rápido de "ver o que mudou").
+    el.avisoDemo.querySelector(".demo-diff")?.remove();
+    const diff = state.demo.composites.find((c) => c.op === "diff" && c.detector === "D1") ??
+      state.demo.composites.find((c) => c.op === "diff");
+    const det = diff ? parseInt(diff.detector.replace(/\D/g, ""), 10) : NaN;
+    if (diff && frames.some((f) => f.detector === det)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip demo-diff";
+      b.textContent = `Ver o que mudou (diferença ${diff.detector})`;
+      b.addEventListener("click", () => {
+        pickDetector(det, false);
+        document.querySelector('input[name="comb-modo"][value="diff"]').checked = true;
+        showDemoComposite();
+        $("combinar").scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      el.demoSair.before(b);
+    }
+  }
   setupFilters(frames);
   el.player.hidden = false;
+  state.cmpDetKey = null; // nova busca: comparador volta ao padrão
   applyFilters();
+}
+
+/* ---------- Alternativas quando a busca falha ----------
+ * Em vez de só uma mensagem de erro: exemplo real salvo (modo demonstração), nova tentativa
+ * automática com contagem regressiva (cancelável), ir ao mapa do céu, ou dados fictícios. */
+const retry = { attempt: 0, timer: null, until: 0, auto: false };
+
+function cancelRetry() {
+  clearInterval(retry.timer);
+  retry.timer = null;
+  el.altContagem.textContent = "";
+  el.altCancelar.hidden = true;
+}
+
+function hideAlternatives() {
+  cancelRetry();
+  el.alt.hidden = true;
+}
+
+function scheduleRetry() {
+  cancelRetry();
+  const delays = CONFIG.RETRY_DELAYS_S;
+  if (retry.attempt >= delays.length) {
+    el.altContagem.textContent = `Já foram ${retry.attempt} novas tentativas automáticas. Use “Tentar de novo” quando quiser.`;
+    return;
+  }
+  retry.until = Date.now() + delays[retry.attempt] * 1000;
+  el.altCancelar.hidden = false;
+  const tick = () => {
+    const s = Math.max(0, Math.ceil((retry.until - Date.now()) / 1000));
+    el.altContagem.textContent = `Nova tentativa automática em ${s} s (tentativa ${retry.attempt + 1} de ${delays.length}).`;
+    if (s <= 0) { cancelRetry(); retry.attempt++; retry.auto = true; el.form.requestSubmit(); }
+  };
+  tick();
+  retry.timer = setInterval(tick, 1000);
+}
+
+/** kind: "source" (IRSA indisponível), "network" (servidor inacessível), "timeout". */
+function showAlternatives(kind, detail = "", { autoRetry = true } = {}) {
+  const titulos = {
+    source: "O arquivo da NASA (IRSA) não respondeu agora",
+    network: "O servidor do SPHEREx Explorer não respondeu",
+    timeout: "A busca demorou demais",
+  };
+  el.altTitulo.textContent = titulos[kind] ?? "Não foi possível buscar as observações";
+  el.altMsg.textContent = (detail ? detail + " " : "") + ({
+    source: "Isso costuma ser passageiro. Enquanto isso, você pode explorar um exemplo real salvo ou o mapa do céu.",
+    network: "O site pode estar publicado sem o servidor (só arquivos estáticos) ou o servidor está desligado. Um exemplo real salvo funciona sem ele.",
+    timeout: "O arquivo da NASA pode estar lento. Tente de novo ou veja um exemplo real salvo.",
+  }[kind] ?? "");
+  renderDemoOptions();
+  el.alt.hidden = false;
+  el.altRetry.hidden = !state.values; // sem coordenadas ainda, não há o que tentar de novo
+  if (autoRetry && state.values) scheduleRetry();
+  else cancelRetry();
 }
 
 /* ---------- Fluxo de busca ---------- */
 async function onSubmit(e) {
   e.preventDefault();
+  if (!retry.auto) retry.attempt = 0; // busca pedida pelo usuário: recomeça a contagem
+  retry.auto = false;
+  hideAlternatives();
   const values = validate();
   if (!values) {
     if (document.body.classList.contains("embed")) setStatus("Coordenadas inválidas na URL.", "erro");
     return;
   }
+  leaveDemo();
   state.values = values;
   // Dados fictícios não usam movimento próprio; sem "seguir o alvo", o quadro fica fixo no céu.
   const motion = el.mock.checked ? null : activeMotion();
@@ -784,20 +1011,154 @@ async function onSubmit(e) {
     if (timedOut && state.controller?.signal.reason !== "timeout") return; // busca substituída
     if (err instanceof ApiError) {
       // NO_OBSERVATIONS_FOUND é um resultado válido, não uma falha.
-      const kind = err.code === "NO_OBSERVATIONS_FOUND" ? "" : "erro";
-      setStatus(API_ERRORS[err.code] ?? err.message, kind);
+      if (err.code === "NO_OBSERVATIONS_FOUND") { setStatus(API_ERRORS.NO_OBSERVATIONS_FOUND); return; }
+      if (err.code === "SOURCE_UNAVAILABLE" || err.status >= 502) {
+        setStatus(API_ERRORS.SOURCE_UNAVAILABLE, "erro");
+        showAlternatives("source");
+        return;
+      }
+      setStatus(API_ERRORS[err.code] ?? err.message, "erro");
       return;
     }
-    setStatus(
-      timedOut
-        ? "A busca demorou demais. Tente novamente em instantes."
-        : "Não foi possível conectar ao servidor. Verifique se o backend está em execução e tente de novo.",
-      "erro"
-    );
+    if (timedOut) {
+      setStatus("A busca demorou demais.", "erro");
+      showAlternatives("timeout");
+    } else {
+      state.backendDown = true;
+      setStatus("Não foi possível conectar ao servidor do SPHEREx Explorer.", "erro");
+      showAlternatives("network");
+    }
   } finally {
     el.buscar.disabled = false;
   }
 }
+
+el.altRetry.addEventListener("click", () => { cancelRetry(); retry.auto = true; retry.attempt++; el.form.requestSubmit(); });
+el.altCancelar.addEventListener("click", () => {
+  cancelRetry();
+  el.altContagem.textContent = "Nova tentativa automática cancelada.";
+});
+el.altMapa.addEventListener("click", () => {
+  cancelRetry();
+  $("ceu").scrollIntoView({ behavior: "smooth", block: "start" });
+  openSky();
+});
+el.altMock.addEventListener("click", () => {
+  hideAlternatives();
+  el.mock.checked = true;
+  if (!validate()) { el.ra.value = el.ra.value || "0"; el.dec.value = el.dec.value || "0"; }
+  el.form.requestSubmit();
+});
+
+/* ---------- Modo demonstração (exemplo real salvo, arquivos estáticos) ----------
+ * Contrato: src/frontend/demo/manifest.json lista alvos; cada um aponta para observations.json
+ * (formato de GET /api/observations, image_url relativo ao site), coverage.json, spectrum.json
+ * e composites pré-gerados. Nada aqui é calculado: só exibe o que foi salvo. */
+let demoManifestPromise = null;
+function loadDemoManifest() {
+  demoManifestPromise ??= fetch(CONFIG.DEMO_MANIFEST, { signal: AbortSignal.timeout(10000) })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((m) => {
+      const targets = (m?.targets ?? []).filter((t) => t && t.id && t.observations);
+      return targets.length ? { ...m, targets } : null;
+    })
+    .catch(() => null);
+  return demoManifestPromise;
+}
+
+async function renderDemoOptions() {
+  const m = await loadDemoManifest();
+  el.altDemo.hidden = !m;
+  if (!m) return;
+  el.altDemoLista.replaceChildren(...m.targets.map((t) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "primary";
+    b.textContent = m.targets.length > 1 ? `Ver exemplo real salvo: ${t.name ?? t.id}` : `Ver um exemplo real salvo (${t.name ?? t.id})`;
+    b.addEventListener("click", () => enterDemo(t.id));
+    return b;
+  }));
+  const quando = m.generated_at ? ` Salvo em ${fmtDateTime(m.generated_at)}.` : "";
+  el.altDemo.querySelector("small").textContent = (m.note ? m.note + " " : "") +
+    "Imagens reais do SPHEREx baixadas anteriormente do IRSA; funciona sem o servidor." + quando;
+}
+
+const fetchJson = async (url) => {
+  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error(`HTTP ${r.status} em ${url}`);
+  return r.json();
+};
+
+async function enterDemo(id) {
+  const m = await loadDemoManifest();
+  const t = m?.targets.find((x) => x.id === id);
+  if (!t) { setStatus("Exemplo salvo não encontrado.", "erro"); return; }
+  hideAlternatives();
+  stop();
+  state.controller?.abort();
+  setStatus(`Abrindo o exemplo real salvo de ${t.name ?? t.id}…`, "carregando");
+  try {
+    const data = await fetchJson(t.observations);
+    const frames = parseObservations(data);
+    if (!frames.length) throw new Error("observations.json sem observações");
+    const motion = t.motion
+      ? parseMotion(t.motion.pm_ra_cosdec_masyr, t.motion.pm_dec_masyr, t.motion.ref_epoch_jyear, t.name ?? t.id) : null;
+    el.mock.checked = false;
+    el.ra.value = t.ra; el.dec.value = t.dec; el.fov.value = t.fov ?? 3;
+    el.seguir.checked = true;
+    state.values = { ra: Number(t.ra), dec: Number(t.dec), fov: Number(t.fov ?? 3) };
+    state.demo = {
+      target: t, cachedAt: data.data_cached_at ?? m.generated_at ?? null,
+      composites: Array.isArray(t.composites) ? t.composites.filter((c) => c?.file && c?.detector && c?.op) : [],
+      spectrum: null, coverage: null,
+    };
+    setMotion(motion); // depois de state.demo: a cobertura não é pedida ao servidor
+    el.seguirBox.hidden = true; // o exemplo foi salvo de um jeito só; mudar exigiria o servidor
+    try { history.replaceState(null, "", "?demo=" + encodeURIComponent(t.id)); } catch { /* file:// */ }
+    clearPoints();
+    loadFrames(frames, false);
+    renderFovUi();
+    if (t.coverage) {
+      fetchJson(t.coverage).then((c) => {
+        if (state.demo?.target !== t) return;
+        state.demo.coverage = normalizeCoverage(c);
+        state.coverage = state.demo.coverage.fovs.length ? state.demo.coverage : null;
+        renderFovUi();
+      }).catch((err) => console.debug("Exemplo salvo sem cobertura:", err));
+    }
+    if (t.quality) {
+      // quality.json: mapa id → resposta de /api/observations/{id}/quality, salva com o exemplo.
+      fetchJson(t.quality).then((q) => {
+        if (state.demo?.target !== t || !q || typeof q !== "object") return;
+        for (const [id, resp] of Object.entries(q)) if (resp) state.quality.set(id, normalizeQuality(resp));
+        if (state.frames.length) showFrame(state.index);
+      }).catch((err) => console.debug("Exemplo salvo sem qualidade:", err));
+    }
+    updateSky({ recenter: true });
+    setStatus(`${frames.length} observações reais (exemplo salvo) · ${t.name ?? t.id} · RA ${t.ra}°, Dec ${t.dec}°, FOV ${t.fov ?? 3}′.`, "aviso");
+    setEspStatus(t.spectrum
+      ? "Exemplo salvo: use “Espectro do alvo” para ver o espectro medido quando o exemplo foi gerado."
+      : "Este exemplo salvo não traz espectro; o espectro precisa do servidor.");
+  } catch (err) {
+    console.error("Modo demonstração:", err);
+    state.demo = null;
+    setStatus("Não foi possível abrir o exemplo salvo.", "erro");
+  }
+}
+
+// Qualquer busca nova sai do modo demonstração.
+function leaveDemo() {
+  if (!state.demo) return;
+  state.demo = null;
+  el.avisoDemo.hidden = true;
+  state.coverage = null;
+  cov.key = "";
+  if (state.motion) el.seguirBox.hidden = false;
+}
+el.demoSair.addEventListener("click", () => {
+  leaveDemo();
+  el.form.requestSubmit(); // tenta a busca ao vivo com as mesmas coordenadas
+});
 
 /* ---------- Eventos ---------- */
 el.form.addEventListener("submit", onSubmit);
@@ -806,8 +1167,26 @@ el.next.addEventListener("click", () => step(1));
 el.play.addEventListener("click", () => (state.timer ? stop() : start()));
 el.speed.addEventListener("change", () => state.timer && start());
 el.slider.addEventListener("input", () => { stop(); showFrame(Number(el.slider.value)); });
-el.img.addEventListener("error", () =>
-  setStatus("Não foi possível carregar esta imagem. Tente outro quadro.", "erro"));
+// Falha da imagem: painel sobre o quadro com "Tentar de novo" e "Próxima observação".
+el.img.addEventListener("error", () => {
+  if (!el.img.getAttribute("src")) return;
+  const f = state.frames[state.index];
+  el.imgFalhaMsg.textContent = state.demo
+    ? "A imagem desta observação não está no exemplo salvo."
+    : `Não foi possível carregar a imagem de ${f ? fmtDateTime(f.date) : "esta observação"}. ` +
+      "O recorte é feito no IRSA na hora e às vezes falha ou demora.";
+  el.imgProx.hidden = state.frames.length < 2;
+  el.imgFalha.hidden = false;
+});
+el.img.addEventListener("load", () => { el.imgFalha.hidden = true; });
+el.imgRetry.addEventListener("click", () => {
+  const f = state.frames[state.index];
+  if (!f?.imageUrl || f.imageUrl.startsWith("data:")) return;
+  el.imgFalha.hidden = true;
+  const u = f.imageUrl + (f.imageUrl.includes("?") ? "&" : "?") + "tentativa=" + Date.now();
+  el.img.src = u;
+});
+el.imgProx.addEventListener("click", () => step(1));
 // Edição manual de RA/Dec: o movimento próprio do alvo deixa de valer (mudar só o FOV não afeta).
 el.ra.addEventListener("input", () => setMotion(null));
 el.dec.addEventListener("input", () => setMotion(null));
@@ -964,6 +1343,16 @@ function scheduleCoverage() {
   const c = coordsFromInputs();
   const motion = activeMotion();
   const key = c ? JSON.stringify([c.ra, c.dec, motionParams(motion)]) : "";
+  if (state.demo) { // exemplo salvo: cobertura vem do coverage.json, nunca do servidor
+    clearTimeout(cov.timer);
+    cov.ctl?.abort();
+    const t = state.demo.target;
+    const same = c && Math.abs(c.ra - t.ra) < 1e-5 && Math.abs(c.dec - t.dec) < 1e-5;
+    state.coverage = same && state.demo.coverage?.fovs.length ? state.demo.coverage : null;
+    state.coverageLoading = false;
+    renderFovUi();
+    return;
+  }
   if (key === cov.key) return; // mesmo pedido já feito ou em andamento
   clearTimeout(cov.timer);
   cov.ctl?.abort();
@@ -1045,8 +1434,25 @@ async function loadTargets() {
       });
       box.append(b);
     }
-  } catch {
+  } catch (err) {
     box.querySelector("span").textContent = "Alvos de exemplo indisponíveis no momento. Informe as coordenadas manualmente.";
+    // Servidor inacessível (ex.: site publicado só com arquivos estáticos): oferece os exemplos salvos.
+    if (err instanceof TypeError || err?.name === "TimeoutError") {
+      state.backendDown = true;
+      const m = await loadDemoManifest();
+      if (!m) return;
+      box.querySelector("span").textContent = "Servidor indisponível. Exemplos reais salvos:";
+      for (const t of m.targets) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip";
+        b.textContent = `${t.name ?? t.id} (exemplo salvo)`;
+        b.addEventListener("click", () => enterDemo(t.id));
+        box.append(b);
+      }
+      // Sem busca em andamento nem exemplo aberto: mostra a oferta no lugar da mensagem inicial.
+      if (!state.values && !state.demo && el.alt.hidden) showAlternatives("network", "", { autoRetry: false });
+    }
   }
 }
 loadTargets();
@@ -1168,6 +1574,7 @@ function clearPoints() {
     state.specCtl[k]?.abort();
     state.pts[k] = null;
   }
+  el.espAcoes.hidden = true;
   updateProgress();
   renderMarkers();
   renderChart();
@@ -1243,6 +1650,24 @@ function mockSpectrum(pt) {
     wavelength_source: "fictício (teste de interface)", data_source: "mock" });
 }
 
+// Modo demonstração: só o espectro do alvo, medido quando o exemplo foi salvo (spectrum.json).
+async function demoSpectrum(pt) {
+  const t = state.demo.target;
+  const noAlvo = pt.target || Math.hypot(pt.fx - 0.5, pt.fy - 0.5) <= 2 * pixelFrac();
+  const falha = (message) => Object.assign(new Error(message), { demo: true });
+  if (!t.spectrum) throw falha("Este exemplo salvo não traz espectro. O espectro de um ponto precisa do servidor.");
+  if (!noAlvo) throw falha("No exemplo salvo só há o espectro do alvo (centro do quadro). Para outros pontos é preciso o servidor; use “Espectro do alvo”.");
+  state.demo.spectrum ??= await fetchJson(t.spectrum);
+  pt.target = true; // o espectro salvo é o do alvo
+  return normalizeSpectrum(state.demo.spectrum);
+}
+
+el.espRetry.addEventListener("click", () => {
+  const k = el.espRetry.dataset.key;
+  el.espAcoes.hidden = true;
+  if (k && state.pts[k]) loadSpectrum(k);
+});
+
 // Barra de progresso indeterminada enquanto algum ponto espera o backend.
 const updateProgress = () => { el.espProgresso.hidden = !["A", "B"].some((k) => state.pts[k]?.loading); };
 
@@ -1260,8 +1685,9 @@ async function loadSpectrum(key) {
     ? `Calculando o espectro do ${ptLabel(key, pt)}…`
     : `Medindo o ${ptLabel(key, pt)} em até ${CONFIG.SPECTRUM_MAX_EXPOSURES} exposições… A primeira vez é lenta ` +
       "(cerca de 1–2 s por exposição, podendo passar de um minuto); depois o resultado fica em cache.", "carregando");
+  el.espAcoes.hidden = true;
   try {
-    const data = state.isMock ? mockSpectrum(pt) : await fetchSpectrum(key, pt);
+    const data = state.isMock ? mockSpectrum(pt) : state.demo ? await demoSpectrum(pt) : await fetchSpectrum(key, pt);
     if (pt.req !== req || state.pts[key] !== pt) return;
     if (!data.points.length) {
       setEspStatus(`Sem medidas para o ponto ${key}: nenhuma exposição cobre esse ponto. Tente outro ponto.`);
@@ -1270,19 +1696,32 @@ async function loadSpectrum(key) {
     pt.data = data;
     renderChart();
     const nFlag = data.points.filter((p) => p.flagged).length;
+    if (nFlag === data.points.length) {
+      // Ex.: Estrela de Barnard satura o SPHEREx: todas as medidas sinalizadas. Não apresentar como espectro.
+      setEspStatus(`Espectro inválido para o ${ptLabel(key, pt)}: todas as ${nFlag} medidas estão sinalizadas como contaminadas ` +
+        `(${[...new Set(data.points.flatMap((p) => p.flags))].map(flagName).join(", ") || "flags do SPHEREx"}). ` +
+        "Para uma fonte muito brilhante isso indica saturação do detector; os valores no gráfico não representam o brilho real." +
+        (state.demo ? " (exemplo real salvo)" : ""), "aviso");
+      return;
+    }
     setEspStatus(
       `${ptLabel(key, pt).replace(/^p/, "P")}: ${data.points.length} medidas` +
         (data.nExposures !== null ? ` de ${data.nExposures} exposições` : "") +
         `, abertura de ${data.aperture ?? radius()}″, RA ${pt.ra.toFixed(4)}°, Dec ${pt.dec.toFixed(4)}°.` +
         (nFlag ? ` ${nFlag} com contaminação na abertura (símbolo vazado).` : "") +
         (data.dataSource === "stale_cache" ? " Atenção: IRSA indisponível, usando resultado salvo." : "") +
-        (state.isMock ? " (dados fictícios)" : ""),
+        (state.isMock ? " (dados fictícios)" : "") +
+        (state.demo ? " (exemplo real salvo; medido quando o exemplo foi gerado)" : ""),
       data.dataSource === "stale_cache" ? "aviso" : ""
     );
   } catch (err) {
     if (pt.req !== req || state.pts[key] !== pt) return;
     const timedOut = err === "timeout" || err?.name === "AbortError";
     if (timedOut && state.specCtl[key]?.signal.reason !== "timeout") return; // pedido substituído
+    if (err?.demo) { setEspStatus(err.message); return; }
+    el.espRetry.dataset.key = key;
+    el.espRetry.textContent = `Tentar de novo (ponto ${key})`;
+    el.espAcoes.hidden = false;
     setEspStatus(
       timedOut
         ? "O cálculo do espectro demorou demais. Tente novamente: as exposições já processadas ficam em cache."
@@ -1627,23 +2066,24 @@ function renderMap() {
   el.mapaMock.hidden = !state.isMock;
 }
 
-/* ---------- Mapa do céu (Aladin Lite, carregado só quando o usuário pede) ---------- */
-const sky = { A: null, aladin: null, timer: null, drawGen: 0 };
+/* ---------- Mapa do céu (Aladin Lite) ----------
+ * Carregado quando a seção aparece na tela (ou pelo botão). O código do Aladin vem da primeira
+ * fonte que responder dentro do tempo limite; o fundo (HiPS) só é usado depois de verificado. */
+const sky = { A: null, aladin: null, timer: null, frameTimer: null, drawGen: 0, opening: null,
+              dyn: null, alvo: null, bgSeq: 0, timing: null };
 
-// Fundo do mapa: por padrão, os mapas HiPS da própria missão SPHEREx (um por detector)
+const SPHEREX_PREFIX = "spherex:"; // valor das opções SPHEREx no <select>: "spherex:<detector>"
+
 (function preencherFundos() {
   const spherex = document.createElement("optgroup");
   spherex.label = "SPHEREx (dados da NASA)";
   DET_RANGES.forEach((r, i) =>
-    spherex.append(new Option(`SPHEREx D${i + 1} · ${fmtRange(r)}`, CONFIG.SPHEREX_HIPS_BASE + (i + 1))));
+    spherex.append(new Option(`SPHEREx D${i + 1} · ≈ ${fmtRange(r)}`, SPHEREX_PREFIX + (i + 1))));
   const outros = document.createElement("optgroup");
   outros.label = "Outros telescópios (comparação)";
-  // Espelhos do IRSA (NASA) dos HiPS do CDS (listados no MocServer do CDS). Em 2026-11-15 o alasky/alaskybis
-  // não respondia e o Aladin, com os IDs "P/...", escolhia o alaskybis: o fundo ficava cinza.
-  [["DSS2 (luz visível)", "https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color"],
-   ["2MASS (infravermelho próximo)", "https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color"],
-   ["AllWISE (infravermelho)", "https://irsa.ipac.caltech.edu/data/hips/CDS/AllWISE/RGB-W4-W2-W1"]]
-    .forEach(([nome, id]) => outros.append(new Option(nome, id)));
+  // Em 2026-11-15 o alasky/alaskybis não respondia para alguns HiPS e o Aladin, com os IDs "P/...",
+  // escolhia o alaskybis: o fundo ficava cinza. Por isso usamos URLs explícitas dos espelhos do IRSA.
+  CONFIG.HIPS_FALLBACK.forEach((h) => outros.append(new Option(`${h.name} (${h.why})`, h.url)));
   el.ceuFundo.replaceChildren(spherex, outros);
 })();
 
@@ -1652,38 +2092,140 @@ function setCeuStatus(msg, kind = "") {
   el.ceuStatus.className = "status " + kind;
 }
 
+function setFundoInfo(msg, kind = "") {
+  el.ceuFundoInfo.textContent = msg;
+  el.ceuFundoInfo.className = "note " + kind;
+}
+
+const withTimeout = (p, ms, msg) => {
+  let t;
+  return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(msg)), ms); })])
+    .finally(() => clearTimeout(t));
+};
+
 function loadScript(url) {
   return new Promise((resolve, reject) => {
-    const el = document.createElement("script");
-    el.src = url;
-    el.onload = resolve;
-    el.onerror = () => { el.remove(); reject(new Error("Falha ao baixar o script do Aladin Lite: " + url)); };
-    document.head.append(el);
+    const s = document.createElement("script");
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = () => { s.remove(); reject(new Error("Falha ao baixar o script do Aladin Lite: " + url)); };
+    document.head.append(s);
   });
 }
 
 async function loadAladin() {
-  // Já carregado: só espera A.init (que rejeita, p.ex., sem WebGL2)
-  if (window.A?.aladin) { await window.A.init; return window.A; }
+  if (sky.A) return sky.A;
   const falhas = [];
   for (const src of CONFIG.ALADIN_SOURCES) {
+    const t0 = performance.now();
     try {
-      if (src.type === "module") window.A = (await import(src.url)).default;
-      else await loadScript(src.url);
-      if (!window.A?.aladin) throw new Error("O código do Aladin carregou, mas window.A não existe: " + src.url);
-      await window.A.init; // rejeita se o navegador não tiver WebGL2: não adianta tentar outra fonte
-      return window.A;
+      let A;
+      if (src.type === "module") {
+        A = (await withTimeout(import(src.url), CONFIG.ALADIN_SOURCE_TIMEOUT_MS, "tempo esgotado: " + src.url)).default;
+      } else {
+        await withTimeout(loadScript(src.url), CONFIG.ALADIN_SOURCE_TIMEOUT_MS, "tempo esgotado: " + src.url);
+        A = window.A;
+      }
+      if (!A?.aladin) throw new Error("O código do Aladin carregou, mas não expôs A.aladin: " + src.url);
+      // Rejeita sem WebGL2: aí não adianta tentar outra fonte.
+      await withTimeout(A.init, CONFIG.ALADIN_INIT_TIMEOUT_MS, "inicialização do Aladin demorou demais");
+      console.info(`Mapa do céu: Aladin Lite de ${src.url} em ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+      sky.source = src.url;
+      return (sky.A = A);
     } catch (err) {
       if (/webgl/i.test(String(err))) throw err;
-      console.warn("Mapa do céu: fonte falhou, tentando a próxima.", err);
-      window.A = undefined;
+      console.warn(`Mapa do céu: fonte falhou após ${((performance.now() - t0) / 1000).toFixed(1)} s, tentando a próxima.`, err);
       falhas.push(err);
     }
   }
   throw falhas.at(-1) ?? new Error("Nenhuma fonte do Aladin Lite configurada.");
 }
 
+/* Disponibilidade de um HiPS: o arquivo "properties" precisa responder (com tempo limite).
+ * Resultado ("ok" | "missing" = o servidor respondeu sem o HiPS | "down" = sem resposta),
+ * guardado por URL durante a sessão. */
+const hipsProbe = new Map();
+function probeHipsState(url) {
+  if (!hipsProbe.has(url)) {
+    hipsProbe.set(url, fetch(url + "/properties", { signal: AbortSignal.timeout(CONFIG.HIPS_PROBE_TIMEOUT_MS) })
+      .then(async (r) => (r.ok && /hips_|obs_title|creator_did/i.test(await r.text()) ? "ok" : "missing"))
+      .catch(() => "down"));
+  }
+  return hipsProbe.get(url);
+}
+const probeHips = async (url) => (await probeHipsState(url)) === "ok";
+
+// Espelhos (mesmo conteúdo): o primeiro "ok" vence; se o principal RESPONDER que não tem o HiPS,
+// não vale esperar o tempo limite dos espelhos (em 2026-11-15: alasky 404 rápido, alaskybis sem resposta).
+function firstMirror(urls) {
+  return new Promise((resolve) => {
+    let pend = urls.length;
+    urls.forEach((u, i) => probeHipsState(u).then((st) => {
+      if (st === "ok") resolve(i);
+      else if (i === 0 && st === "missing") resolve(-1);
+      if (--pend === 0) resolve(-1);
+    }));
+  });
+}
+
+/* Resolve o fundo pedido. SPHEREx: tenta os espelhos do CDS; se nenhum responder, usa a cadeia
+ * CONFIG.HIPS_FALLBACK (AllWISE → 2MASS → DSS2). As verificações rodam em paralelo. */
+async function resolveBackground(value) {
+  const isSpherex = value.startsWith(SPHEREX_PREFIX);
+  const det = isSpherex ? value.slice(SPHEREX_PREFIX.length) : null;
+  const pedidos = isSpherex
+    ? CONFIG.SPHEREX_HIPS_MIRRORS.map((m) => ({ url: m + det, name: `SPHEREx D${det}`, spherex: true }))
+    : CONFIG.HIPS_FALLBACK.filter((h) => h.url === value).map((h) => ({ ...h }));
+  if (!pedidos.length) pedidos.push({ url: value, name: "fundo escolhido" });
+  const reservas = CONFIG.HIPS_FALLBACK.filter((h) => !pedidos.some((p) => p.url === h.url));
+  const okR = reservas.map((h) => probeHips(h.url)); // em paralelo com a verificação do pedido
+  const i = await firstMirror(pedidos.map((p) => p.url));
+  if (i >= 0) return { ...pedidos[i], value };
+  const ok2 = await Promise.all(okR);
+  const j = ok2.indexOf(true);
+  const pedidoNome = pedidos[0].name;
+  if (j >= 0) return { ...reservas[j], value: reservas[j].url, fallbackFrom: pedidoNome, wasSpherex: isSpherex };
+  return { ...pedidos[0], value, unverified: true };
+}
+
+function backgroundText(bg) {
+  if (bg.unverified) return `Nenhum fundo respondeu à verificação agora; tentando mesmo assim ${bg.name}. Se o mapa ficar vazio, o serviço de imagens está fora do ar.`;
+  if (bg.fallbackFrom) {
+    return `${bg.wasSpherex ? "Mapa SPHEREx indisponível no CDS agora" : `${bg.fallbackFrom} indisponível agora`}; ` +
+      `mostrando ${bg.name}${bg.why ? ", " + bg.why : ""} (outro telescópio, só para comparação). As imagens da seção Observações continuam sendo do SPHEREx.`;
+  }
+  return bg.spherex
+    ? `Fundo: mapa da própria missão SPHEREx, detector ${bg.name.slice(-2)} (HiPS do CDS, versão QR2). Regiões ainda não observadas aparecem vazias.`
+    : `Fundo: ${bg.name}${bg.why ? ", " + bg.why : ""} (outro telescópio, só para comparação).`;
+}
+
+async function applyBackground(value) {
+  const seq = ++sky.bgSeq;
+  setFundoInfo("Verificando se o fundo escolhido está disponível…", "carregando");
+  const bg = await resolveBackground(value);
+  if (seq !== sky.bgSeq) return bg;
+  if (bg.value !== el.ceuFundo.value && [...el.ceuFundo.options].some((o) => o.value === bg.value)) el.ceuFundo.value = bg.value;
+  setFundoInfo(backgroundText(bg), bg.fallbackFrom || bg.unverified ? "aviso" : "");
+  if (sky.aladin) {
+    try { (sky.aladin.setBaseImageLayer ?? sky.aladin.setImageSurvey).call(sky.aladin, bg.url); }
+    catch (err) { console.error("Mapa do céu:", err); }
+  }
+  return bg;
+}
+
 const wrapRa = (ra) => ((ra % 360) + 360) % 360;
+
+// Centro do quadro em exibição (propagado pelo movimento próprio quando "Seguir" está ativo).
+const skyTarget = () => state.frames[state.index]?.cutoutCenter ?? (state.values ? { ra: state.values.ra, dec: state.values.dec } : null);
+
+function fovPolygon(A, c, fov) {
+  const h = fov / 120; // meia largura, em graus
+  const k = h / Math.cos((c.dec * Math.PI) / 180);
+  return A.polygon([
+    [wrapRa(c.ra - k), c.dec - h], [wrapRa(c.ra + k), c.dec - h],
+    [wrapRa(c.ra + k), c.dec + h], [wrapRa(c.ra - k), c.dec + h],
+  ]);
+}
 
 function drawSkyLayers() {
   const al = sky.aladin, A = sky.A, v = state.values;
@@ -1691,18 +2233,13 @@ function drawSkyLayers() {
   try {
     al.removeLayers();
     sky.drawGen++; // descarta catálogos assíncronos de desenhos anteriores
-    // retângulo da área (coordenadas do céu: leste = RA crescente). Centro = última busca;
-    // lado = valor atual do seletor de FOV (acompanha a régua antes mesmo de buscar de novo).
-    const fov = readFov() ?? v.fov;
-    const h = fov / 120; // meia largura, em graus
-    const k = h / Math.cos((v.dec * Math.PI) / 180);
-    const ov = A.graphicOverlay({ color: "#ff5c8a", lineWidth: 2 });
-    al.addOverlay(ov);
-    ov.addFootprints([A.polygon([
-      [wrapRa(v.ra - k), v.dec - h], [wrapRa(v.ra + k), v.dec - h],
-      [wrapRa(v.ra + k), v.dec + h], [wrapRa(v.ra - k), v.dec + h],
-    ])]);
+    // Camadas dinâmicas: retângulo do FOV e alvo no quadro atual (atualizadas a cada quadro).
+    sky.dyn = A.graphicOverlay({ color: "#ff5c8a", lineWidth: 2 });
+    al.addOverlay(sky.dyn);
+    sky.alvo = A.catalog({ name: "Alvo no quadro atual", shape: "circle", color: "#ff5c8a", sourceSize: 18, onClick: "showPopup" });
+    al.addCatalog(sky.alvo);
 
+    const fov = readFov() ?? v.fov;
     const marca = (name, color, shape, size, list) => {
       if (!list.length) return;
       const cat = A.catalog({ name, shape, color, sourceSize: size, onClick: "showPopup" });
@@ -1719,9 +2256,28 @@ function drawSkyLayers() {
       el.ceuWise.checked && { table: "II/328/allwise", opts: { name: "AllWISE", shape: "rhomb", color: "#9be28a", sourceSize: 9, onClick: "showTable" } },
     ].filter(Boolean);
     if (pedidos.length) addVizierCatalogs(pedidos, v, raio, sky.drawGen);
+    updateSkyFrame();
   } catch (err) {
     console.error("Mapa do céu:", err);
     setCeuStatus("O mapa abriu, mas não foi possível desenhar todas as camadas.", "erro");
+  }
+}
+
+// Só as camadas que mudam com o quadro: retângulo do FOV e marcador do alvo.
+function updateSkyFrame() {
+  const A = sky.A, c = skyTarget();
+  if (!sky.aladin || !sky.dyn || !c) return;
+  try {
+    const fov = readFov() ?? state.values.fov;
+    const f = state.frames[state.index];
+    sky.dyn.removeAll();
+    sky.dyn.addFootprints([fovPolygon(A, c, fov)]);
+    sky.alvo.removeAll();
+    sky.alvo.addSources([A.source(c.ra, c.dec, {
+      nome: f ? `Centro do quadro de ${fmtDateTime(f.date)} (${f.detectorLabel})` : "Centro da busca",
+    })]);
+  } catch (err) {
+    console.error("Mapa do céu (quadro):", err);
   }
 }
 
@@ -1767,18 +2323,28 @@ function scheduleSky() {
   sky.timer = setTimeout(drawSkyLayers, 500); // evita refazer a cada tecla
 }
 
+// Limitado a ~4 por segundo (a reprodução troca de quadro a cada 350 ms ou mais).
+function scheduleSkyFrame() {
+  if (!sky.aladin || sky.frameTimer) return;
+  sky.frameTimer = setTimeout(() => { sky.frameTimer = null; updateSkyFrame(); }, 250);
+}
+
+function centerSky(c, fov) {
+  try {
+    sky.aladin.gotoRaDec(c.ra, c.dec);
+    sky.aladin.setFoV(Math.max(0.05, (fov / 60) * 4));
+  } catch (err) { console.error("Mapa do céu:", err); }
+}
+
 function updateSky({ recenter = false } = {}) {
   const v = state.values;
   if (!v) return;
   if (!sky.aladin) {
-    setCeuStatus(`Mapa pronto para RA ${v.ra}°, Dec ${v.dec}°. Clique em “Carregar mapa interativo”.`);
+    if (!sky.opening) setCeuStatus(`Mapa pronto para RA ${v.ra}°, Dec ${v.dec}°. Ele abre sozinho quando esta seção aparece na tela, ou clique em “Carregar mapa interativo”.`);
     return;
   }
   if (recenter) {
-    try {
-      sky.aladin.gotoRaDec(v.ra, v.dec);
-      sky.aladin.setFoV(Math.max(0.05, (v.fov / 60) * 4));
-    } catch (err) { console.error("Mapa do céu:", err); }
+    centerSky(v, v.fov);
     setCeuStatus(`Mapa centrado em RA ${v.ra}°, Dec ${v.dec}°.`);
   }
   scheduleSky();
@@ -1803,52 +2369,175 @@ function onSkyClick(e) {
 }
 
 el.ceuTudo.addEventListener("click", () => {
-  if (!sky.aladin) { setCeuStatus("Carregue o mapa primeiro."); return; }
+  if (!sky.aladin) { openSky(); return; }
   try { sky.aladin.setFoV(360); } catch (err) { console.error("Mapa do céu:", err); }
 });
 
-el.ceuAbrir.addEventListener("click", async () => {
-  const v = state.values;
-  if (sky.aladin) {
-    if (v) updateSky({ recenter: true });
-    else setCeuStatus("Clique no mapa para escolher um ponto, ou faça uma busca.");
-    return;
-  }
-  el.ceuAbrir.disabled = true;
-  setCeuStatus("Carregando o mapa…", "carregando");
-  try {
-    sky.A = await loadAladin();
-    el.ceuMapa.hidden = false;
-    sky.aladin = sky.A.aladin("#ceu-mapa", {
-      survey: el.ceuFundo.value, target: v ? `${v.ra} ${v.dec}` : "0 0",
-      fov: 360, projection: "AIT", showCooGrid: true, showFullscreenControl: true, // AIT: céu inteiro numa elipse
-    });
-    sky.aladin.on("click", onSkyClick);
-    el.ceuAbrir.textContent = "Recentrar na busca";
-    el.ceuAbrir.disabled = false;
-    setCeuStatus("Céu inteiro, com mapas do SPHEREx. Clique num ponto para pesquisar aquelas coordenadas.");
-    drawSkyLayers();
-  } catch (err) {
-    console.error("Mapa do céu:", err);
-    sky.aladin = null;
-    el.ceuMapa.hidden = true;
-    el.ceuAbrir.disabled = false;
-    setCeuStatus(
-      /webgl/i.test(String(err))
-        ? "O mapa precisa de WebGL2, que está indisponível neste navegador. Ative a aceleração de hardware nas configurações do navegador ou tente outro navegador."
-        : "Não foi possível carregar o mapa. Verifique a conexão com a internet e tente de novo (detalhes no console do navegador, tecla F12).",
-      "erro"
-    );
-  }
+el.ceuCentro.addEventListener("click", () => {
+  const c = skyTarget();
+  if (!c) { setCeuStatus("Faça uma busca primeiro para ter um alvo."); return; }
+  if (!sky.aladin) { openSky(); return; }
+  const f = state.frames[state.index];
+  centerSky(c, state.values.fov);
+  setCeuStatus(`Centralizado no alvo: RA ${c.ra.toFixed(4)}°, Dec ${c.dec.toFixed(4)}°` +
+    (f?.positionSource === "proper_motion" ? ` (posição em ${fmtDate(f.date)}, pelo movimento próprio).` : "."));
 });
 
-el.ceuFundo.addEventListener("change", () => {
-  if (!sky.aladin) return;
-  try { (sky.aladin.setBaseImageLayer ?? sky.aladin.setImageSurvey).call(sky.aladin, el.ceuFundo.value); }
-  catch (err) { console.error("Mapa do céu:", err); }
+function openSky() {
+  if (sky.aladin) return Promise.resolve();
+  sky.opening ??= (async () => {
+    const t0 = performance.now();
+    el.ceuAbrir.disabled = true;
+    setCeuStatus("Carregando o mapa…", "carregando");
+    try {
+      // Código do Aladin e verificação do fundo em paralelo.
+      const [A, bg] = await Promise.all([loadAladin(), applyBackground(el.ceuFundo.value)]);
+      const tCode = performance.now();
+      const v = state.values;
+      el.ceuMapa.hidden = false;
+      sky.aladin = A.aladin("#ceu-mapa", {
+        survey: bg.url, target: v ? `${v.ra} ${v.dec}` : "0 0",
+        fov: 360, projection: "AIT", showCooGrid: true, showFullscreenControl: true, // AIT: céu inteiro numa elipse
+      });
+      sky.aladin.on("click", onSkyClick);
+      el.ceuAbrir.textContent = "Recentrar na busca";
+      sky.timing = { total_s: (performance.now() - t0) / 1000, code_s: (tCode - t0) / 1000, source: sky.source, background: bg.url };
+      console.info("Mapa do céu: aberto", sky.timing);
+      setCeuStatus(`Mapa aberto em ${sky.timing.total_s.toFixed(1).replace(".", ",")} s. Clique num ponto para pesquisar aquelas coordenadas.`);
+      drawSkyLayers();
+    } catch (err) {
+      console.error("Mapa do céu:", err);
+      sky.aladin = null;
+      el.ceuMapa.hidden = true;
+      setCeuStatus(
+        /webgl/i.test(String(err))
+          ? "O mapa precisa de WebGL2, que está indisponível neste navegador. Ative a aceleração de hardware nas configurações do navegador ou tente outro navegador."
+          : "Não foi possível carregar o mapa (nenhuma fonte do Aladin Lite respondeu a tempo). Verifique a conexão e clique em “Carregar mapa interativo” para tentar de novo.",
+        "erro"
+      );
+    } finally {
+      el.ceuAbrir.disabled = false;
+      sky.opening = null;
+    }
+  })();
+  return sky.opening;
+}
+
+el.ceuAbrir.addEventListener("click", () => {
+  if (!sky.aladin) { openSky(); return; }
+  if (state.values) updateSky({ recenter: true });
+  else setCeuStatus("Clique no mapa para escolher um ponto, ou faça uma busca.");
 });
+
+// Abre sozinho quando a seção entra na tela (uma vez).
+if ("IntersectionObserver" in window) {
+  const ceuObs = new IntersectionObserver((entries) => {
+    if (!entries.some((en) => en.isIntersecting)) return;
+    ceuObs.disconnect();
+    openSky();
+  }, { rootMargin: "150px 0px" });
+  ceuObs.observe($("ceu"));
+}
+
+el.ceuFundo.addEventListener("change", () => applyBackground(el.ceuFundo.value));
 el.ceuGaia.addEventListener("change", scheduleSky);
 el.ceuWise.addEventListener("change", scheduleSky);
+
+/* ---------- Comparar duas datas (cortina deslizante ou piscar) ----------
+ * Os quadros estão no mesmo referencial (norte para cima, mesmo FOV), então A e B se sobrepõem
+ * pixel a pixel. Padrão: primeira e última observação do detector selecionado (ou do quadro atual). */
+const cmp = { timer: null, showA: true };
+const cmpMode = () => document.querySelector('input[name="cmp-modo"]:checked').value;
+const cmpFrame = (sel) => state.frames.find((f) => f.id === sel.value) ?? null;
+const reduzMovimento = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+function stopBlink() {
+  clearInterval(cmp.timer);
+  cmp.timer = null;
+  el.cmpPiscar.textContent = "Piscar";
+  el.cmpPiscar.setAttribute("aria-pressed", "false");
+}
+
+function startBlink() {
+  stopBlink();
+  el.cmpPiscar.textContent = "Pausar";
+  el.cmpPiscar.setAttribute("aria-pressed", "true");
+  cmp.timer = setInterval(() => { cmp.showA = !cmp.showA; paintCompare(); }, 500); // A/B a ~1 Hz
+}
+
+// Preenche as listas A/B. keep = mantém a escolha anterior quando ainda visível.
+function resetCompare({ keep = false } = {}) {
+  stopBlink();
+  const frames = state.frames;
+  el.cmp.hidden = frames.length < 2;
+  if (frames.length < 2) return;
+  const prevA = el.cmpA.value, prevB = el.cmpB.value;
+  const det = state.detectors.size === 1 ? [...state.detectors][0] : frames[state.index]?.detector ?? null;
+  const doDet = frames.filter((f) => f.detector === det);
+  const base = doDet.length >= 2 ? doDet : frames;
+  const opts = () => frames.map((f) => new Option(`${fmtDateTime(f.date)} · ${f.detectorLabel}`, f.id));
+  el.cmpA.replaceChildren(...opts());
+  el.cmpB.replaceChildren(...opts());
+  const has = (id) => frames.some((f) => f.id === id);
+  el.cmpA.value = keep && has(prevA) ? prevA : base[0].id;
+  el.cmpB.value = keep && has(prevB) ? prevB : base.at(-1).id;
+  renderCompare();
+}
+
+function renderCompare() {
+  if (el.cmp.hidden || !el.cmp.open) { stopBlink(); return; }
+  const a = cmpFrame(el.cmpA), b = cmpFrame(el.cmpB);
+  if (!a || !b) return;
+  if (el.cmpImgA.getAttribute("src") !== a.imageUrl) el.cmpImgA.src = a.imageUrl;
+  if (el.cmpImgB.getAttribute("src") !== b.imageUrl) el.cmpImgB.src = b.imageUrl;
+  el.cmpImgA.alt = `Data A: ${fmtDateTime(a.date)}, detector ${a.detectorLabel}`;
+  el.cmpImgB.alt = `Data B: ${fmtDateTime(b.date)}, detector ${b.detectorLabel}`;
+  const dias = Math.abs(Date.parse(b.date) - Date.parse(a.date)) / 864e5;
+  const avisos = [`Intervalo entre A e B: ${dias < 1 ? (dias * 24).toFixed(1).replace(".", ",") + " h" : Math.round(dias) + " dias"}.`];
+  if (a.id === b.id) avisos.push("A e B são o mesmo quadro: escolha datas diferentes.");
+  if (a.detector !== b.detector) avisos.push(`Atenção: detectores diferentes (${a.detectorLabel} × ${b.detectorLabel}) veem faixas diferentes do infravermelho; a diferença pode não ser mudança no tempo.`);
+  if (isPartial(a) || isPartial(b)) avisos.push("Um dos quadros é parcial: a área hachurada não tem dados.");
+  el.cmpAviso.textContent = avisos.join(" ");
+  const modo = cmpMode();
+  el.cmpStage.dataset.modo = modo;
+  el.cmpPiscar.hidden = modo !== "piscar";
+  el.cmpDivisor.hidden = modo !== "cortina";
+  if (modo === "piscar") {
+    if (!cmp.timer && !reduzMovimento() && el.cmpPiscar.dataset.pausado !== "1") startBlink();
+  } else stopBlink();
+  paintCompare();
+}
+
+function paintCompare() {
+  const a = cmpFrame(el.cmpA), b = cmpFrame(el.cmpB);
+  if (!a || !b) return;
+  if (cmpMode() === "piscar") {
+    el.cmpStage.style.setProperty("--pos", cmp.showA ? "100%" : "0%");
+    el.cmpRotulo.textContent = cmp.showA ? `Mostrando A: ${fmtDateTime(a.date)} · ${a.detectorLabel}` : `Mostrando B: ${fmtDateTime(b.date)} · ${b.detectorLabel}`;
+  } else {
+    el.cmpStage.style.setProperty("--pos", el.cmpDivisor.value + "%");
+    el.cmpRotulo.textContent = `◀ A: ${fmtDateTime(a.date)} · ${a.detectorLabel}   |   B: ${fmtDateTime(b.date)} · ${b.detectorLabel} ▶ — arraste a cortina`;
+    el.cmpDivisor.setAttribute("aria-valuetext", `${el.cmpDivisor.value}% da largura mostra a data A`);
+  }
+}
+
+el.cmp.addEventListener("toggle", renderCompare);
+el.cmpA.addEventListener("change", renderCompare);
+el.cmpB.addEventListener("change", renderCompare);
+el.cmpDivisor.addEventListener("input", paintCompare);
+document.querySelectorAll('input[name="cmp-modo"]').forEach((r) => r.addEventListener("change", () => {
+  el.cmpPiscar.dataset.pausado = "";
+  cmp.showA = true;
+  renderCompare();
+}));
+el.cmpTrocar.addEventListener("click", () => {
+  [el.cmpA.value, el.cmpB.value] = [el.cmpB.value, el.cmpA.value];
+  renderCompare();
+});
+el.cmpPiscar.addEventListener("click", () => {
+  if (cmp.timer) { stopBlink(); el.cmpPiscar.dataset.pausado = "1"; }
+  else { el.cmpPiscar.dataset.pausado = ""; startBlink(); }
+});
 
 /* ---------- URL, compartilhamento e modo incorporado ---------- */
 // Movimento próprio na URL: mesmos nomes do backend, mais "alvo" (nome exibido na mensagem).
@@ -1869,7 +2558,9 @@ function shareUrl(embed) {
   const { ra, dec, fov } = state.values;
   const u = new URL(location.href);
   u.hash = "";
-  u.search = new URLSearchParams({ ra, dec, fov, ...motionUrlParams(state.motion), ...(embed ? { embed: 1 } : {}) });
+  u.search = new URLSearchParams(state.demo
+    ? { demo: state.demo.target.id, ...(embed ? { embed: 1 } : {}) }
+    : { ra, dec, fov, ...motionUrlParams(state.motion), ...(embed ? { embed: 1 } : {}) });
   return u.toString();
 }
 
@@ -1891,6 +2582,7 @@ renderFovUi(); // estado inicial do seletor de FOV (depois de todas as funções
 (function initFromUrl() {
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1") document.body.classList.add("embed");
+  if (q.has("demo")) { enterDemo(q.get("demo")); return; }
   if (q.has("ra") && q.has("dec")) {
     el.ra.value = q.get("ra");
     el.dec.value = q.get("dec");
@@ -1902,11 +2594,19 @@ renderFovUi(); // estado inicial do seletor de FOV (depois de todas as funções
   }
 })();
 
-// Atalhos de teclado no visualizador (fora de campos de texto)
+// Atalhos de teclado na linha do tempo: ←/→ trocam o quadro, espaço reproduz/pausa.
+// Ignorados em campos de formulário, na imagem (que usa as setas para mover o ponto) e com modificadores.
 document.addEventListener("keydown", (e) => {
-  if (el.player.hidden || e.target.matches("input, select, textarea") || e.target.closest("#imgwrap")) return;
-  if (e.key === "ArrowLeft") step(-1);
-  else if (e.key === "ArrowRight") step(1);
+  const t = e.target;
+  if (el.player.hidden || el.visor.hidden || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (t.isContentEditable || t.matches?.("input, select, textarea") || t.closest?.("#imgwrap, #ceu-mapa")) return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+  else if (e.key === " " && !t.matches?.("button, a, summary, [role='button']") &&
+           (t === document.body || t.closest?.("#observacoes"))) {
+    e.preventDefault();
+    state.timer ? stop() : start();
+  }
 });
 
 // Destaca no menu lateral a seção visível
