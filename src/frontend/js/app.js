@@ -1200,3 +1200,62 @@ const spy = new IntersectionObserver(
   { rootMargin: "-20% 0px -70% 0px" }
 );
 sections.forEach((s) => spy.observe(s));
+
+
+/* ---------- Ícone SPHEREx: 1º clique = barra de coordenadas, 2º = + menu lateral (a barra continua aberta), 3º = fecha tudo ---------- */
+(function iconeSpherex() {
+  const btn = $("spx-btn"), barra = $("barra-coord"), menu = $("menu-lateral"), scrim = $("scrim");
+  const bRa = $("barra-ra"), bDec = $("barra-dec"), bFov = $("barra-fov"), msg = $("barra-msg");
+  const ROTULOS = ["Abrir a busca por coordenadas", "Abrir o menu lateral", "Fechar a busca e o menu lateral"];
+  const ERROS = ["ra-erro", "dec-erro", "fov-erro"];
+  let estado = 0; // 0 fechado · 1 barra de coordenadas · 2 barra + menu lateral
+
+  const syncBarra = () => { bRa.value = el.ra.value; bDec.value = el.dec.value; bFov.value = el.fov.value; };
+  // O menu lateral e o fundo escurecido começam logo abaixo da barra, que pode mudar de altura (quebra de linha)
+  const medeBarra = () =>
+    document.documentElement.style.setProperty("--barra-h", barra.hidden ? "0px" : barra.offsetHeight + "px");
+  const atualizaMsg = () => {
+    const erro = ERROS.map((id) => $(id).textContent.trim()).find(Boolean);
+    msg.textContent = erro || el.status.textContent.trim();
+    msg.classList.toggle("erro", Boolean(erro) || el.status.classList.contains("erro"));
+    medeBarra();
+  };
+
+  function ir(novo) {
+    const antes = estado;
+    estado = novo;
+    barra.hidden = estado === 0;
+    scrim.hidden = estado !== 2;
+    document.body.classList.toggle("barra-aberta", estado >= 1);
+    document.body.classList.toggle("menu-aberto", estado === 2);
+    btn.setAttribute("aria-expanded", String(estado !== 0));
+    btn.setAttribute("aria-label", ROTULOS[estado]);
+    btn.title = ROTULOS[estado];
+    if (antes === 0 && estado === 1) { syncBarra(); atualizaMsg(); bRa.focus(); }
+    medeBarra();
+    if (estado === 2) menu.querySelector("a")?.focus();
+  }
+
+  btn.addEventListener("click", () => ir((estado + 1) % 3));
+  scrim.addEventListener("click", () => ir(1));                       // fecha só o menu; a barra continua
+  menu.addEventListener("click", (e) => { if (e.target.closest("a")) ir(1); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || estado === 0) return;
+    ir(estado - 1);                                                   // Esc fecha uma camada por vez
+    btn.focus();
+  });
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(medeBarra).observe(barra);
+
+  // A barra usa o mesmo formulário e a mesma validação da pesquisa principal
+  barra.addEventListener("submit", (e) => {
+    e.preventDefault();
+    el.ra.value = bRa.value; el.dec.value = bDec.value; el.fov.value = bFov.value;
+    el.form.requestSubmit();
+    if (!ERROS.some((id) => $(id).textContent.trim())) $("observacoes").scrollIntoView();
+  });
+  // Cliques no mapa do céu, alvos de exemplo etc. também enviam o formulário: mantém a barra em dia
+  el.form.addEventListener("submit", () => { if (estado >= 1) syncBarra(); });
+  const mo = new MutationObserver(atualizaMsg);
+  [...ERROS, "status"].forEach((id) =>
+    mo.observe($(id), { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class"] }));
+})();

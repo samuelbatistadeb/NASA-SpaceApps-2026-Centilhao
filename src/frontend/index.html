@@ -11,40 +11,67 @@
 <body>
   <a class="skip" href="#busca">Ir para a pesquisa</a>
 
+  <!-- Ícone SPHEREx: 1º clique abre a barra de coordenadas, 2º abre o menu lateral, 3º fecha -->
+  <button type="button" id="spx-btn" class="spx-btn" aria-expanded="false"
+          aria-label="Abrir a busca por coordenadas" title="Abrir a busca por coordenadas">
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="spx-grad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#7fd1ff"/><stop offset="1" stop-color="#ff5c8a"/>
+        </linearGradient>
+      </defs>
+      <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M5.2 11.5 Q16 7.5 26.8 11.5" fill="none" stroke="url(#spx-grad)" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M3.4 16 Q16 12 28.6 16" fill="none" stroke="url(#spx-grad)" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M5.2 20.5 Q16 16.5 26.8 20.5" fill="none" stroke="url(#spx-grad)" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <form id="barra-coord" class="barra-coord" aria-label="Buscar por coordenadas" novalidate hidden>
+    <div class="barra-campo">
+      <label for="barra-ra">RA (graus)</label>
+      <input id="barra-ra" inputmode="text" autocomplete="off" placeholder="ex.: 133.795">
+    </div>
+    <div class="barra-campo">
+      <label for="barra-dec">Dec (graus)</label>
+      <input id="barra-dec" inputmode="text" autocomplete="off" placeholder="ex.: -7.245">
+    </div>
+    <div class="barra-campo fov">
+      <label for="barra-fov">FOV (′)</label>
+      <input id="barra-fov" inputmode="decimal" autocomplete="off">
+    </div>
+    <button type="submit" class="primary">Buscar</button>
+    <p id="barra-msg" class="barra-msg" role="status" aria-live="polite"></p>
+  </form>
+
+  <div id="scrim" class="scrim" hidden></div>
+
   <div class="layout">
-  <aside class="sidebar">
-    <div>
-      <a class="brand" href="#busca"><span class="brand-mark">✳</span><span>SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
-      <div class="nav-label">EXPLORE</div>
-      <nav aria-label="Menu principal"><ul>
-        <li><a href="#busca" aria-current="true"><span class="nav-icon">⌕</span>Explorar o céu</a></li>
-        <li><a href="#observacoes"><span class="nav-icon">◉</span>Observações</a></li>
-        <li><a href="#ceu"><span class="nav-icon">✧</span>Mapa do céu</a></li>
-        <li><a href="#mapa"><span class="nav-icon">⌖</span>Mapa de observações</a></li>
-        <li><a href="#espectro"><span class="nav-icon">∿</span>Espectro</a></li>
-        <li><a href="#galeria"><span class="nav-icon">▦</span>Galeria</a></li>
-        <li><a href="termos.html"><span class="nav-icon">⌁</span>Guia de termos</a></li>
-      </ul></nav>
-    </div>
-    <div class="sidebar-bottom">
-      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small>Arquivo científico · IRSA/IPAC</small></div>
-      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
-    </div>
+  <aside class="sidebar" id="menu-lateral">
+    <nav aria-label="Menu principal">
+      <p class="brand">SPHEREx Explorer</p>
+      <ul>
+        <li><a href="#busca">Pesquisa</a></li>
+        <li><a href="#observacoes">Observações</a></li>
+        <li><a href="#ceu">Mapa do céu</a></li>
+        <li><a href="#mapa">Mapa de observações</a></li>
+        <li><a href="#espectro">Espectro</a></li>
+        <li><a href="#galeria">Galeria de imagens</a></li>
+        <li><a href="termos.html">Aprenda os termos</a></li>
+      </ul>
+    </nav>
+    <p class="side-note">Dados: missão SPHEREx / NASA (IRSA/IPAC)</p>
   </aside>
 
   <div class="content">
   <header class="top">
-    <div class="topline"><span class="eyebrow">DESCUBRA O CÉU COM OS DADOS DO SPHEREx</span><span class="status-pill"><i></i> EXPLORAÇÃO ASTRONÔMICA</span></div>
-    <div class="hero-copy">
-      <div><h1>Explore o universo<br><em>em outra luz.</em></h1>
-      <p>Escolha uma região do céu e descubra como o telescópio SPHEREx a observou em diferentes momentos e faixas de luz infravermelha.</p></div>
-      <div class="hero-orbit" aria-hidden="true"><div class="orbit o1"></div><div class="orbit o2"></div><div class="planet"></div><div class="orbit-star">✦</div></div>
-    </div>
+    <h1>SPHEREx Explorer</h1>
+    <p>Escolha um ponto do céu e veja como ele foi fotografado, em infravermelho, em datas diferentes.</p>
   </header>
 
   <main>
     <section id="busca" class="panel" aria-labelledby="t-busca">
-      <div><span class="eyebrow">COMECE POR AQUI</span><h2 id="t-busca">Qual região do céu você quer explorar?</h2></div>
+      <h2 id="t-busca">Onde você quer olhar?</h2>
 
       <div class="presets" id="presets" role="group" aria-label="Alvos de exemplo">
         <span>Alvos de exemplo:</span>
@@ -53,20 +80,20 @@
       <form id="form" novalidate>
         <div class="field">
           <label for="ra">Ascensão reta (RA), em graus</label>
-          <div class="input-wrap"><span>α</span><input id="ra" name="ra" inputmode="text" autocomplete="off" placeholder="Ex.: 133.79513" required aria-describedby="ra-ajuda ra-erro"></div>
-          <small id="ra-ajuda">Pense como a longitude no céu. Informe em graus ou em horas, minutos e segundos.</small>
+          <input id="ra" name="ra" inputmode="text" autocomplete="off" required aria-describedby="ra-ajuda ra-erro">
+          <small id="ra-ajuda">Como a “longitude” do céu. Graus (0 a 360) ou h/m/s, ex.: 08h55m10.831s.</small>
           <small id="ra-erro" class="erro" role="alert"></small>
         </div>
         <div class="field">
           <label for="dec">Declinação (Dec), em graus</label>
-          <div class="input-wrap"><span>δ</span><input id="dec" name="dec" inputmode="text" autocomplete="off" placeholder="Ex.: -7.24515" required aria-describedby="dec-ajuda dec-erro"></div>
-          <small id="dec-ajuda">Pense como a latitude no céu. O valor vai de −90° a +90°.</small>
+          <input id="dec" name="dec" inputmode="text" autocomplete="off" required aria-describedby="dec-ajuda dec-erro">
+          <small id="dec-ajuda">Como a “latitude” do céu. Graus (−90 a 90) ou °/′/″, ex.: -7d14m42.53s.</small>
           <small id="dec-erro" class="erro" role="alert"></small>
         </div>
         <div class="field">
           <label for="fov">Tamanho da área (FOV), em minutos de arco</label>
-          <div class="input-wrap"><span>◫</span><input id="fov" name="fov" inputmode="decimal" value="3" required aria-describedby="fov-ajuda fov-erro"><i>arcmin</i></div>
-          <small id="fov-ajuda">Escolha o tamanho da região que deseja visualizar. Quanto maior o valor, maior a área exibida. Use de 0,5 a 30.</small>
+          <input id="fov" name="fov" inputmode="decimal" value="3" required aria-describedby="fov-ajuda fov-erro">
+          <small id="fov-ajuda">Quanto maior, mais céu aparece (e objetos rápidos ficam no quadro), mas o carregamento é mais lento. Entre 0,5 e 30.</small>
           <small id="fov-erro" class="erro" role="alert"></small>
         </div>
         <div class="actions">
