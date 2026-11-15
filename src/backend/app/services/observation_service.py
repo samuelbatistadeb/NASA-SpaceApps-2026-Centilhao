@@ -96,7 +96,7 @@ logger = logging.getLogger(__name__)
 #: Display frame of the images: TAN, north up, east left, centred on the target.
 FRAME_COMMON = "common_north_up"
 #: Bumped whenever the rendering of the cached images changes.
-_IMAGE_CACHE_VERSION = "frame-v2"  # v2: frames carry FLAGS and VARIANCE
+_IMAGE_CACHE_VERSION = "frame-v3"  # v2: FLAGS/VARIANCE; v3: fixed frame scale
 
 #: Fields of view (arcmin) evaluated by :meth:`ObservationService.coverage`.
 COVERAGE_FOVS_ARCMIN: tuple[float, ...] = (1.0, 2.0, 3.0, 5.0, 10.0, 15.0, 30.0)
@@ -803,7 +803,9 @@ class ObservationService:
                 entry.ra_deg,
                 entry.dec_deg,
                 entry.fov_arcmin,
-                scale_arcsec=fits_processor.pixel_scale_arcsec(wcs) or SPHEREX_PIXEL_SCALE_ARCSEC,
+                # Fixed nominal scale: every frame of a query has the same grid
+                # (the measured scale varies ~6.15-6.21"/px between products).
+                scale_arcsec=SPHEREX_PIXEL_SCALE_ARCSEC,
                 max_pixels=self._settings.max_cutout_pixels,
                 extras={
                     name: plane for name, plane in (

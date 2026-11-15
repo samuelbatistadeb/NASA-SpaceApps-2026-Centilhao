@@ -199,3 +199,32 @@ def test_invalid_operations_are_refused(composite_service) -> None:
         composite_service.composite("sum", ["x"])
     with pytest.raises(InvalidParametersError):
         composite_service.composite("diff", ["x"])
+
+
+def test_frames_of_one_query_share_the_grid_even_if_pixel_scales_differ(service_factory) -> None:
+    """Regression: a product with a slightly larger measured scale produced a
+    29 px frame among 31 px ones, and the D6 difference failed (Barnard, 15/11)."""
+    from conftest import FakeTransport, fits_response, votable_response
+
+    def fits_with_scale(arcsec: float) -> bytes:
+        size = 120
+        hdr = fits.Header()
+        hdr["CTYPE1"], hdr["CTYPE2"] = "RA---TAN", "DEC--TAN"
+        hdr["CRVAL1"], hdr["CRVAL2"] = 133.795129, -7.245147
+        hdr["CRPIX1"] = hdr["CRPIX2"] = (size + 1) / 2
+        hdr["CDELT1"], hdr["CDELT2"] = -arcsec / 3600, arcsec / 3600
+        hdr["DATE-OBS"] = "2025-05-05T00:00:00"
+        buffer = io.BytesIO()
+        fits.HDUList([fits.PrimaryHDU(), fits.ImageHDU(np.ones((size, size), np.float32),
+                                                       header=hdr, name="IMAGE")]).writeto(buffer)
+        return buffer.getvalue()
+
+    transport = FakeTransport([votable_response()])
+    service = service_factory(transport)
+    observations = service.search(133.795129, -7.245147, 3.0).observations[:2]
+    sides = []
+    for observation, scale in zip(observations, (6.15, 6.21)):
+        transport.queue(fits_response(fits_with_scale(scale)))
+        frame, _ = service.get_frame(observation.id)
+        sides.append(frame.data.shape)
+    assert sides[0] == sides[1]
