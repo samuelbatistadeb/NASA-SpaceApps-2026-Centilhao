@@ -5,8 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SPHEREx Explorer — o céu em infravermelho ao longo do tempo</title>
   <meta name="description" content="Explore imagens reais da missão SPHEREx da NASA e veja como uma região do céu muda entre observações.">
+  <meta name="theme-color" content="#080d1b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/theme.css">
   <script src="js/app.js" defer></script>
+  <script src="js/theme.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#busca">Ir para a pesquisa</a>
@@ -14,9 +20,12 @@
   <div class="layout">
   <aside class="sidebar">
     <div>
-      <a class="brand" href="#busca"><span class="brand-mark">✳</span><span>SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
+      <div class="sidebar-head">
+        <button type="button" class="probe-toggle" aria-expanded="false" aria-controls="menu-principal" hidden><img src="assets/favicon.svg" alt="" width="34" height="34"><span class="sr-only">Menu de navegação</span></button>
+        <a class="brand" href="#busca"><span class="brand-mark"><img src="assets/favicon.svg" alt="" width="36" height="36"></span><span>SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
+      </div>
       <div class="nav-label">EXPLORE</div>
-      <nav aria-label="Menu principal"><ul>
+      <nav id="menu-principal" aria-label="Menu principal"><ul>
         <li><a href="#busca" aria-current="true"><span class="nav-icon">⌕</span>Explorar o céu</a></li>
         <li><a href="#observacoes"><span class="nav-icon">◉</span>Observações</a></li>
         <li><a href="#ceu"><span class="nav-icon">✧</span>Mapa do céu</a></li>
@@ -38,7 +47,11 @@
     <div class="hero-copy">
       <div><h1>Explore o universo<br><em>em outra luz.</em></h1>
       <p>Escolha uma região do céu e descubra como o telescópio SPHEREx a observou em diferentes momentos e faixas de luz infravermelha.</p></div>
-      <div class="hero-orbit" aria-hidden="true"><div class="orbit o1"></div><div class="orbit o2"></div><div class="planet"></div><div class="orbit-star">✦</div></div>
+      <figure class="hero-figure">
+        <img src="assets/nasa/spherex-all-sky-map-pia26600.jpg" width="960" height="540" alt="Primeiro mapa do céu inteiro feito pelo SPHEREx: uma elipse com a faixa brilhante da Via Láctea no centro, poeira em tons de vermelho e gás hidrogênio quente em azul.">
+        <figcaption>Primeiro mapa do céu inteiro do SPHEREx, em 102 cores infravermelhas (observações de maio a dezembro de 2025).
+          <span class="credito">Crédito: <a href="https://www.jpl.nasa.gov/images/pia26600-spherexs-first-all-sky-map/" rel="noopener">NASA/JPL-Caltech (PIA26600)</a></span></figcaption>
+      </figure>
     </div>
   </header>
 
@@ -255,8 +268,25 @@
     </section>
   </main>
 
-  <footer>
-    Dados: missão SPHEREx / NASA (JPL-Caltech), arquivo IRSA/IPAC. Protótipo criado para o NASA Space Apps Challenge 2026. O IRSA pede um texto de agradecimento oficial em materiais publicados; copie-o da página da missão no IRSA.
+  <footer class="site-footer">
+    <section class="sobre-missao" aria-labelledby="t-sobre">
+      <h2 id="t-sobre">Sobre a missão SPHEREx</h2>
+      <p>O SPHEREx é um telescópio espacial da NASA que mapeia o céu inteiro em infravermelho, em 102 cores. Como ele observa a mesma região em datas diferentes, dá para comparar o céu ao longo do tempo.</p>
+      <div class="missao-galeria">
+        <figure>
+          <img src="assets/nasa/spherex-in-orbit-pia26531.jpg" width="800" height="450" loading="lazy" alt="Ilustração da sonda SPHEREx em órbita da Terra: um grande escudo em forma de cone sobre o corpo da nave, com um painel solar ao lado.">
+          <figcaption>Ilustração (conceito artístico) do SPHEREx em órbita. Os escudos fotônicos em forma de cone bloqueiam a luz e o calor do Sol e da Terra.
+            <span class="credito">Crédito: <a href="https://www.jpl.nasa.gov/images/pia26531-spherex-in-orbit-artists-concept/" rel="noopener">NASA/JPL-Caltech (PIA26531)</a></span></figcaption>
+        </figure>
+        <figure>
+          <img src="assets/nasa/spherex-first-images-pia26280.jpg" width="800" height="518" loading="lazy" alt="Seis quadros de campos estrelados em cores diferentes, um para cada detector do SPHEREx.">
+          <figcaption>Primeiras imagens do SPHEREx, de 27 de março de 2025, ainda não calibradas: uma imagem por detector, seis em cada exposição.
+            <span class="credito">Crédito: <a href="https://www.jpl.nasa.gov/images/pia26280-first-images-from-nasas-spherex/" rel="noopener">NASA/JPL-Caltech (PIA26280)</a></span></figcaption>
+        </figure>
+      </div>
+    </section>
+    <p class="rodape-texto">Dados: missão SPHEREx / NASA (JPL-Caltech), arquivo IRSA/IPAC. Protótipo criado para o NASA Space Apps Challenge 2026. O IRSA pede um texto de agradecimento oficial em materiais publicados; copie-o da página da missão no IRSA.</p>
+    <p class="rodape-texto">Imagens da missão: NASA/JPL-Caltech, usadas conforme as diretrizes de mídia da NASA e do JPL (<a href="assets/CREDITS.md">créditos e fontes</a>). Projeto independente, sem endosso da NASA, do JPL ou do Caltech. Ícone e fundo estrelado: criação do projeto.</p>
   </footer>
   </div>
   </div>
