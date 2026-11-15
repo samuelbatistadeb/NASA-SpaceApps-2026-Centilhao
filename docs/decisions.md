@@ -400,6 +400,66 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 018 — Interface em páginas, modo cinema, outras bases e imagens salvas dos 5 alvos
+
+**Data:** 15/11/2026
+
+**Contexto:** Pedidos da equipe:
+- a landing em seções parecia engessada;
+- a mensagem "Não foi possível conectar ao servidor…" assustava o usuário;
+- a sonda do menu devia ser uma imagem real do SPHEREx;
+- o visor de observações precisava de mais espaço;
+- o site devia oferecer outra base (WISE) e mostrar imagens mesmo quando o IRSA falha.
+
+O trabalho foi feito por 3 agentes em worktrees, com escopos de arquivo separados, e consolidado por merge em `feat/sia-integration`.
+
+**Decisão tomada:**
+
+1. **Páginas** (`js/router.js`):
+   - Uma seção por vez, endereçada por hash (`#busca`, `#observacoes`, `#ceu`, `#mapa`, `#espectro`, `#galeria`).
+   - O botão voltar funciona, `?demo=` continua valendo, e depois de uma busca o site vai para Observações.
+   - Sem JS, ou com `?embed=1`, tudo continua visível.
+   - API: `spxRouter.go(id)` e o evento `spx:page`.
+   - Acoplamento conhecido: o router intercepta `scrollIntoView` e `history.replaceState` para não editar app.js.
+2. **Sonda real com feixe** (`js/theme.js`, `css/theme.css`):
+   - Usa o render oficial "Sectional View of the SPHEREx Spacecraft (Transparent)" (Caltech/IPAC, NASA/JPL-Caltech). O PNG já é transparente; só foi reduzido.
+   - O uso segue a política de imagens do site, com crédito em `assets/CREDITS.md`.
+   - O feixe infravermelho sai da sonda e forma a navbar; no celular, a sonda é o botão do menu.
+3. **Tema:** fundo `#03050b` e painéis como cartões flutuantes. Contraste AA calculado, pior caso 4,73:1.
+4. **Modo cinema** (`js/cinema.js`, `css/cinema.css`):
+   - A imagem é a protagonista e os controles ficam numa barra no estilo player.
+   - Abas Sequência | Comparar | Combinar, marcas de mês na linha do tempo e faixa de miniaturas, só com imagens já baixadas.
+   - Tela cheia (`F`/`C`, com fallback para um overlay fixo), zoom e arrasto sem quebrar a marcação do espectro.
+5. **Mensagem amigável:** a falha de conexão vira um status neutro (classe `info`) que oferece:
+   - exemplo salvo;
+   - outras bases;
+   - nova tentativa.
+6. **Outras bases** (`js/surveys.js`):
+   - WISE W1–W4, 2MASS J/H/K e DSS2, via IRSA Finder Chart. O hips2fits do CDS estava em 404.
+   - Busca por nome via Sesame, com espelho da CfA.
+   - Visualizador Aladin com o mesmo HiPS do mapa.
+   - Sempre com o aviso de que é outra missão, sem linha do tempo.
+7. **Imagens salvas dos 5 alvos** (`data/scripts/18_reference_images.py`, `js/refimages.js`):
+   - Imagens DSS1/DSS2 vermelho, 2MASS J/H/K e WISE W1–W4, baixadas do IRSA Finder Chart e servidas como arquivos estáticos (`demo/<id>/ref/`, manifesto `demo/reference.json`).
+   - Quando a busca falha, o painel de alternativas mostra as imagens do alvo mais próximo (≤ 10′) ou uma galeria dos alvos.
+   - Cada imagem é **centrada no alvo propagado para a data da própria imagem**: o `obsdate` informado pelo Finder Chart é reconferido na posição propagada. Isso usa o mesmo `propagate_position` do backend.
+   - Os pacotes SPHEREx reais dos alvos que faltavam foram exportados com `17_export_demo.py`.
+
+**Evidência:**
+- Estrela de Barnard: a placa DSS1 é de 09/07/1950 e a DSS2 vermelho de 16/06/1991. A estrela aparece no centro das duas imagens. Sem a propagação, ela estaria ~13′ fora do quadro de 3′ em 1950.
+- Finder Chart: 200 `image/png`, 131×131 px para 3′.
+
+**Limitações:**
+- O AllWISE soma exposições de 2010–2011. A data usada é a que o serviço informa para o ladrilho.
+- As datas DSS são de placas individuais.
+- As imagens de referência são de outros telescópios e servem só para orientação; não entram em nenhuma medida.
+- A tela cheia nativa não foi testada no navegador embutido, só o overlay.
+- A animação do feixe foi conferida em quadros congelados.
+
+**Responsável:** Liderança técnica e de interface.
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026

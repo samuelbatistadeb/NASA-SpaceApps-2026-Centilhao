@@ -95,6 +95,13 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
     - validar com um alvo brilhante (Estrela de Barnard), para mostrar um espectro com sinal real;
     - revalidar a busca ao vivo quando o SIA voltar;
     - validação científica pela Integrante 2.
+- **Interface em páginas, modo cinema, outras bases e imagens salvas (15/11/2026, DECISÃO 018):**
+  - Páginas por hash (`js/router.js`); sonda SPHEREx real (render oficial transparente) com feixe que forma a navbar; fundo mais escuro e cartões flutuantes.
+  - Visor redesenhado com modo cinema (`js/cinema.js`): abas Sequência/Comparar/Combinar, zoom e marcas de data.
+  - Mensagem amigável quando o servidor cai; busca por nome (Sesame) e outras bases (WISE, 2MASS, DSS2 via IRSA Finder Chart).
+  - Imagens de referência dos 5 alvos salvas no site (`data/scripts/18_reference_images.py`), centradas no alvo na data de cada imagem; aparecem no painel de alternativas quando a busca falha (`js/refimages.js`).
+  - Testado no navegador embutido: falha simulada do servidor mostra as imagens da Barnard (alvo próximo) e a galeria de alvos (região sem imagens); ampliar e fechar com Esc funcionam.
+  - **Pendente:** testar a tela cheia nativa num Chrome comum; ver a animação do feixe em tempo real; revisar a navbar entre 761 e 1000 px.
 - **Quadro comum, cobertura, combinação de épocas e releases (15/11/2026, DECISÃO 015):**
   - Imagens reamostradas numa grade norte-acima centrada no alvo; área fora do detector transparente.
   - `GET /api/coverage` (quadros completos/parciais por FOV, sem baixar imagens) e `GET /api/composite` (média por detector e diferença entre épocas).

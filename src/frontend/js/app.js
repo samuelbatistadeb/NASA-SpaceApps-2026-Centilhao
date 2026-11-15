@@ -968,6 +968,8 @@ function showAlternatives(kind, detail = "", { autoRetry = true } = {}) {
   el.altRetry.hidden = !state.values; // sem coordenadas ainda, não há o que tentar de novo
   if (autoRetry && state.values) scheduleRetry();
   else cancelRetry();
+  // js/refimages.js mostra as imagens salvas desta região (ou dos alvos de exemplo).
+  document.dispatchEvent(new CustomEvent("spx:alternativas", { detail: { kind, values: state.values ?? null } }));
 }
 
 /* ---------- Fluxo de busca ---------- */
@@ -1173,6 +1175,8 @@ async function enterDemo(id) {
     setStatus("Não foi possível abrir o exemplo salvo.", "erro");
   }
 }
+
+window.spxEnterDemo = enterDemo; // usado por js/refimages.js
 
 // Qualquer busca nova sai do modo demonstração.
 function leaveDemo() {
