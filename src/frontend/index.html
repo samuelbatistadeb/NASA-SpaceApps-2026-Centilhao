@@ -211,7 +211,7 @@
 
     <section id="espectro" class="panel" aria-labelledby="t-esp">
       <h2 id="t-esp">Espectro de um ponto</h2>
-      <p class="dica">Clique na imagem (ou foque nela e use as setas) para ver o brilho do ponto em cada comprimento de onda. Marque um segundo ponto como fundo do céu para comparar. O espectro usa todas as observações disponíveis, não só o quadro mostrado.</p>
+      <p class="dica">Clique na imagem (ou foque nela e use as setas) para medir o fluxo do ponto em cada comprimento de onda. Marque um segundo ponto como fundo do céu para comparar. O espectro usa as exposições disponíveis (até 60), não só o quadro mostrado: cada medida vem de uma exposição em que o ponto caiu numa posição diferente do detector. Com “Seguir o movimento do alvo” ativo, “Espectro do alvo” (ou um clique no centro do quadro) acompanha o alvo em cada data; os demais pontos ficam fixos no céu. A primeira medida de um ponto é lenta (cerca de 1–2 s por exposição).</p>
 
       <div class="esp-controles">
         <fieldset class="pt-sel">
@@ -221,14 +221,18 @@
         </fieldset>
         <div class="field">
           <label for="raio">Raio da abertura (segundos de arco)</label>
-          <input id="raio" type="number" min="3" max="60" step="1" value="12">
+          <input id="raio" type="number" min="3" max="30" step="1" value="9">
         </div>
+        <button type="button" id="esp-alvo" class="chip">Espectro do alvo</button>
         <button type="button" id="esp-centro" class="chip">Marcar o centro</button>
         <button type="button" id="esp-limpar" class="chip">Limpar pontos</button>
+        <label class="check vis"><input type="checkbox" id="esp-ocultar"> Ocultar contaminados</label>
       </div>
 
       <p id="esp-status" class="status" role="status" aria-live="polite">Faça uma busca e marque um ponto na imagem.</p>
+      <progress id="esp-progresso" class="esp-progresso" hidden aria-label="Calculando o espectro"></progress>
       <div id="esp-grafico" class="grafico" hidden></div>
+      <p id="esp-nota" class="note" hidden></p>
       <details id="esp-tabela-box" hidden>
         <summary>Ver os dados em tabela</summary>
         <div class="tabela-scroll"><table id="esp-tabela"></table></div>

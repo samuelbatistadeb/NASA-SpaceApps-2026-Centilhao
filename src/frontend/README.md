@@ -107,24 +107,35 @@ listado mais próximo e marcado com "≈". O retângulo do FOV no mapa do céu a
   detector aparece nos detalhes do quadro.
 
 ## Espectro de um ponto
-> **Ainda não implementado no backend.** Com dados reais a página informa que o espectro não está
-> disponível; com "dados fictícios" a seção funciona. Atenção: os recortes reais vêm na orientação
-> do detector (não norte para cima), então a conversão clique → RA/Dec abaixo ainda não vale para eles.
-
 Clique na imagem (ou foque nela, use as setas e Enter) para marcar o ponto A (alvo) e o ponto B (fundo do céu).
-O frontend converte a posição clicada em RA/Dec, assumindo imagem quadrada com lado = FOV, centrada na busca,
-com norte para cima e leste à esquerda (`CONFIG.IMAGE_EAST_LEFT`). Depois chama:
+As imagens vêm no quadro comum (TAN, norte para cima, leste à esquerda, lado = FOV, pixel 6,15″), então o
+frontend converte o clique em RA/Dec usando como centro `metadata.cutout_center_ra_deg/dec_deg` **do quadro em
+exibição** (com "Seguir o movimento do alvo" ativo, cada quadro tem o centro propagado). A conversão é plana
+(erro muito menor que um pixel para FOV de poucos minutos de arco). Depois chama:
 
-`GET /api/spectrum?ra=<graus>&dec=<graus>&radius=<segundos de arco>`
+`GET /api/spectrum?ra_deg=&dec_deg=[&pm_ra_cosdec_masyr=&pm_dec_masyr=&ref_epoch_jyear=]&aperture_arcsec=9&max_exposures=60`
 
-Resposta esperada (lista direta ou objeto com `points`):
-```json
-{ "unit": "MJy/sr", "points": [
-  { "wavelength_um": 0.78, "flux": 12.3, "flux_err": 0.4, "detector": 1, "band_index": 1 }
-] }
-```
-`flux_err`, `detector` e `band_index` são opcionais. O gráfico usa uma cor por detector (paleta Okabe-Ito),
-círculos para A e losangos para B, e há uma tabela e um CSV com os mesmos dados.
+- O movimento próprio só é enviado para o **próprio alvo**: botão "Espectro do alvo" ou clique a ≤ 1 pixel do
+  centro com "Seguir" ativo (aí RA/Dec enviados são as coordenadas do alvo na época `ref_epoch_jyear`). Qualquer
+  outro ponto (ex.: fundo do céu B) é fixo no céu e vai sem movimento.
+- O raio da UI vira `aperture_arcsec` (padrão 9″, limitado a 3–30″). Timeout de 240 s; enquanto espera, barra de
+  progresso indeterminada e aviso de que a primeira vez é lenta (~1–2 s por exposição).
+- Resposta: `{ unit, points: [{ wavelength_um, bandwidth_um, flux, flux_err, detector, observed_at,
+  observation_id, flagged, flags }], n_exposures, aperture_arcsec, wavelength_source, data_source }`.
+  Erros no envelope `{ error: { code, message } }`.
+
+Gráfico: X = λ (µm), Y = fluxo (unidade do backend), barra de erro = `flux_err`, cor = detector (Okabe-Ito),
+círculos para A e losangos para B. Medidas com `flagged: true` (contaminação na abertura) aparecem com símbolo
+vazado, ficam fora da linha e podem ser escondidas ("Ocultar contaminados"). A nota abaixo do gráfico mostra
+`wavelength_source` (λ aproximado). Tabela e CSV: uma linha por medida, com largura de banda, data, id da
+observação, contaminado e flags. No modo de dados fictícios o espectro é gerado localmente no mesmo formato.
+
+## Contaminação no alvo (detalhes do quadro)
+Depois que a imagem principal carrega, o frontend pede `GET /api/observations/{id}/quality` (sem bloquear; 404 e
+erros são ignorados e a linha não aparece). A linha "Contaminação no alvo" mostra "nenhuma" ou os nomes das flags
+em português (tabela `FLAG_NAMES` em `app.js`; `GHOST*` → "reflexo (ghost)"), com a `description` do backend e as
+maiores frações de pixels sinalizados no quadro como dica (tooltip). Flags listadas em `informational`
+(ex.: `SOURCE`) não contam como contaminação. Não é pedido para a galeria.
 
 ## Mapa de observações (plano cartesiano)
 Gráfico gerado só com os dados já devolvidos pela busca: eixo X = data (`observed_at`), eixo Y = detector,
