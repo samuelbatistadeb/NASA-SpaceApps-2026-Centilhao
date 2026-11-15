@@ -69,3 +69,32 @@ def get_composite(
     """Return the combined image as a PNG; metadata in X-SpherEx-* headers."""
     result = service.composite(op, _ids(a), _ids(b))
     return Response(content=result.content, media_type="image/png", headers=result.headers)
+
+
+@router.get("/spectrum", summary="Spectrum of a sky position from many SPHEREx exposures")
+def get_spectrum(
+    ra_deg: float = Query(..., ge=0.0, lt=360.0),
+    dec_deg: float = Query(..., ge=-90.0, le=90.0),
+    pm_ra_cosdec_masyr: float | None = Query(None, ge=-30000.0, le=30000.0),
+    pm_dec_masyr: float | None = Query(None, ge=-30000.0, le=30000.0),
+    ref_epoch_jyear: float | None = Query(None, ge=1900.0, le=2100.0),
+    aperture_arcsec: float = Query(9.0, ge=3.0, le=30.0, description="Aperture radius."),
+    max_exposures: int = Query(60, ge=6, le=120, description="Exposures measured (cost)."),
+    service: ObservationService = Depends(get_observation_service),
+) -> dict[str, Any]:
+    """One point per exposure: wavelength (WCS-WAVE), aperture flux, error, flags."""
+    motion = _motion(pm_ra_cosdec_masyr, pm_dec_masyr, ref_epoch_jyear)
+    return service.spectrum(
+        ra_deg, dec_deg, motion, aperture_arcsec=aperture_arcsec, max_exposures=max_exposures
+    )
+
+
+@router.get(
+    "/observations/{observation_id}/quality",
+    summary="Contamination FLAGS of an observation (after its image was generated)",
+)
+def get_quality(
+    observation_id: str,
+    service: ObservationService = Depends(get_observation_service),
+) -> dict[str, Any]:
+    return service.quality(observation_id)

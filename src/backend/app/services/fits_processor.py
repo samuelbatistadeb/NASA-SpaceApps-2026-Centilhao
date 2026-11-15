@@ -587,3 +587,28 @@ def render_frame_png(
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
+
+
+def load_auxiliary_planes(
+    content: bytes, names: tuple[str, ...] = ("FLAGS", "VARIANCE")
+) -> dict[str, tuple[np.ndarray, fits.Header]]:
+    """Return the auxiliary 2D planes present in the FITS (e.g. FLAGS, VARIANCE).
+
+    Missing planes are simply absent from the result (the stream may have
+    stopped before them, or the product may not have them). The FLAGS plane of
+    a full SPHEREx product is tile-compressed; astropy decompresses it.
+    """
+    planes: dict[str, tuple[np.ndarray, fits.Header]] = {}
+    try:
+        with fits.open(io.BytesIO(content), memmap=False) as hdul:
+            for name in names:
+                if name not in hdul:
+                    continue
+                hdu = hdul[name]
+                data = getattr(hdu, "data", None)
+                if data is None or getattr(data, "ndim", 0) != 2:
+                    continue
+                planes[name] = (np.array(data), hdu.header.copy())
+    except Exception:  # noqa: BLE001 - auxiliary planes are optional
+        logger.warning("Could not read auxiliary planes %s", names, exc_info=True)
+    return planes

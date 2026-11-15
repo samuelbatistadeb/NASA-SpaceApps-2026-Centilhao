@@ -21,7 +21,8 @@ dependencies of the project).
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Mapping
 
 import numpy as np
 from astropy.wcs import WCS
@@ -38,6 +39,11 @@ class FrameImage:
     outside: np.ndarray  # bool, True where the grid is outside the source data
     wcs: WCS
     pixel_scale_arcsec: float
+    #: Auxiliary planes resampled by nearest pixel (e.g. "flags", "variance").
+    extras: dict[str, np.ndarray] = field(default_factory=dict)
+    #: 0-based (x, y) of the frame centre in the source image (where the
+    #: target falls on the detector: it sets the wavelength). None if unknown.
+    center_source_xy: tuple[float, float] | None = None
 
     @property
     def coverage_fraction(self) -> float:
@@ -73,8 +79,13 @@ def project_to_frame(
     *,
     scale_arcsec: float = SPHEREX_PIXEL_SCALE_ARCSEC,
     max_pixels: int = 2048,
+    extras: Mapping[str, np.ndarray] | None = None,
 ) -> FrameImage:
-    """Resample ``data`` (with ``source_wcs``) onto the common frame."""
+    """Resample ``data`` (with ``source_wcs``) onto the common frame.
+
+    ``extras`` are planes aligned with ``data`` (FLAGS, VARIANCE) resampled by
+    nearest pixel; outside the source, integer planes get 0 and float planes NaN.
+    """
     source = np.asarray(data, dtype=float)
     if source.ndim != 2:
         raise ValueError("project_to_frame expects a 2D image")
@@ -120,4 +131,24 @@ def project_to_frame(
         )
         out[ok] = bilinear[ok]
 
-    return FrameImage(data=out, outside=~inside, wcs=target, pixel_scale_arcsec=scale_arcsec)
+    projected: dict[str, np.ndarray] = {}
+    for name, plane in (extras or {}).items():
+        plane = np.asarray(plane)
+        if plane.shape != source.shape:
+            continue
+        if np.issubdtype(plane.dtype, np.integer):
+            result = np.zeros((side, side), dtype=np.int64)
+        else:
+            result = np.full((side, side), np.nan)
+        result[inside] = plane[ny[inside], nx[inside]]
+        projected[name] = result
+
+    centre = (side - 1) // 2
+    center_xy = None
+    if np.isfinite(sx[centre, centre]) and np.isfinite(sy[centre, centre]):
+        center_xy = (float(sx[centre, centre]), float(sy[centre, centre]))
+
+    return FrameImage(
+        data=out, outside=~inside, wcs=target, pixel_scale_arcsec=scale_arcsec,
+        extras=projected, center_source_xy=center_xy,
+    )

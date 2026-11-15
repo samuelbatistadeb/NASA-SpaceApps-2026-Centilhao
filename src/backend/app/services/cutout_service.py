@@ -71,6 +71,13 @@ class CutoutResult:
     #: used to resample onto the common frame. ``None`` when unavailable.
     source_data: np.ndarray | None = None
     source_wcs: Any = None
+    #: IMAGE header of the source (spectral WCS 'W', CRPIX of the cutout).
+    source_header: Any = None
+    #: FLAGS bitmask and VARIANCE planes aligned with ``source_data`` (optional).
+    source_flags: np.ndarray | None = None
+    source_variance: np.ndarray | None = None
+    #: Header of the FLAGS HDU (bit names MSKN/MSKM/MSKD).
+    flags_header: Any = None
 
 
 class CutoutService:
@@ -157,6 +164,7 @@ class CutoutService:
             observed_at=fits_processor.extract_observation_datetime(image.header),
             source_data=image.data,
             source_wcs=fits_processor.extract_wcs(image.header),
+            **_auxiliary(content, image),
         )
 
     def _build_local_cutout(
@@ -206,4 +214,19 @@ class CutoutService:
             observed_at=fits_processor.extract_observation_datetime(image.header),
             source_data=image.data,
             source_wcs=wcs,
+            **_auxiliary(content, image),
         )
+
+
+def _auxiliary(content: bytes, image: fits_processor.FitsImage) -> dict[str, Any]:
+    """FLAGS / VARIANCE planes matching the IMAGE plane, plus the IMAGE header."""
+    planes = fits_processor.load_auxiliary_planes(content)
+    shape = np.shape(image.data)
+    flags = planes.get("FLAGS")
+    variance = planes.get("VARIANCE")
+    return {
+        "source_header": image.header,
+        "source_flags": flags[0] if flags and flags[0].shape == shape else None,
+        "flags_header": flags[1] if flags else None,
+        "source_variance": variance[0] if variance and variance[0].shape == shape else None,
+    }

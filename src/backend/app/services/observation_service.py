@@ -70,6 +70,21 @@ from app.services.common_frame import (
     frame_wcs,
     project_to_frame,
 )
+from app.services.spectral import (
+    WAVELENGTH_SOURCE,
+    WCS_WAVE_TAIL_BYTES,
+    aperture_photometry,
+    calibration_key,
+    parse_wcs_wave_tail,
+    wavelength_at,
+)
+from app.services.spherex_flags import (
+    INFORMATIONAL_NAMES,
+    bits_from_header,
+    contamination_mask,
+    decode,
+    fraction_by_flag,
+)
 from app.services.sky_coverage import (
     footprint_coverage,
     parse_s_region,
@@ -81,7 +96,7 @@ logger = logging.getLogger(__name__)
 #: Display frame of the images: TAN, north up, east left, centred on the target.
 FRAME_COMMON = "common_north_up"
 #: Bumped whenever the rendering of the cached images changes.
-_IMAGE_CACHE_VERSION = "frame-v1"
+_IMAGE_CACHE_VERSION = "frame-v2"  # v2: frames carry FLAGS and VARIANCE
 
 #: Fields of view (arcmin) evaluated by :meth:`ObservationService.coverage`.
 COVERAGE_FOVS_ARCMIN: tuple[float, ...] = (1.0, 2.0, 3.0, 5.0, 10.0, 15.0, 30.0)
@@ -190,6 +205,8 @@ class ObservationService:
         # (e.g. main viewer + first thumbnail) wait for a single cutout.
         self._image_locks: dict[str, threading.Lock] = {}
         self._image_locks_guard = threading.Lock()
+        #: WCS-WAVE tables by calibration key (detector + processing run).
+        self._wave_tables: dict[str, Any] = {}
 
     # -- public API -------------------------------------------------------------
     def search(
@@ -395,6 +412,9 @@ class ObservationService:
             arrays = []
             for frame, _ in group:
                 data = np.where(frame.outside, np.nan, frame.data)
+                if "flags" in frame.extras:
+                    # Cosmic rays, bad pixels, ghosts... would look like changes.
+                    data = np.where(contamination_mask(frame.extras["flags"]), np.nan, data)
                 background = np.nanmedian(data) if np.isfinite(data).any() else 0.0
                 arrays.append(data - background)
             cube = np.stack(arrays)
@@ -430,6 +450,7 @@ class ObservationService:
             "detector": detectors[0],
             "frame": FRAME_COMMON,
             "background": "median of each frame subtracted",
+            "masked": "pixels with contamination FLAGS excluded",
             "epoch_span_jyear": [round(epochs[0], 4), round(epochs[-1], 4)] if epochs else None,
             "max_frames_per_pixel": int(counts_a.max()) if counts_a.size else 0,
             "difference_limits": list(limits) if limits else None,
@@ -455,6 +476,163 @@ class ObservationService:
             if metadata.get(key) is not None:
                 headers[header] = str(metadata[key])
         return headers
+
+    def quality(self, observation_id: str) -> dict[str, Any]:
+        """Contamination FLAGS at the target and over the frame of an observation.
+
+        Available once the image was generated (the FLAGS travel with it).
+        """
+        entry = self._entry(observation_id)
+        cache_key = self._image_cache_key(entry)
+        frame = self._cached_frame(entry, cache_key)
+        if frame is None or "flags" not in frame.extras:
+            raise ImageNotFoundError(
+                "A qualidade fica disponível depois que a imagem da observação é gerada."
+            )
+        _, flags_header = self._cached_headers(cache_key)
+        bits = bits_from_header(flags_header)
+        flags = frame.extras["flags"]
+        valid = ~frame.outside
+        centre = (flags.shape[0] - 1) // 2
+        box = flags[max(centre - 1, 0):centre + 2, max(centre - 1, 0):centre + 2]
+        value = int(np.bitwise_or.reduce(box.ravel())) if box.size else 0
+        at_target = decode(value, bits)
+        return {
+            "observation_id": observation_id,
+            "contaminated_at_target": any(
+                b.name not in INFORMATIONAL_NAMES for b in at_target
+            ),
+            "flags_at_target": [
+                {"bit": b.bit, "name": b.name, "description": b.description}
+                for b in at_target if b.name not in INFORMATIONAL_NAMES
+            ],
+            "informational": [b.name for b in at_target if b.name in INFORMATIONAL_NAMES],
+            "frame_flagged_fraction": fraction_by_flag(flags, valid, bits),
+            "target_box_pixels": int(box.size),
+            "source": "FLAGS HDU (SPHEREx Explanatory Supplement v2.0, Tabela 16)",
+        }
+
+    def spectrum(
+        self,
+        ra_deg: float,
+        dec_deg: float,
+        motion: ProperMotion | None = None,
+        aperture_arcsec: float = 9.0,
+        max_exposures: int = 60,
+    ) -> dict[str, Any]:
+        """Spectrum of a sky position built from many exposures.
+
+        Each exposure sees the position at another place of the linear
+        variable filter, hence at another wavelength. For each selected
+        exposure: aperture mean minus the local background (annulus), error
+        from the VARIANCE plane, wavelength and bandwidth from WCS-WAVE at the
+        detector pixel where the position falls.
+        """
+        scale = SPHEREX_PIXEL_SCALE_ARCSEC
+        radius_px = max(aperture_arcsec / scale, 0.5)
+        fov = max(1.0, math.ceil(8.0 * radius_px * scale / 60.0 * 10) / 10)
+        response = self.search(ra_deg, dec_deg, fov, motion=motion)
+        chosen = self._spread_exposures(response.observations, max_exposures)
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        def measure(observation: Observation) -> dict[str, Any] | None:
+            try:
+                frame, entry = self.get_frame(observation.id)
+            except Exception as exc:  # noqa: BLE001 - one bad exposure must not stop the spectrum
+                logger.info("Spectrum: skipping %s (%s)", observation.id, exc)
+                return None
+            point = aperture_photometry(frame, radius_px)
+            if point is None:
+                return None
+            wave = self._wavelength_for(entry, frame)
+            if wave is None:
+                return None
+            names = [b.name for b in decode(point.pop("flags_value"))
+                     if b.name not in INFORMATIONAL_NAMES]
+            return {
+                "wavelength_um": round(wave[0], 5),
+                "bandwidth_um": round(wave[1], 5),
+                **point,
+                "detector": observation.detector,
+                "observed_at": observation.observed_at.isoformat() if observation.observed_at else None,
+                "observation_id": observation.id,
+                "flagged": bool(names),
+                "flags": names,
+            }
+
+        with ThreadPoolExecutor(max_workers=self._settings.max_concurrent_product_requests) as pool:
+            points = [p for p in pool.map(measure, chosen) if p is not None]
+        points.sort(key=lambda p: p["wavelength_um"])
+        return {
+            "unit": "MJy/sr",
+            "points": points,
+            "n_exposures": len(chosen),
+            "aperture_arcsec": aperture_arcsec,
+            "frame_fov_arcmin": fov,
+            "wavelength_source": WAVELENGTH_SOURCE,
+            "flux_definition": (
+                "média do brilho superficial na abertura menos a mediana de um anel "
+                "de fundo (2 a 3 raios); erro a partir do plano VARIANCE"
+            ),
+            "data_source": response.data_source,
+        }
+
+    @staticmethod
+    def _spread_exposures(observations: list[Observation], limit: int) -> list[Observation]:
+        """Up to ``limit`` complete exposures, spread over detectors and time."""
+        complete = [o for o in observations if (o.metadata.coverage_fraction or 0) >= COMPLETE_COVERAGE]
+        pool = complete or list(observations)
+        by_detector: dict[str, list[Observation]] = {}
+        for observation in pool:  # chronological order is kept inside each detector
+            by_detector.setdefault(observation.detector or "?", []).append(observation)
+        chosen: list[Observation] = []
+        per_detector = max(1, limit // max(len(by_detector), 1))
+        for group in by_detector.values():
+            step = max(len(group) / per_detector, 1.0)
+            chosen.extend(group[int(i * step)] for i in range(min(per_detector, len(group))))
+        return chosen[:limit]
+
+    def _wavelength_for(
+        self, entry: ObservationEntry, frame: FrameImage
+    ) -> tuple[float, float] | None:
+        """Wavelength/bandwidth (µm) at the detector pixel of the frame centre."""
+        if frame.center_source_xy is None:
+            return None
+        image_header, _ = self._cached_headers(self._image_cache_key(entry))
+        access_url = _to_str(pick(entry.record, "access_url"))
+        if image_header is None or not access_url:
+            return None
+        table = self._wcs_wave_table(access_url, extract_detector(entry.record))
+        if table is None:
+            return None
+        return wavelength_at(image_header, table, *frame.center_source_xy)
+
+    def _wcs_wave_table(self, access_url: str, detector: str | None):
+        """WCS-WAVE table of a product; one download per (detector, processing run)."""
+        from astropy.io import fits
+
+        key = calibration_key(access_url, detector)
+        with self._image_locks_guard:
+            if key in self._wave_tables:
+                return self._wave_tables[key]
+        cache_key = DiskCache.make_key("wcs-wave", key)
+        payload = self._cache.get_bytes(NAMESPACE_IMAGES, cache_key, allow_stale=True)
+        table = None
+        if payload is not None:
+            table = parse_wcs_wave_tail(payload)
+        if table is None:
+            try:
+                tail = self._client.fetch_tail(access_url, WCS_WAVE_TAIL_BYTES)
+            except Exception as exc:  # noqa: BLE001 - wavelength unknown, point skipped
+                logger.warning("WCS-WAVE unavailable for %s: %s", access_url, exc)
+                return None
+            table = parse_wcs_wave_tail(tail)
+            if table is not None:
+                self._cache.set_bytes(NAMESPACE_IMAGES, cache_key, tail)
+        with self._image_locks_guard:
+            self._wave_tables[key] = table
+        return table
 
     def _center_function(
         self, ra_deg: float, dec_deg: float, motion: ProperMotion | None
@@ -558,8 +736,31 @@ class ObservationService:
             data = arrays["data"].astype(float)
             outside = arrays["outside"].astype(bool)
             scale = float(arrays["scale"])
+            extras = {}
+            if "flags" in arrays.files:
+                extras["flags"] = arrays["flags"].astype(np.int64)
+            if "variance" in arrays.files:
+                extras["variance"] = arrays["variance"].astype(float)
+            center_xy = (
+                tuple(float(v) for v in arrays["center_source_xy"])
+                if "center_source_xy" in arrays.files else None
+            )
         wcs = frame_wcs(entry.ra_deg, entry.dec_deg, data.shape[0], scale)
-        return FrameImage(data=data, outside=outside, wcs=wcs, pixel_scale_arcsec=scale)
+        return FrameImage(
+            data=data, outside=outside, wcs=wcs, pixel_scale_arcsec=scale,
+            extras=extras, center_source_xy=center_xy,
+        )
+
+    def _cached_headers(self, cache_key: str) -> tuple[Any, Any]:
+        """IMAGE and FLAGS headers of the source cutout (``None`` if unknown)."""
+        from astropy.io import fits
+
+        stored = self._cache.get_json(NAMESPACE_IMAGES, f"{cache_key}.headers", allow_stale=True)
+        if not stored:
+            return None, None
+        image = fits.Header.fromstring(stored["image"]) if stored.get("image") else None
+        flags = fits.Header.fromstring(stored["flags"]) if stored.get("flags") else None
+        return image, flags
 
     def _image_lock(self, cache_key: str) -> threading.Lock:
         """Return the lock that serialises the generation of one image."""
@@ -598,16 +799,31 @@ class ObservationService:
                 entry.fov_arcmin,
                 scale_arcsec=fits_processor.pixel_scale_arcsec(wcs) or SPHEREX_PIXEL_SCALE_ARCSEC,
                 max_pixels=self._settings.max_cutout_pixels,
+                extras={
+                    name: plane for name, plane in (
+                        ("flags", result.source_flags), ("variance", result.source_variance),
+                    ) if plane is not None
+                },
             )
             content = fits_processor.render_frame_png(frame.data, frame.outside)
+            arrays: dict[str, Any] = {
+                "data": frame.data.astype(np.float32),
+                "outside": frame.outside,
+                "scale": np.float64(frame.pixel_scale_arcsec),
+            }
+            if "flags" in frame.extras:
+                arrays["flags"] = frame.extras["flags"].astype(np.int32)
+            if "variance" in frame.extras:
+                arrays["variance"] = frame.extras["variance"].astype(np.float32)
+            if frame.center_source_xy is not None:
+                arrays["center_source_xy"] = np.array(frame.center_source_xy)
             buffer = io.BytesIO()
-            np.savez_compressed(
-                buffer,
-                data=frame.data.astype(np.float32),
-                outside=frame.outside,
-                scale=np.float64(frame.pixel_scale_arcsec),
-            )
+            np.savez_compressed(buffer, **arrays)
             self._cache.set_bytes(NAMESPACE_IMAGES, f"{cache_key}.frame", buffer.getvalue())
+            self._cache.set_json(NAMESPACE_IMAGES, f"{cache_key}.headers", {
+                "image": result.source_header.tostring() if result.source_header is not None else None,
+                "flags": result.flags_header.tostring() if result.flags_header is not None else None,
+            })
             metadata.update(
                 frame=FRAME_COMMON,
                 frame_side_pixels=int(frame.data.shape[0]),

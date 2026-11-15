@@ -179,6 +179,18 @@ def fits_bytes_through_extension(
     return None
 
 
+def _stop_after(extname: str) -> Callable[[bytes | bytearray], int | None]:
+    def stop(buffer: bytes | bytearray) -> int | None:
+        return fits_bytes_through_extension(buffer, extname)
+
+    return stop
+
+
+#: Level 2 HDU order: PRIMARY, IMAGE, FLAGS, VARIANCE, ZODI, EPSF, WCS-WAVE.
+_STOP_AFTER_VARIANCE = _stop_after("VARIANCE")
+_STOP_AFTER_FLAGS = _stop_after("FLAGS")
+
+
 @dataclass(frozen=True)
 class HttpResponse:
     """Minimal HTTP response returned by a transport."""
@@ -592,7 +604,9 @@ class IrsaClient:
                 params=params,
                 max_bytes=self.max_fits_bytes,
                 terminal_statuses=IBE_NO_OVERLAP_STATUS_CODES,
-                stop_when=fits_bytes_through_extension,
+                # IMAGE, FLAGS and VARIANCE come first (~3x the IMAGE size);
+                # ZODI, the 3.9 MB EPSF and WCS-WAVE are not downloaded.
+                stop_when=_STOP_AFTER_VARIANCE,
             )
         if response.status_code in IBE_NO_OVERLAP_STATUS_CODES:
             raise ImageNotFoundError(
@@ -615,9 +629,33 @@ class IrsaClient:
                 "GET",
                 target,
                 max_bytes=self.max_fits_bytes,
-                stop_when=fits_bytes_through_extension,
+                # Full product: IMAGE + FLAGS end at ~27 MiB of 65.8 MB.
+                stop_when=_STOP_AFTER_FLAGS,
             )
         return response.content
+
+    def fetch_tail(self, url: str, nbytes: int) -> bytes:
+        """Return the last ``nbytes`` of a product (HTTP Range ``bytes=-n``).
+
+        Used to read the small WCS-WAVE table stored at the end of SPHEREx
+        products (the server answers 206 Partial Content).
+        """
+        target = self._resolve_data_url(url)
+        self._validate_download_url(target)
+        with self._product_slots:
+            response = self._request_with_retry(
+                "GET",
+                target,
+                max_bytes=max(nbytes * 4, 65536),
+                extra_headers={"Range": f"bytes=-{int(nbytes)}"},
+            )
+        if response.status_code not in (200, 206):
+            raise SourceUnavailableError(
+                "Não foi possível ler a calibração espectral do produto.",
+                detail=f"HTTP {response.status_code} for tail of {target}",
+            )
+        content = response.content
+        return content[-nbytes:] if response.status_code == 200 else content
 
     # -- internals --------------------------------------------------------------
     def _build_sia2_params(
@@ -677,13 +715,14 @@ class IrsaClient:
         max_bytes: int | None = None,
         terminal_statuses: frozenset[int] = frozenset(),
         stop_when: Callable[[bytes], int | None] | None = None,
+        extra_headers: Mapping[str, str] | None = None,
     ) -> HttpResponse:
         """Execute a request, retrying transient failures.
 
         Statuses in ``terminal_statuses`` are returned to the caller at once,
         without retry and without raising, so it can interpret them.
         """
-        headers = {"User-Agent": self.user_agent, "Accept": "*/*"}
+        headers = {"User-Agent": self.user_agent, "Accept": "*/*", **dict(extra_headers or {})}
         last_error: Exception | None = None
 
         extra: dict[str, Any] = {"stop_when": stop_when} if stop_when is not None else {}
