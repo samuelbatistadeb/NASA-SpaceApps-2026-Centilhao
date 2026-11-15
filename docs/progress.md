@@ -67,6 +67,19 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
 - **Desempenho das imagens (DECISÃO 012):** o backend lê só a extensão `IMAGE` do FITS (recorte IBE de 17,7 s/4,05 MB para 1,2 s/31,7 KB, pixels idênticos), limita a 3 os pedidos simultâneos ao IRSA e deduplica pedidos da mesma imagem. Medição pela API, alvo Estrela de Barnard sem cache: 25 imagens em paralelo concluídas em 17 s, todas com HTTP 200 (antes, só 1 de 24 miniaturas havia carregado depois de ~60 s). O frontend carrega as miniaturas em fila (no máximo 2 por vez), só depois da imagem principal, e descarta a fila ao trocar de busca ou filtro. Validado no navegador com o IRSA real, alvo ε Indi sem cache (517 observações): busca em 11,7 s, imagem principal 0,8 s depois, 24 miniaturas resolvidas em ~26 s com no máximo 2 simultâneas; 23 carregaram e 1 retornou 422 (o produto não cobre a posição, caso do pré-filtro de sobreposição ainda pendente). Os 503 do IRSA foram absorvidos pelo retry.
 - **Unidades espectrais (DECISÃO 011):** `wavelength_*_nm` agora em nanômetros (SIA publica em metros). Suíte: **113 passed, 2 skipped**.
 - **Pré-filtro de sobreposição (14/11/2026, DECISÃO 013):** `/api/observations` só lista produtos cujo polígono `s_region` contém a posição pedida. Ao vivo, FoV 3′: ε Indi 517 → 460, Barnard 380 → 358, WISE 0855 259 → 258. Em 30 recortes de produtos mantidos não houve nenhum 422; todos os 422 observados estavam entre os descartados. Também saem os recortes parciais em que o alvo cai fora do detector. Suíte: **144 passed, 2 skipped**. Não revalidado no navegador (a mudança é só no backend e não altera o contrato).
+- **Frontend público e resiliente (15/11/2026, DECISÃO 017):**
+  - Modo demonstração com dados reais (WISE 0855 e Estrela de Barnard).
+  - Painel de alternativas em vez de erro.
+  - Mapa em 1,5 s com fallback honesto (AllWISE enquanto o HiPS SPHEREx do CDS está fora).
+  - Detectores com faixa real e clique simples.
+  - Comparador de duas datas e atalhos de teclado.
+  - Glossário com 53 termos.
+  - Tema astronômico com 3 imagens NASA/JPL-Caltech creditadas e ícone original do SPHEREx.
+  - Validado no navegador real: busca ao vivo (M31, 362 observações, com o SIA intermitente), painel de falha com 503 simulado → exemplo salvo da Barnard (354 observações), detector D3 isolado com 1,63–2,43 µm, mapa com AllWISE.
+  - Diferença D1 da Barnard (céu fixo) mostra o par claro/escuro do movimento próprio.
+  - Corrigida a escala do quadro comum (um quadro D6 de 29 px entre quadros de 31 px).
+  - Suíte: **198 passed, 2 skipped**.
+  - **Não verificado:** a aparência visual por captura de tela (janela do navegador minimizada) e a abertura automática do mapa ao rolar a página.
 - **Contaminação e espectro de um ponto (15/11/2026, DECISÃO 016):**
   - `FLAGS` (23 bits) por quadro e no alvo; combinações excluem pixels contaminados.
   - `GET /api/spectrum`: um ponto por exposição, λ pela `WCS-WAVE` (idêntico ao método oficial em 3 recortes reais), erro pela `VARIANCE`.

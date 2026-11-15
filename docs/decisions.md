@@ -355,6 +355,51 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 017 — Site público resiliente: modo demonstração, mapa com fallback e ajuda contextual
+
+**Data:** 15/11/2026
+
+**Contexto:** O SIA do IRSA ficou instável o dia inteiro (502 e timeouts), e os servidores do CDS (alasky, HiPS SPHEREx, aladin.cds) também caíram. A ferramenta precisa servir ao público mesmo assim.
+
+**Decisão tomada:**
+
+1. **Modo demonstração com dados reais** (`src/frontend/demo/`, gerado por `data/scripts/17_export_demo.py`):
+   - Contém WISE 0855 (50 observações, lista de uma resposta SIA salva) e Estrela de Barnard (354 observações, SIA ao vivo).
+   - Ele é oferecido quando a busca falha ou o servidor está inacessível, e fica acessível por `?demo=<id>`.
+   - A tela mostra sempre a data em que o exemplo foi salvo.
+2. **Erro vira alternativa:** quando a busca falha, a página mostra um painel com:
+   - os exemplos salvos;
+   - nova tentativa automática com contagem regressiva e opção de cancelar;
+   - o mapa do céu;
+   - os dados fictícios, só para testar a interface.
+
+   Falhas de imagem e de espectro oferecem "tentar de novo" ou "próxima observação".
+3. **Mapa:**
+   - O script do Aladin vem primeiro do jsdelivr, com limite de 8 s por fonte.
+   - A disponibilidade do fundo HiPS é verificada antes do uso, na ordem SPHEREx (CDS) → AllWISE → 2MASS → DSS2 (IRSA).
+   - O aviso informa qual fundo está em uso. Medido: o mapa abriu em 1,5 s com AllWISE, enquanto o HiPS SPHEREx dava 404.
+4. **Detectores:**
+   - Clique simples isola um detector; Ctrl, ⌘ ou Shift soma outro.
+   - Cada botão mostra a contagem e a faixa real tirada dos metadados (ex.: D3 1,63–2,43 µm).
+5. **Comparador de duas datas:** modos cortina e piscar.
+6. **Atalhos de teclado:** ←/→ trocam o quadro e espaço reproduz/pausa.
+7. **Glossário:** 53 termos com ícone "?" acessível por mouse, teclado e toque.
+8. **Identidade visual:**
+   - Céu estrelado gerado no navegador.
+   - 3 imagens NASA/JPL-Caltech (PIA26600, PIA26280, PIA26531), com crédito e origem em `src/frontend/assets/CREDITS.md`.
+   - Ícone original estilizado do SPHEREx, sem insígnia da NASA nem logotipo da missão, e menu com "feixe infravermelho".
+
+**Evidência (diferença entre épocas):** na Estrela de Barnard com céu fixo, a diferença D1 entre 2025-08 e 2026-09 mostra o par claro (norte) e escuro (sul) do movimento próprio de ~10″/ano.
+
+**Limitações:**
+- **Lista parcial do WISE 0855:** o pacote veio de uma resposta SIA salva com no máximo 50 registros.
+- **Espectro da Barnard inválido:** a estrela satura o SPHEREx, e todas as medidas vieram sinalizadas.
+- **Pendente de revisão científica:** fatos do glossário vindos do conhecimento do agente — gelos por detector, contagem de fontes do Gaia, bandas do AllWISE, definição de MJD e significado de "QR".
+
+**Responsável:** Liderança técnica e de interface.
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026
