@@ -221,7 +221,7 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 - O recorte IBE é lento (~11–15 s por produto). O cache de imagens é essencial, e a interface não deve pedir todas as imagens de uma vez.
 - A escala é de 6,15″/pixel: FoV de 1′ ≈ 10×10 pixels. Para a demonstração, convém um FoV padrão de vários minutos de arco.
-- Pendente: o pré-filtro de sobreposição por `s_fov`/`s_region` (DECISÃO 007, item 6) ainda não foi implementado. Por enquanto, a falta de sobreposição só aparece como `IMAGE_NOT_FOUND` ao pedir a imagem.
+- Pendente: o pré-filtro de sobreposição por `s_fov`/`s_region` (DECISÃO 007, item 6) ainda não foi implementado. Por enquanto, a falta de sobreposição só aparece como `IMAGE_NOT_FOUND` ao pedir a imagem. Resolvido na DECISÃO 013.
 
 **Responsável:** Liderança técnica.
 
@@ -288,5 +288,41 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 **Justificativa:** Verificação na resposta real; o contrato da API (nomes `*_nm`) é mantido.
 
 **Consequências:** A primeira observação real passa a mostrar 1630,1–2434,6 nm. O teste sintético com `band_units = "um"` passou a esperar 900 nm.
+
+**Responsável:** Liderança técnica.
+
+---
+
+## DECISÃO 013 — Pré-filtro de sobreposição pelo polígono `s_region`
+
+**Data:** 14/11/2026
+
+**Assunto:** Implementar o item 6 da DECISÃO 007 (produtos que só tocam a borda do cone de busca).
+
+**Contexto:** O SIA devolve toda imagem que **intersecta** o cone. Parte delas não contém a posição pedida e o recorte falhava depois com `422 Arrays do not overlap`. A DECISÃO 007 previa o critério `angsep ≤ s_fov/2`, mas `s_fov` é o diâmetro de um círculo e o detector é um quadrilátero de ~3,5°: o círculo não descreve as bordas. A resposta real traz `s_region` (`POLYGON ICRS` com os 4 cantos do detector) em **todos** os produtos consultados.
+
+**Decisão tomada:**
+
+1. Manter apenas os produtos cujo polígono `s_region` **contém a posição pedida** (teste ponto-em-polígono na projeção gnomônica centrada na posição; `sky_coverage.py`). Isso substitui o critério `s_fov/2`.
+2. Produto sem `s_region` legível é **mantido** (nada é descartado sem evidência); o tratamento de 422/500 no recorte continua valendo.
+3. O filtro roda depois do cache de consultas, então vale também para consultas já em cache.
+4. Se nenhum produto cobrir a posição, a API responde `NO_OBSERVATIONS_FOUND`.
+
+**Evidência (IRSA ao vivo, FoV 3′, 14/11/2026):**
+
+| Alvo | Produtos SIA | Mantidos | Descartados |
+|---|---|---|---|
+| ε Indi | 517 | 460 | 57 |
+| Estrela de Barnard | 380 | 358 | 22 |
+| WISE 0855 | 259 | 258 | 1 |
+
+- Amostra de 30 recortes de produtos mantidos: 29 × HTTP 200 e 1 × 503 (servidor ocupado), **nenhum 422**.
+- Produtos descartados (52 testados): **todos** os 422 observados estavam entre eles. Os que ainda devolvem HTTP 200 têm a posição fora do detector por menos de ~1,5′–1,8′ (metade do FoV): o IBE entrega um recorte **parcial**, em que o centro pedido cai fora da imagem.
+
+**Consequências:**
+
+- Os recortes parciais em que o alvo está fora do detector deixam de aparecer na sequência. É intencional: um quadro sem o alvo não é uma observação dele.
+- Recortes parciais com o alvo **dentro** do detector, perto da borda, continuam aparecendo (parte do quadro pode vir vazia).
+- Limitação: a exatidão do `s_region` em escala de pixel não foi medida; o caso mais próximo da borda estava a 0,14′ (~1,4 px) do lado de fora. Um produto pode ser descartado ou mantido indevidamente nessa margem.
 
 **Responsável:** Liderança técnica.

@@ -51,6 +51,7 @@ from app.services.irsa_client import (
     pick,
     radius_from_fov,
 )
+from app.services.sky_coverage import parse_s_region, polygon_contains_position
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +145,13 @@ class ObservationService:
         if not records:
             raise NoObservationsFoundError(
                 "Nenhuma observação foi encontrada para os parâmetros informados."
+            )
+
+        records = self._filter_by_footprint(records, ra_deg, dec_deg)
+        if not records:
+            raise NoObservationsFoundError(
+                "Nenhuma observação cobre a posição informada: os produtos "
+                "encontrados apenas tocam a borda da região consultada."
             )
 
         built = self._build_observations(records, ra_deg, dec_deg, fov_arcmin)
@@ -270,6 +278,30 @@ class ObservationService:
         )
         self._cache.set_json(NAMESPACE_QUERIES, cache_key, records)
         return records
+
+    @staticmethod
+    def _filter_by_footprint(
+        records: list[dict[str, Any]], ra_deg: float, dec_deg: float
+    ) -> list[dict[str, Any]]:
+        """Drop the products whose footprint does not contain the position.
+
+        The SIA service returns every image that *intersects* the search cone,
+        including detectors that only touch its edge; their cutout fails later
+        with ``422 Arrays do not overlap`` (DECISÃO 007, item 6). The footprint
+        is the ``s_region`` polygon published by the archive. A record without
+        a readable polygon is kept: nothing is discarded without evidence.
+        """
+        kept: list[dict[str, Any]] = []
+        for record in records:
+            polygon = parse_s_region(record.get("s_region"))
+            if polygon is None or polygon_contains_position(polygon, ra_deg, dec_deg):
+                kept.append(record)
+        dropped = len(records) - len(kept)
+        if dropped:
+            logger.info(
+                "Footprint pre-filter dropped %d of %d products", dropped, len(records)
+            )
+        return kept
 
     def _query_cache_key(self, ra_deg: float, dec_deg: float, fov_arcmin: float) -> str:
         """Stable key of a query (disk cache)."""

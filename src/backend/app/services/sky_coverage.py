@@ -43,3 +43,77 @@ def contains_sky_position(
         -0.5 <= x < width - 0.5
         and -0.5 <= y < height - 0.5
     )
+
+
+def parse_s_region(text: object) -> list[tuple[float, float]] | None:
+    """Parse an ObsCore ``s_region`` polygon into ``(ra_deg, dec_deg)`` vertices.
+
+    Accepts the form published by the IRSA SIA v2 service for SPHEREx
+    (``POLYGON ICRS ra1 dec1 ra2 dec2 ...``, verified on the real answer
+    saved in ``tests/backend/fixtures``). The frame token is optional. Anything
+    else (circles, malformed text, fewer than 3 vertices) gives ``None``,
+    meaning "footprint unknown".
+    """
+    if not isinstance(text, str):
+        return None
+    tokens = text.split()
+    if not tokens or tokens[0].upper() != "POLYGON":
+        return None
+    values: list[float] = []
+    for token in tokens[1:]:
+        try:
+            values.append(float(token))
+        except ValueError:
+            if values:
+                return None
+            # Leading frame tokens (``ICRS``, ``J2000`` ...) are skipped.
+    if len(values) % 2 or not all(math.isfinite(value) for value in values):
+        return None
+    vertices = list(zip(values[0::2], values[1::2]))
+    if len(vertices) > 1 and vertices[0] == vertices[-1]:
+        vertices.pop()
+    return vertices if len(vertices) >= 3 else None
+
+
+def polygon_contains_position(
+    vertices: list[tuple[float, float]],
+    ra_deg: float,
+    dec_deg: float,
+) -> bool:
+    """Check whether a sky position lies inside a spherical polygon.
+
+    The vertices are projected on the plane tangent to the sphere at the
+    position (gnomonic projection), where great-circle edges are straight
+    lines and the position is the origin; an even-odd ray test follows. A
+    vertex 90 degrees or more away cannot be projected: the polygon is then
+    treated as not containing the position, which is correct for footprints
+    of a few degrees such as the SPHEREx detectors (~3.5 degrees).
+    """
+    ra0 = math.radians(ra_deg)
+    dec0 = math.radians(dec_deg)
+    projected: list[tuple[float, float]] = []
+    for vertex_ra, vertex_dec in vertices:
+        ra = math.radians(vertex_ra)
+        dec = math.radians(vertex_dec)
+        cos_c = math.sin(dec0) * math.sin(dec) + math.cos(dec0) * math.cos(dec) * math.cos(
+            ra - ra0
+        )
+        if cos_c <= 1e-9:
+            return False
+        x = math.cos(dec) * math.sin(ra - ra0) / cos_c
+        y = (
+            math.cos(dec0) * math.sin(dec)
+            - math.sin(dec0) * math.cos(dec) * math.cos(ra - ra0)
+        ) / cos_c
+        projected.append((x, y))
+
+    inside = False
+    count = len(projected)
+    for index in range(count):
+        x1, y1 = projected[index]
+        x2, y2 = projected[(index + 1) % count]
+        if (y1 > 0.0) != (y2 > 0.0):
+            crossing_x = x1 + (0.0 - y1) * (x2 - x1) / (y2 - y1)
+            if crossing_x > 0.0:
+                inside = not inside
+    return inside
