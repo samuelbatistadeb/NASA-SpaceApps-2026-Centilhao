@@ -1,0 +1,65 @@
+{
+ "fovs": [
+  {
+   "fov_arcmin": 1.0,
+   "pixels": 11,
+   "observations": 50,
+   "complete": 50,
+   "partial": 0,
+   "estimated_kb_per_image": 9.3
+  },
+  {
+   "fov_arcmin": 2.0,
+   "pixels": 21,
+   "observations": 50,
+   "complete": 50,
+   "partial": 0,
+   "estimated_kb_per_image": 12.0
+  },
+  {
+   "fov_arcmin": 3.0,
+   "pixels": 31,
+   "observations": 50,
+   "complete": 50,
+   "partial": 0,
+   "estimated_kb_per_image": 16.0
+  },
+  {
+   "fov_arcmin": 5.0,
+   "pixels": 49,
+   "observations": 50,
+   "complete": 50,
+   "partial": 0,
+   "estimated_kb_per_image": 29.8
+  },
+  {
+   "fov_arcmin": 10.0,
+   "pixels": 99,
+   "observations": 50,
+   "complete": 48,
+   "partial": 2,
+   "estimated_kb_per_image": 92.8
+  },
+  {
+   "fov_arcmin": 15.0,
+   "pixels": 147,
+   "observations": 50,
+   "complete": 46,
+   "partial": 4,
+   "estimated_kb_per_image": 197.5
+  },
+  {
+   "fov_arcmin": 30.0,
+   "pixels": 293,
+   "observations": 50,
+   "complete": 44,
+   "partial": 6,
+   "estimated_kb_per_image": 764.7
+  }
+ ],
+ "recommended_fov_arcmin": 3.0,
+ "motion_arcsec_over_survey": 4.0,
+ "pixel_scale_arcsec": 6.15,
+ "data_source": "cache",
+ "data_cached_at": "2026-11-15T13:05:49.156442+00:00"
+}
