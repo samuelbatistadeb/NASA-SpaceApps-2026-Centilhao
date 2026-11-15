@@ -12,7 +12,9 @@
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/glossary.css">
+  <link rel="stylesheet" href="css/cinema.css">
   <script src="js/app.js" defer></script>
+  <script src="js/cinema.js" defer></script>
   <script src="js/theme.js" defer></script>
   <script src="js/glossary-data.js" defer></script>
   <script src="js/glossary.js" defer></script>
@@ -144,18 +146,21 @@
         <p id="aviso-mock" class="mock" hidden>Dados fictícios: não representam observações científicas.</p>
         <p id="aviso-demo" class="mock demo" hidden><span></span> <button type="button" id="demo-sair" class="chip">Tentar a busca ao vivo</button></p>
 
-        <fieldset class="filtros" id="filtros">
+        <fieldset class="filtros cine-filtros" id="filtros">
           <legend data-term="detector comprimento-onda">Filtrar por detector e comprimento de onda</legend>
           <div id="detectores" class="detectores" role="group" aria-label="Detectores: clique para ver só um; Ctrl, ⌘ ou Shift + clique para somar"></div>
-          <label class="check vis det-modo" id="det-modo" hidden><input type="checkbox" id="det-somar"> Combinar detectores (cada clique soma ou tira um; atalho: Ctrl/⌘/Shift + clique)</label>
-          <div id="faixa-wl" class="faixa" hidden>
-            <label for="wl-min" data-term="micrometro">Mínimo: <output id="wl-min-out" for="wl-min"></output></label>
-            <input type="range" id="wl-min" min="0" max="0" value="0">
-            <label for="wl-max">Máximo: <output id="wl-max-out" for="wl-max"></output></label>
-            <input type="range" id="wl-max" min="0" max="0" value="0">
-          </div>
-          <label class="check vis" id="so-completos-box" hidden data-term="quadro-parcial"><input type="checkbox" id="so-completos"> Só quadros completos <small id="so-completos-info"></small></label>
-          <p class="dica">Dica: clique num detector para ver só ele — assim a linha do tempo mostra só a mudança ao longo do tempo. O número em cada botão é a quantidade de observações; a faixa vem dos metadados das observações (≈ = aproximada).</p>
+          <details class="filtros-mais">
+            <summary>Mais filtros <small>(faixa de comprimento de onda, quadros completos, combinar detectores)</small></summary>
+            <label class="check vis det-modo" id="det-modo" hidden><input type="checkbox" id="det-somar"> Combinar detectores (cada clique soma ou tira um; atalho: Ctrl/⌘/Shift + clique)</label>
+            <div id="faixa-wl" class="faixa" hidden>
+              <label for="wl-min" data-term="micrometro">Mínimo: <output id="wl-min-out" for="wl-min"></output></label>
+              <input type="range" id="wl-min" min="0" max="0" value="0">
+              <label for="wl-max">Máximo: <output id="wl-max-out" for="wl-max"></output></label>
+              <input type="range" id="wl-max" min="0" max="0" value="0">
+            </div>
+            <label class="check vis" id="so-completos-box" hidden data-term="quadro-parcial"><input type="checkbox" id="so-completos"> Só quadros completos <small id="so-completos-info"></small></label>
+            <p class="dica">Dica: clique num detector para ver só ele — assim a linha do tempo mostra só a mudança ao longo do tempo. O número em cada botão é a quantidade de observações; a faixa vem dos metadados das observações (≈ = aproximada).</p>
+          </details>
           <div class="filtro-rodape">
             <span id="contagem" role="status" aria-live="polite"></span>
             <button type="button" id="filtro-reset" class="chip">Limpar filtros</button>
@@ -166,93 +171,138 @@
           Nenhuma observação com esses filtros. Amplie a faixa de comprimento de onda ou ative mais detectores.
         </p>
 
-        <div id="visor">
-        <figure class="frame">
-          <div class="imgwrap" id="imgwrap" tabindex="0"
-               aria-label="Imagem da região. Clique para marcar um ponto, ou use as setas do teclado. Enter marca o centro.">
-            <img id="imagem" alt="">
+        <div id="visor" class="cine">
+          <div class="cine-abas" role="tablist" aria-label="Modo de visualização">
+            <button type="button" role="tab" id="aba-seq" aria-selected="true" aria-controls="painel-seq">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Sequência</button>
+            <button type="button" role="tab" id="aba-comparar" aria-selected="false" aria-controls="comparar" tabindex="-1">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v18h-2zM4 6h5v12H4zM15 6h5v12h-5z"/></svg>Comparar</button>
+            <button type="button" role="tab" id="aba-combinar" aria-selected="false" aria-controls="combinar" tabindex="-1">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4a8 8 0 1 0 0 16A8 8 0 0 0 9 4zm6 0a8 8 0 0 0-2.3.34 9.9 9.9 0 0 1 0 15.32A8 8 0 1 0 15 4z"/></svg>Combinar</button>
           </div>
-          <div id="img-falha" class="img-falha" role="alert" hidden>
-            <p id="img-falha-msg"></p>
-            <div class="alt-botoes">
-              <button type="button" id="img-retry" class="chip">Tentar de novo</button>
-              <button type="button" id="img-prox" class="chip">Próxima observação</button>
+
+          <div class="cine-painel" id="painel-seq" role="tabpanel" aria-labelledby="aba-seq">
+            <div class="cine-palco" id="cine-palco" tabindex="-1" aria-label="Visor das observações">
+              <div class="cine-vista" id="cine-vista">
+                <figure class="frame cine-frame">
+                  <div class="imgwrap" id="imgwrap" tabindex="0"
+                       aria-label="Imagem da região. Clique para marcar um ponto, ou use as setas do teclado. Enter marca o centro.">
+                    <img id="imagem" alt="">
+                  </div>
+                  <figcaption id="legenda" class="sr-only"></figcaption>
+                </figure>
+                <div class="cine-info" aria-hidden="true">
+                  <strong id="cine-data">—</strong>
+                  <span class="cine-tags"><span id="cine-det" class="cine-det">—</span><span id="cine-cont"></span><span id="cine-parcial" class="cine-parcial" hidden></span></span>
+                </div>
+                <div class="cine-zoom" role="group" aria-label="Zoom da imagem">
+                  <button type="button" id="zoom-mais" aria-label="Aproximar">+</button>
+                  <button type="button" id="zoom-menos" aria-label="Afastar">−</button>
+                  <button type="button" id="zoom-ajustar" class="cine-ajustar" hidden>Ajustar</button>
+                </div>
+                <button type="button" id="cine-sair" class="cine-sair" hidden>✕ Sair <kbd>Esc</kbd></button>
+                <div id="img-falha" class="img-falha" role="alert" hidden>
+                  <p id="img-falha-msg"></p>
+                  <div class="alt-botoes">
+                    <button type="button" id="img-retry" class="chip">Tentar de novo</button>
+                    <button type="button" id="img-prox" class="chip">Próxima observação</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cine-barra" id="cine-barra">
+                <div class="controls cine-botoes" role="group" aria-label="Controles da sequência">
+                  <button type="button" id="prev" aria-label="Observação anterior" title="Anterior (←)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+                  <button type="button" id="play" aria-pressed="false" title="Reproduzir/pausar (Espaço)">
+                    <span class="ico" aria-hidden="true"></span><span class="txt">Reproduzir</span></button>
+                  <button type="button" id="next" aria-label="Próxima observação" title="Próxima (→)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+                </div>
+                <div class="timeline cine-linha">
+                  <label for="slider" class="sr-only">Linha do tempo</label>
+                  <div class="cine-trilho" id="cine-trilho">
+                    <span class="cine-bolha" id="cine-bolha" aria-hidden="true"></span>
+                    <input type="range" id="slider" min="0" max="0" value="0">
+                    <div class="cine-marcas" id="cine-marcas" aria-hidden="true"></div>
+                  </div>
+                  <div class="ends"><span id="t-ini"></span><span id="t-fim"></span></div>
+                </div>
+                <div class="cine-direita">
+                  <label class="speed">Velocidade
+                    <select id="speed">
+                      <option value="1500">Lenta</option>
+                      <option value="800" selected>Normal</option>
+                      <option value="350">Rápida</option>
+                    </select>
+                  </label>
+                  <button type="button" id="cine-btn" class="cine-btn" aria-pressed="false" title="Modo cinema (F)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z"/></svg><span>Modo cinema</span></button>
+                </div>
+              </div>
+
+              <ol class="cine-tira" id="cine-tira" aria-label="Observações vizinhas"></ol>
             </div>
+
+            <p class="legenda-sem-dados" data-term="fora-detector pixel-invalido quadro-comum"><span class="sw-sem-dados" aria-hidden="true"></span>Hachurado = fora do detector (sem dados), não céu escuro. <span class="sw-invalido" aria-hidden="true"></span>Vinho (#B03060) = pixel inválido dentro do detector (núcleo saturado de estrela brilhante ou pixel defeituoso). Norte para cima, leste à esquerda.</p>
+            <small class="atalhos">Atalhos: <kbd>←</kbd> <kbd>→</kbd> trocam o quadro · <kbd>Espaço</kbd> reproduz/pausa · <kbd>F</kbd> modo cinema · <kbd>Esc</kbd> sai · Ctrl + roda do mouse (ou pinça) aproxima.</small>
+
+            <details class="cine-detalhes">
+              <summary>Detalhes da observação</summary>
+              <dl id="meta" class="meta"></dl>
+              <div class="share">
+                <button type="button" id="copiar-link" class="chip">Copiar link desta busca</button>
+                <button type="button" id="copiar-embed" class="chip">Copiar código para incorporar</button>
+                <span id="copiado" role="status"></span>
+              </div>
+              <p class="note" data-term="banda normalizacao">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
+            </details>
           </div>
-          <figcaption id="legenda"></figcaption>
-          <p class="legenda-sem-dados" data-term="fora-detector pixel-invalido quadro-comum"><span class="sw-sem-dados" aria-hidden="true"></span>Hachurado = fora do detector (sem dados), não céu escuro. <span class="sw-invalido" aria-hidden="true"></span>Vinho (#B03060) = pixel inválido dentro do detector (núcleo saturado de estrela brilhante ou pixel defeituoso). Norte para cima, leste à esquerda.</p>
-        </figure>
 
-        <div class="controls" role="group" aria-label="Controles da sequência">
-          <button type="button" id="prev" aria-label="Observação anterior">◀</button>
-          <button type="button" id="play" aria-pressed="false">Reproduzir</button>
-          <button type="button" id="next" aria-label="Próxima observação">▶</button>
-          <label class="speed">Velocidade
-            <select id="speed">
-              <option value="1500">Lenta</option>
-              <option value="800" selected>Normal</option>
-              <option value="350">Rápida</option>
-            </select>
-          </label>
-        </div>
+          <div class="cine-painel comparar" id="comparar" role="tabpanel" aria-labelledby="aba-comparar" hidden>
+            <p class="dica">Compare duas datas do mesmo pedaço do céu: arraste a cortina ou deixe piscar entre A e B.</p>
+            <div class="cmp-controles">
+              <label>Data A <select id="cmp-a"></select></label>
+              <label>Data B <select id="cmp-b"></select></label>
+              <button type="button" id="cmp-trocar" class="chip">Trocar A ↔ B</button>
+              <fieldset class="cmp-modos">
+                <legend>Modo</legend>
+                <label><input type="radio" name="cmp-modo" value="cortina" checked> Cortina deslizante</label>
+                <label><input type="radio" name="cmp-modo" value="piscar"> Piscar A/B</label>
+              </fieldset>
+              <button type="button" id="cmp-piscar" class="chip" aria-pressed="false" hidden>Piscar</button>
+            </div>
+            <p id="cmp-aviso" class="dica" aria-live="polite"></p>
+            <div class="cine-vista cine-vista-cmp">
+              <div class="cmp-stage" id="cmp-stage" data-modo="cortina">
+                <img id="cmp-img-b" alt="">
+                <img id="cmp-img-a" alt="">
+                <div class="cmp-linha" aria-hidden="true"></div>
+                <input type="range" id="cmp-divisor" min="0" max="100" value="50" aria-label="Posição da cortina: à esquerda a data A, à direita a data B">
+              </div>
+            </div>
+            <p id="cmp-rotulo" class="cmp-rotulo" aria-live="polite"></p>
+          </div>
 
-        <div class="timeline">
-          <label for="slider" data-term="epoca utc">Linha do tempo</label>
-          <input type="range" id="slider" min="0" max="0" value="0">
-          <div class="ends"><span id="t-ini"></span><span id="t-fim"></span></div>
-          <small class="atalhos">Atalhos: <kbd>←</kbd> <kbd>→</kbd> trocam o quadro · <kbd>Espaço</kbd> reproduz/pausa.</small>
-        </div>
-
-        <details class="comparar" id="comparar" hidden>
-          <summary>Comparar duas datas (cortina deslizante ou piscar)</summary>
-          <div class="cmp-controles">
-            <label>Data A <select id="cmp-a"></select></label>
-            <label>Data B <select id="cmp-b"></select></label>
-            <button type="button" id="cmp-trocar" class="chip">Trocar A ↔ B</button>
-            <fieldset class="cmp-modos">
+          <div class="cine-painel combinar" id="combinar" role="tabpanel" aria-labelledby="aba-combinar" hidden>
+            <h3 id="t-combinar" data-term="media-epocas">Combinar épocas</h3>
+            <p class="dica">Junta várias observações do mesmo detector numa só imagem, calculada pelo servidor. O fundo de cada quadro (mediana) é subtraído antes de combinar. A primeira combinação pode levar 1–2 s por observação.</p>
+            <fieldset class="combinar-modos">
               <legend>Modo</legend>
-              <label><input type="radio" name="cmp-modo" value="cortina" checked> Cortina deslizante</label>
-              <label><input type="radio" name="cmp-modo" value="piscar"> Piscar A/B</label>
+              <label data-term="sinal-ruido"><input type="radio" name="comb-modo" value="mean" checked> Somar épocas (melhor sinal/ruído)</label>
+              <label data-term="diferenca"><input type="radio" name="comb-modo" value="diff"> Diferença entre épocas (o que mudou?)</label>
             </fieldset>
-            <button type="button" id="cmp-piscar" class="chip" aria-pressed="false" hidden>Piscar</button>
+            <p class="dica" id="comb-explica">Na diferença, com “Seguir o movimento do alvo” desmarcado, uma estrela que se move aparece como um par claro/escuro; marcado, o alvo fica parado e se cancela, e são as estrelas de fundo que podem aparecer como pares.</p>
+            <div class="combinar-acoes">
+              <button type="button" id="comb-gerar" class="chip primary-chip">Combinar</button>
+              <span id="comb-selecao" class="comb-selecao"></span>
+            </div>
+            <p id="comb-status" class="status" role="status" aria-live="polite" hidden></p>
+            <figure class="frame cine-comb" id="comb-resultado" hidden>
+              <div class="cine-vista cine-vista-comb"><img id="comb-img" alt=""></div>
+              <figcaption id="comb-legenda"></figcaption>
+            </figure>
           </div>
-          <p id="cmp-aviso" class="dica" aria-live="polite"></p>
-          <div class="cmp-stage" id="cmp-stage" data-modo="cortina">
-            <img id="cmp-img-b" alt="">
-            <img id="cmp-img-a" alt="">
-            <div class="cmp-linha" aria-hidden="true"></div>
-            <input type="range" id="cmp-divisor" min="0" max="100" value="50" aria-label="Posição da cortina: à esquerda a data A, à direita a data B">
-          </div>
-          <p id="cmp-rotulo" class="cmp-rotulo" aria-live="polite"></p>
-        </details>
-
-        <dl id="meta" class="meta"></dl>
-        <div class="share">
-          <button type="button" id="copiar-link" class="chip">Copiar link desta busca</button>
-          <button type="button" id="copiar-embed" class="chip">Copiar código para incorporar</button>
-          <span id="copiado" role="status"></span>
-        </div>
-        <p class="note" data-term="banda normalizacao">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
-
-        <div class="combinar" id="combinar" role="group" aria-labelledby="t-combinar">
-          <h3 id="t-combinar" data-term="media-epocas">Combinar épocas</h3>
-          <p class="dica">Junta várias observações do mesmo detector numa só imagem, calculada pelo servidor. O fundo de cada quadro (mediana) é subtraído antes de combinar. A primeira combinação pode levar 1–2 s por observação.</p>
-          <fieldset class="combinar-modos">
-            <legend>Modo</legend>
-            <label data-term="sinal-ruido"><input type="radio" name="comb-modo" value="mean" checked> Somar épocas (melhor sinal/ruído)</label>
-            <label data-term="diferenca"><input type="radio" name="comb-modo" value="diff"> Diferença entre épocas (o que mudou?)</label>
-          </fieldset>
-          <p class="dica" id="comb-explica">Na diferença, com “Seguir o movimento do alvo” desmarcado, uma estrela que se move aparece como um par claro/escuro; marcado, o alvo fica parado e se cancela, e são as estrelas de fundo que podem aparecer como pares.</p>
-          <div class="combinar-acoes">
-            <button type="button" id="comb-gerar" class="chip">Combinar</button>
-            <span id="comb-selecao" class="comb-selecao"></span>
-          </div>
-          <p id="comb-status" class="status" role="status" aria-live="polite" hidden></p>
-          <figure class="frame" id="comb-resultado" hidden>
-            <img id="comb-img" alt="">
-            <figcaption id="comb-legenda"></figcaption>
-          </figure>
-        </div>
         </div>
       </div>
     </section>
