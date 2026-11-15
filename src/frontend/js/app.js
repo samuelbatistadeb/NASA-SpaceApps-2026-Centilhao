@@ -26,6 +26,8 @@ const CONFIG = {
   FOV_MAX: 30, // minutos de arco (o backend aceita 0,1 a 120)
   // Cada miniatura gera um recorte no IRSA (~10–15 s, sem cache): limitar evita sobrecarga.
   GALLERY_MAX: 24,
+  // Miniaturas baixadas ao mesmo tempo (o IRSA responde 503 "Server busy" com muitos pedidos simultâneos).
+  THUMB_CONCURRENCY: 2,
 };
 
 // Mensagens para os códigos de erro do backend (src/backend/app/api/errors.py).
@@ -247,12 +249,67 @@ function showFrame(i) {
   );
 }
 
+/* ---------- Fila de miniaturas ----------
+ * Cada miniatura real é um recorte pedido ao IRSA (~10–15 s). As <img> nascem sem src
+ * (URL em data-src) e a fila atribui src a no máximo CONFIG.THUMB_CONCURRENCY por vez.
+ * A fila não avança enquanto a imagem principal (#imagem) estiver carregando.
+ * Cada renderGallery() abre uma nova geração: a fila anterior é descartada. */
+const thumbs = { gen: 0, queue: [], active: new Set() };
+
+const mainImageBusy = () => !!el.img.getAttribute("src") && !el.img.complete;
+
+function setThumbState(img, st) {
+  const tag = img.parentElement?.querySelector(".thumb-estado");
+  if (!tag) return;
+  tag.textContent = st === "carregando" ? "carregando…" : st === "falha" ? "falha ao carregar" : "";
+  tag.hidden = !tag.textContent;
+  if (st === "falha") {
+    // Troca a <img> por um quadrado neutro (o navegador mostraria o ícone de imagem quebrada).
+    const ph = document.createElement("div");
+    ph.className = "thumb-falha";
+    ph.style.cssText = "width:100%;aspect-ratio:1;background:#000;border-radius:4px;opacity:.4";
+    img.replaceWith(ph);
+  }
+}
+
+// Descarta as miniaturas que ainda não receberam src. As que já estão baixando continuam
+// contando no limite até terminar: o recorte no servidor segue em andamento de qualquer forma.
+function resetThumbQueue() {
+  thumbs.gen++;
+  thumbs.queue = [];
+}
+
+function pumpThumbs() {
+  if (mainImageBusy()) return; // a principal tem prioridade; o evento load/error dela chama pumpThumbs
+  while (thumbs.active.size < CONFIG.THUMB_CONCURRENCY && thumbs.queue.length) {
+    const img = thumbs.queue.shift();
+    if (!img.isConnected) continue;
+    const gen = thumbs.gen;
+    const done = (ok) => {
+      img.onload = img.onerror = null;
+      thumbs.active.delete(img);
+      if (gen === thumbs.gen) setThumbState(img, ok ? "ok" : "falha"); // galeria descartada: nada a atualizar
+      pumpThumbs();
+    };
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
+    thumbs.active.add(img);
+    img.src = img.dataset.src;
+  }
+}
+
+el.img.addEventListener("load", pumpThumbs);
+el.img.addEventListener("error", pumpThumbs);
+
 function clearGallery() {
+  resetThumbQueue();
   el.galeria.replaceChildren();
   el.galeriaVazio.hidden = false;
 }
 
+// Não inicia a fila: quem chama deve definir a imagem principal (showFrame) e depois chamar pumpThumbs().
 function renderGallery(frames) {
+  resetThumbQueue();
   el.galeriaVazio.hidden = true;
   // Mantém os índices: o botão i mostra state.frames[i].
   el.galeria.replaceChildren(
@@ -261,13 +318,24 @@ function renderGallery(frames) {
       const btn = document.createElement("button");
       btn.type = "button";
       const img = document.createElement("img");
-      img.src = f.imageUrl;
-      img.loading = "lazy";
       img.alt = "";
+      const estado = document.createElement("small");
+      estado.className = "thumb-estado";
+      estado.style.cssText = "font-size:.7rem;opacity:.75";
       const label = document.createElement("span");
       label.textContent = `${fmtDate(f.date)} · ${f.detectorLabel}`;
       btn.setAttribute("aria-label", `Ver observação de ${fmtDateTime(f.date)}, detector ${f.detectorLabel}`);
-      btn.append(img, label);
+      btn.append(img, estado, label);
+      if (f.imageUrl.startsWith("data:")) {
+        img.src = f.imageUrl; // modo fictício: imagem local, sem rede
+        estado.hidden = true;
+      } else if (!f.imageUrl) {
+        setThumbState(img, "falha");
+      } else {
+        img.dataset.src = f.imageUrl;
+        setThumbState(img, "carregando");
+        thumbs.queue.push(img);
+      }
       btn.addEventListener("click", () => { stop(); showFrame(i); });
       li.append(btn);
       return li;
@@ -387,6 +455,7 @@ function applyFilters() {
   renderGallery(frames);
   const idx = frames.findIndex((f) => f.id === keepId);
   showFrame(idx >= 0 ? idx : 0);
+  pumpThumbs(); // só começa se a imagem principal já estiver pronta; senão, espera o load/error dela
 }
 
 el.wlMin.addEventListener("input", () => {
