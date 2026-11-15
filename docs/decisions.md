@@ -308,6 +308,53 @@ Comparação, subtração de imagens, exploração espectral e integração com 
 
 ---
 
+## DECISÃO 016 — Contaminação (FLAGS) e espectro de um ponto
+
+**Data:** 15/11/2026
+
+**Assunto:** Itens do desafio: "exibir metadados como indicadores de contaminação" e "gerar espectros instantaneamente".
+
+**Base verificada** (pesquisa com dados reais e Explanatory Supplement v2.0, https://irsa.ipac.caltech.edu/data/SPHEREx/docs/SPHEREx_Expsupp_QR.pdf):
+
+- **FLAGS:**
+  - Bitmask com 23 bits nomeados no próprio cabeçalho (`MSKN/MSKM/MSKD`), conforme a Tabela 16.
+  - `SOURCE` marca ~51% dos pixels e é informativo, não defeito.
+- **WCS-WAVE:**
+  - Tabela de 1 linha (pontos de controle de λ e largura de banda).
+  - É idêntica em todas as exposições de um detector com a mesma calibração; vem inteira no recorte, e só o `CRPIX*W` muda.
+  - Fica no **fim** do arquivo, depois da `EPSF` de 3,9 MB.
+- **Ordem dos HDUs:** PRIMARY, IMAGE, FLAGS, VARIANCE, ZODI, EPSF, WCS-WAVE.
+
+**Decisão tomada:**
+
+1. Os recortes IBE são lidos até `VARIANCE` (≈ 3× o tamanho da `IMAGE`). O download completo é lido até `FLAGS`.
+2. `FLAGS` e `VARIANCE` são projetadas no quadro comum pelo pixel mais próximo.
+   - `GET /api/observations/{id}/quality` informa as flags no alvo (caixa 3×3) e a fração de pixels de cada flag.
+   - `/api/composite` exclui os pixels contaminados.
+3. **λ de cada exposição:**
+   - É a `WCS-WAVE` avaliada no pixel do detector onde o alvo cai, pelo método do tutorial oficial: `WCS(hdr, fobj, key='W')` com `sip=None`.
+   - A tabela é obtida por HTTP Range com os últimos 11.520 bytes do produto.
+   - Ela é baixada uma vez por (detector, diretório de processamento `l2b-…`).
+4. **`GET /api/spectrum`:**
+   - Gera um ponto por exposição (até 60, distribuídas pelos 6 detectores).
+   - Fluxo = média na abertura (raio padrão de 9″) menos a mediana de um anel de 2 a 3 raios. Erro calculado pela `VARIANCE`. Cada ponto traz as flags da abertura.
+
+**Evidência:**
+
+- O λ calculado só com a cauda do arquivo é idêntico ao do método oficial em 3 recortes reais: D3 centro 2,36218 µm, D6 4,96672 µm e D3 deslocado 2,08114 µm.
+- Ao vivo, WISE 0855: as exposições cobrem 0,88–5,00 µm. Os únicos valores anômalos estavam sinalizados: 1,514 µm com TRANSIENT e 4,294 µm com OUTLIER+HALO. O alvo não é detectado em exposições únicas com abertura de 9″.
+- No navegador: 42 pontos, 7 com contaminação.
+
+**Limitações:**
+
+- A `WCS-WAVE` é **aproximada**: o suplemento (§4.3.1) recomenda CWAVE/CBAND dos arquivos `spectral_wcs_N` para uso científico, e esses arquivos não foram localizados.
+- O fluxo é brilho superficial médio na abertura, sem correção de PSF nem de abertura. Serve para comparar a forma do espectro, não como fotometria absoluta.
+- O bit 29 (SATELLITE_HALO) consta do suplemento, mas não do cabeçalho testado.
+
+**Responsável:** Liderança técnica, com validação científica pendente (Integrante 2).
+
+---
+
 ## DECISÃO 006 — Quadro de tarefas local provisório
 
 **Data:** 14/11/2026

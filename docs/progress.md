@@ -67,6 +67,21 @@ A divisão é inicial e poderá ser ajustada conforme a evolução do projeto.
 - **Desempenho das imagens (DECISÃO 012):** o backend lê só a extensão `IMAGE` do FITS (recorte IBE de 17,7 s/4,05 MB para 1,2 s/31,7 KB, pixels idênticos), limita a 3 os pedidos simultâneos ao IRSA e deduplica pedidos da mesma imagem. Medição pela API, alvo Estrela de Barnard sem cache: 25 imagens em paralelo concluídas em 17 s, todas com HTTP 200 (antes, só 1 de 24 miniaturas havia carregado depois de ~60 s). O frontend carrega as miniaturas em fila (no máximo 2 por vez), só depois da imagem principal, e descarta a fila ao trocar de busca ou filtro. Validado no navegador com o IRSA real, alvo ε Indi sem cache (517 observações): busca em 11,7 s, imagem principal 0,8 s depois, 24 miniaturas resolvidas em ~26 s com no máximo 2 simultâneas; 23 carregaram e 1 retornou 422 (o produto não cobre a posição, caso do pré-filtro de sobreposição ainda pendente). Os 503 do IRSA foram absorvidos pelo retry.
 - **Unidades espectrais (DECISÃO 011):** `wavelength_*_nm` agora em nanômetros (SIA publica em metros). Suíte: **113 passed, 2 skipped**.
 - **Pré-filtro de sobreposição (14/11/2026, DECISÃO 013):** `/api/observations` só lista produtos cujo polígono `s_region` contém a posição pedida. Ao vivo, FoV 3′: ε Indi 517 → 460, Barnard 380 → 358, WISE 0855 259 → 258. Em 30 recortes de produtos mantidos não houve nenhum 422; todos os 422 observados estavam entre os descartados. Também saem os recortes parciais em que o alvo cai fora do detector. Suíte: **144 passed, 2 skipped**. Não revalidado no navegador (a mudança é só no backend e não altera o contrato).
+- **Contaminação e espectro de um ponto (15/11/2026, DECISÃO 016):**
+  - `FLAGS` (23 bits) por quadro e no alvo; combinações excluem pixels contaminados.
+  - `GET /api/spectrum`: um ponto por exposição, λ pela `WCS-WAVE` (idêntico ao método oficial em 3 recortes reais), erro pela `VARIANCE`.
+  - Validado no navegador com IBE real e lista de produtos de uma resposta real do SIA salva (o SIA estava em 502):
+    - WISE 0855, 50 observações;
+    - espectro com 42 pontos de 0,88–5,00 µm, 7 com contaminação;
+    - qualidade "nenhuma" no alvo;
+    - diferença entre épocas D1 em ~1 s;
+    - seletor de FOV com 50/50 quadros completos.
+  - Corrigido um bug de gravação concorrente no cache (Windows/OneDrive) encontrado nessa validação.
+  - Suíte: **197 passed, 2 skipped**.
+  - **Pendente:**
+    - validar com um alvo brilhante (Estrela de Barnard), para mostrar um espectro com sinal real;
+    - revalidar a busca ao vivo quando o SIA voltar;
+    - validação científica pela Integrante 2.
 - **Quadro comum, cobertura, combinação de épocas e releases (15/11/2026, DECISÃO 015):**
   - Imagens reamostradas numa grade norte-acima centrada no alvo; área fora do detector transparente.
   - `GET /api/coverage` (quadros completos/parciais por FOV, sem baixar imagens) e `GET /api/composite` (média por detector e diferença entre épocas).

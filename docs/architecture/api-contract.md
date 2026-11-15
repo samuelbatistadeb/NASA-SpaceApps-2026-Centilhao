@@ -289,3 +289,32 @@ Tudo é calculado pelos polígonos dos detectores, sem baixar imagens.
 A mediana de cada quadro é subtraída antes de combinar. Misturar detectores retorna `INVALID_PARAMETERS`.
 
 Retorna PNG, com metadados nos cabeçalhos `X-SpherEx-Composite-Op`, `-Frames-A`, `-Frames-B` e `-Detector`.
+
+### 13.6 `GET /api/spectrum`
+
+Parâmetros:
+- `ra_deg`, `dec_deg`;
+- opcionalmente o movimento próprio (os três parâmetros juntos);
+- `aperture_arcsec` (3–30, padrão 9);
+- `max_exposures` (6–120, padrão 60).
+
+Retorna `{ unit: "MJy/sr", points: [...], n_exposures, aperture_arcsec, frame_fov_arcmin, wavelength_source, flux_definition, data_source }`.
+
+Cada item de `points` tem `wavelength_um`, `bandwidth_um`, `flux`, `flux_err`, `background`, `n_pixels`, `detector`, `observed_at`, `observation_id`, `flagged` e `flags`. A lista vem ordenada por λ. Detalhes na DECISÃO 016.
+
+### 13.7 `GET /api/observations/{id}/quality`
+
+Disponível depois que a imagem da observação foi gerada; antes disso, retorna `IMAGE_NOT_FOUND`.
+
+Retorna `{ contaminated_at_target, flags_at_target: [{bit, name, description}], informational, frame_flagged_fraction, target_box_pixels, source }`.
+
+### 13.8 `GET /api/releases`
+
+Retorna `{ collections, source: config|discovered|fallback, discovered_at, hips_base }`. A configuração é feita por `SPHEREX_COLLECTIONS` (lista ou `auto`).
+
+### 13.9 Origem dos dados
+
+`/api/observations` e `/api/coverage` informam `data_source`:
+- `live`: consulta feita agora;
+- `cache`: resposta recente do cache;
+- `stale_cache`: o IRSA estava indisponível e foi usada a última resposta salva, cuja data vem em `data_cached_at`.
