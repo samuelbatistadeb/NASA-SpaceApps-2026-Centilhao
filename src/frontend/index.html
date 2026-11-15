@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/glossary.css">
+  <link rel="stylesheet" href="css/surveys.css">
   <link rel="stylesheet" href="css/cinema.css">
   <link rel="preload" as="image" href="assets/nasa/spherex-probe-cutout.png" imagesrcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x">
   <script>
@@ -26,6 +27,7 @@
     })(document.documentElement);
   </script>
   <script src="js/app.js" defer></script>
+  <script src="js/surveys.js" defer></script>
   <script src="js/cinema.js" defer></script>
   <script src="js/router.js" defer></script>
   <script src="js/theme.js" defer></script>
@@ -79,6 +81,24 @@
       </div>
 
       <form id="form" novalidate>
+        <div class="busca-extra">
+          <div class="field">
+            <label for="nome">Nome do objeto (opcional)</label>
+            <div class="input-wrap"><span>✦</span><input id="nome" name="nome" autocomplete="off" spellcheck="false" placeholder="Ex.: M42, Barnard's Star, NGC 5194" aria-describedby="nome-ajuda nome-status"><button type="button" id="nome-localizar" class="chip">Localizar</button></div>
+            <small id="nome-ajuda">Digite um nome e clique em “Localizar” (ou já busque): RA e Dec são preenchidos pelo serviço de nomes Sesame, do CDS (SIMBAD, NED e VizieR).</small>
+            <small id="nome-status" class="nome-status" role="status" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="base">Base de dados</label>
+            <div class="input-wrap"><span>⛁</span><select id="base" name="base" aria-describedby="base-ajuda">
+              <option value="spherex" selected>SPHEREx (linha do tempo)</option>
+              <option value="wise">WISE / AllWISE (infravermelho)</option>
+              <option value="2mass">2MASS (infravermelho próximo)</option>
+              <option value="dss">DSS2 (luz visível)</option>
+            </select></div>
+            <small id="base-ajuda">SPHEREx mostra a região ao longo do tempo. As outras bases são de outros telescópios: uma imagem por banda, só para comparação.</small>
+          </div>
+        </div>
         <div class="field">
           <label for="ra" data-term="ra sexagesimal">Ascensão reta (RA), em graus</label>
           <div class="input-wrap"><span>α</span><input id="ra" name="ra" inputmode="text" autocomplete="off" placeholder="Ex.: 133.79513" required aria-describedby="ra-ajuda ra-erro"></div>
@@ -118,6 +138,26 @@
           </label>
         </div>
       </form>
+
+      <div id="outras-bases" class="outras-bases" role="region" aria-labelledby="ob-titulo" hidden>
+        <div class="ob-topo">
+          <h3 id="ob-titulo">Esta região em outra base de dados</h3>
+          <div class="alt-botoes">
+            <button type="button" id="ob-mapa" class="chip">Abrir esta posição no mapa interativo</button>
+            <button type="button" id="ob-spherex" class="chip">Voltar para o SPHEREx</button>
+          </div>
+        </div>
+        <p id="ob-aviso" class="ob-aviso"></p>
+        <p id="ob-status" class="status" role="status" aria-live="polite"></p>
+        <div class="ob-grade">
+          <figure class="ob-fig ob-interativo">
+            <div id="ob-viewer" class="ob-viewer" aria-label="Visualizador interativo da região (Aladin Lite)"></div>
+            <figcaption id="ob-viewer-legenda"></figcaption>
+          </figure>
+          <div id="ob-bandas" class="ob-bandas"></div>
+        </div>
+        <p id="ob-credito" class="note"></p>
+      </div>
     </section>
 
     <section id="observacoes" class="panel viewer page" data-page="observacoes" aria-labelledby="t-viz">
@@ -128,7 +168,7 @@
       </div>
 
       <div id="alternativas" class="alternativas" role="region" aria-labelledby="alt-titulo" hidden>
-        <h3 id="alt-titulo">Não foi possível buscar as observações</h3>
+        <h3 id="alt-titulo">Outras formas de explorar esta região</h3>
         <p id="alt-msg"></p>
         <div class="alt-opcoes">
           <div id="alt-demo" class="alt-opcao" hidden>
@@ -144,6 +184,7 @@
           </div>
           <div class="alt-opcao">
             <div class="alt-botoes">
+              <button type="button" id="alt-outras" class="chip">Ver esta região no WISE (outra missão da NASA)</button>
               <button type="button" id="alt-mapa" class="chip">Explorar o mapa do céu enquanto isso</button>
               <button type="button" id="alt-mock" class="chip">Testar a interface com dados fictícios</button>
             </div>

@@ -113,7 +113,7 @@ const el = {
   imgFalha: $("img-falha"), imgFalhaMsg: $("img-falha-msg"), imgRetry: $("img-retry"), imgProx: $("img-prox"),
   alt: $("alternativas"), altTitulo: $("alt-titulo"), altMsg: $("alt-msg"), altDemo: $("alt-demo"),
   altDemoLista: $("alt-demo-lista"), altRetry: $("alt-retry"), altCancelar: $("alt-cancelar"),
-  altContagem: $("alt-contagem"), altMapa: $("alt-mapa"), altMock: $("alt-mock"),
+  altContagem: $("alt-contagem"), altMapa: $("alt-mapa"), altMock: $("alt-mock"), altOutras: $("alt-outras"),
   avisoDemo: $("aviso-demo"), demoSair: $("demo-sair"),
   ceuCentro: $("ceu-centro"), ceuFundoInfo: $("ceu-fundo-info"),
   espAcoes: $("esp-acoes"), espRetry: $("esp-retry"),
@@ -864,7 +864,8 @@ async function runComposite() {
     } else {
       setCombStatus(ctl.signal.reason === "timeout"
         ? "A combinação demorou demais. Tente com menos observações (filtre por comprimento de onda ou só quadros completos)."
-        : "Não foi possível conectar ao servidor para combinar as épocas.", "erro");
+        : "O servidor de cálculo não está disponível agora, e a combinação de épocas precisa dele. " +
+          "Tente de novo daqui a pouco ou abra um exemplo real salvo, que já traz combinações prontas.", "info");
     }
   } finally {
     clearTimeout(timer);
@@ -951,16 +952,17 @@ function scheduleRetry() {
 /** kind: "source" (IRSA indisponível), "network" (servidor inacessível), "timeout". */
 function showAlternatives(kind, detail = "", { autoRetry = true } = {}) {
   const titulos = {
-    source: "O arquivo da NASA (IRSA) não respondeu agora",
-    network: "O servidor do SPHEREx Explorer não respondeu",
-    timeout: "A busca demorou demais",
+    source: "O arquivo da NASA (IRSA) está ocupado agora",
+    network: "Observações ao vivo indisponíveis no momento",
+    timeout: "A busca está demorando mais que o normal",
   };
-  el.altTitulo.textContent = titulos[kind] ?? "Não foi possível buscar as observações";
+  el.altTitulo.textContent = titulos[kind] ?? "Outras formas de explorar esta região";
   el.altMsg.textContent = (detail ? detail + " " : "") + ({
-    source: "Isso costuma ser passageiro. Enquanto isso, você pode explorar um exemplo real salvo ou o mapa do céu.",
-    network: "O site pode estar publicado sem o servidor (só arquivos estáticos) ou o servidor está desligado. Um exemplo real salvo funciona sem ele.",
-    timeout: "O arquivo da NASA pode estar lento. Tente de novo ou veja um exemplo real salvo.",
+    source: "Isso costuma ser passageiro. Enquanto isso, você pode ver um exemplo real salvo, a mesma região em outras bases de imagens do céu ou o mapa interativo.",
+    network: "Tudo bem: um exemplo real salvo do SPHEREx funciona sem o servidor, e você pode ver esta região em outras bases de imagens do céu (WISE, 2MASS, DSS2) ou no mapa interativo.",
+    timeout: "O arquivo da NASA pode estar lento. Tente de novo, veja um exemplo real salvo ou explore esta região em outras bases de imagens do céu.",
   }[kind] ?? "");
+  el.altOutras.hidden = !state.values; // precisa de coordenadas para mostrar a região
   renderDemoOptions();
   el.alt.hidden = false;
   el.altRetry.hidden = !state.values; // sem coordenadas ainda, não há o que tentar de novo
@@ -974,11 +976,19 @@ async function onSubmit(e) {
   if (!retry.auto) retry.attempt = 0; // busca pedida pelo usuário: recomeça a contagem
   retry.auto = false;
   hideAlternatives();
+  // Nome do objeto (opcional, js/surveys.js): resolvido pelo Sesame (CDS) antes de validar RA/Dec.
+  if (window.Surveys && !(await window.Surveys.resolveNameIfNeeded())) return;
   const values = validate();
   if (!values) {
     if (document.body.classList.contains("embed")) setStatus("Coordenadas inválidas na URL.", "erro");
     return;
   }
+  // Outra base de dados (WISE, 2MASS, DSS2): imagens de outros telescópios, sem o servidor.
+  if (window.Surveys && !el.mock.checked && window.Surveys.selected() !== "spherex") {
+    window.Surveys.show(values);
+    return;
+  }
+  window.Surveys?.hide();
   leaveDemo();
   state.values = values;
   // Dados fictícios não usam movimento próprio; sem "seguir o alvo", o quadro fica fixo no céu.
@@ -1022,7 +1032,7 @@ async function onSubmit(e) {
       // NO_OBSERVATIONS_FOUND é um resultado válido, não uma falha.
       if (err.code === "NO_OBSERVATIONS_FOUND") { setStatus(API_ERRORS.NO_OBSERVATIONS_FOUND); return; }
       if (err.code === "SOURCE_UNAVAILABLE" || err.status >= 502) {
-        setStatus(API_ERRORS.SOURCE_UNAVAILABLE, "erro");
+        setStatus(API_ERRORS.SOURCE_UNAVAILABLE, "aviso");
         showAlternatives("source");
         return;
       }
@@ -1030,11 +1040,13 @@ async function onSubmit(e) {
       return;
     }
     if (timedOut) {
-      setStatus("A busca demorou demais.", "erro");
+      setStatus("A busca está demorando mais que o normal. Você pode tentar de novo, ver um exemplo real salvo ou explorar outras bases de imagens do céu.", "aviso");
       showAlternatives("timeout");
     } else {
       state.backendDown = true;
-      setStatus("Não foi possível conectar ao servidor do SPHEREx Explorer.", "erro");
+      // Sem tom de erro: o site continua útil sem o servidor (exemplos salvos e outras bases).
+      setStatus("O servidor de observações ao vivo não está disponível agora. Você pode ver um exemplo real salvo, " +
+        "explorar esta região em outras bases de imagens do céu (WISE, 2MASS, DSS2) ou tentar de novo daqui a pouco.", "info");
       showAlternatives("network");
     }
   } finally {
@@ -1051,6 +1063,13 @@ el.altMapa.addEventListener("click", () => {
   cancelRetry();
   $("ceu").scrollIntoView({ behavior: "smooth", block: "start" });
   openSky();
+});
+el.altOutras.addEventListener("click", () => {
+  cancelRetry();
+  $("base").value = "wise";
+  $("base").dispatchEvent(new Event("change"));
+  el.mock.checked = false;
+  el.form.requestSubmit();
 });
 el.altMock.addEventListener("click", () => {
   hideAlternatives();
@@ -1450,7 +1469,7 @@ async function loadTargets() {
       state.backendDown = true;
       const m = await loadDemoManifest();
       if (!m) return;
-      box.querySelector("span").textContent = "Servidor indisponível. Exemplos reais salvos:";
+      box.querySelector("span").textContent = "Observações ao vivo fora do ar agora. Exemplos reais salvos:";
       for (const t of m.targets) {
         const b = document.createElement("button");
         b.type = "button";
@@ -2266,6 +2285,7 @@ function drawSkyLayers() {
     ].filter(Boolean);
     if (pedidos.length) addVizierCatalogs(pedidos, v, raio, sky.drawGen);
     updateSkyFrame();
+    window.Surveys?.drawSkyMark(); // região vista em outra base (removeLayers apagou a marca)
   } catch (err) {
     console.error("Mapa do céu:", err);
     setCeuStatus("O mapa abriu, mas não foi possível desenhar todas as camadas.", "erro");
@@ -2372,8 +2392,11 @@ function onSkyClick(e) {
   el.ra.value = ra.toFixed(5);
   el.dec.value = dec.toFixed(5);
   setMotion(null); // ponto arbitrário do céu: sem movimento próprio
+  window.Surveys?.clearName(); // o nome digitado não vale mais para o ponto clicado
   if (!el.fov.value.trim()) el.fov.value = "3";
-  setCeuStatus(`Ponto clicado: RA ${ra.toFixed(4)}°, Dec ${dec.toFixed(4)}°. Buscando observações… O resultado aparece na seção Observações.`, "carregando");
+  const outra = window.Surveys && window.Surveys.selected() !== "spherex";
+  setCeuStatus(`Ponto clicado: RA ${ra.toFixed(4)}°, Dec ${dec.toFixed(4)}°. ` +
+    (outra ? "Mostrando a região na base escolhida, na seção de busca." : "Buscando observações… O resultado aparece na seção Observações."), "carregando");
   el.form.requestSubmit();
 }
 
