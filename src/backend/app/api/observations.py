@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from app.api.errors import InvalidParametersError
 from app.core.config import Settings, get_settings
 from app.schemas.observation import ObservationResponse
+from app.services.astrometry import ProperMotion
 from app.services.cache import DiskCache
 from app.services.cutout_service import CutoutService
 from app.services.irsa_client import IrsaClient
@@ -101,6 +102,27 @@ def list_observations(
             "implemented after the scientific validation of the query."
         ),
     ),
+    pm_ra_cosdec_masyr: float | None = Query(
+        None,
+        ge=-30000.0,
+        le=30000.0,
+        description=(
+            "Proper motion in RA, already multiplied by cos(dec), in mas/yr "
+            "(Gaia pmra convention). Requires pm_dec_masyr and ref_epoch_jyear."
+        ),
+    ),
+    pm_dec_masyr: float | None = Query(
+        None, ge=-30000.0, le=30000.0, description="Proper motion in Dec, in mas/yr."
+    ),
+    ref_epoch_jyear: float | None = Query(
+        None,
+        ge=1900.0,
+        le=2100.0,
+        description=(
+            "Julian year of the given ra_deg/dec_deg (e.g. 2016.0). With the "
+            "proper motion, each observation is cut at the propagated position."
+        ),
+    ),
     service: ObservationService = Depends(get_observation_service),
 ) -> ObservationResponse:
     """Return the observations available for the requested coordinates."""
@@ -121,7 +143,17 @@ def list_observations(
             "nesta versão da API."
         )
 
-    return service.search(ra_deg, dec_deg, fov_arcmin)
+    motion_values = (pm_ra_cosdec_masyr, pm_dec_masyr, ref_epoch_jyear)
+    motion: ProperMotion | None = None
+    if any(value is not None for value in motion_values):
+        if any(value is None for value in motion_values):
+            raise InvalidParametersError(
+                "Para corrigir o movimento próprio informe juntos "
+                "pm_ra_cosdec_masyr, pm_dec_masyr e ref_epoch_jyear."
+            )
+        motion = ProperMotion(pm_ra_cosdec_masyr, pm_dec_masyr, ref_epoch_jyear)
+
+    return service.search(ra_deg, dec_deg, fov_arcmin, motion=motion)
 
 
 @router.get(

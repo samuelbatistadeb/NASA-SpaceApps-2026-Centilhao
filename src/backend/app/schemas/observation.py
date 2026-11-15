@@ -129,6 +129,19 @@ class ObservationMetadata(BaseModel):
         ge=0,
         description="Number of duplicate archive records merged into this entry.",
     )
+    cutout_center_ra_deg: float | None = Field(
+        None, description="Right ascension (ICRS, degrees) at the centre of the cutout."
+    )
+    cutout_center_dec_deg: float | None = Field(
+        None, description="Declination (ICRS, degrees) at the centre of the cutout."
+    )
+    position_source: str | None = Field(
+        None,
+        description=(
+            "'requested' (the position given in the query) or 'proper_motion' "
+            "(position propagated to the epoch of this exposure)."
+        ),
+    )
 
 
 class Observation(BaseModel):

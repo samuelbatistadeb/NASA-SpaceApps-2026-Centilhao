@@ -6,9 +6,10 @@ PROPAGATED to the SPHEREx epochs is used, not the catalogue epoch: WISE 0855
 moved ~207" (3.5') since J2000, so the challenge coordinate would leave the
 object outside a 3' cutout.
 
-The positions are fixed for one epoch; the object still moves between the
-first and the last SPHEREx observation (a few arcseconds for the targets
-below, i.e. less than one 6.15" pixel to ~2 pixels).
+Each target also carries its proper motion and the epoch of ``ra``/``dec``:
+the frontend passes them to ``/api/observations``, which cuts every exposure
+at the position propagated to its own date (the targets still move up to
+~2 pixels across the SPHEREx window).
 """
 
 from __future__ import annotations
@@ -29,6 +30,13 @@ class TargetEntry(BaseModel):
     position_epoch: str = Field(..., description="Epoch of the position above.")
     note: str = Field(..., description="Short explanation shown to the user.")
     source: str = Field(..., description="Where the position comes from.")
+    pm_ra_cosdec_masyr: float | None = Field(
+        None, description="Proper motion in RA (with cos dec), mas/yr."
+    )
+    pm_dec_masyr: float | None = Field(None, description="Proper motion in Dec, mas/yr.")
+    ref_epoch_jyear: float | None = Field(
+        None, description="Julian year of ra/dec; pass it with the proper motion."
+    )
 
 
 class TargetsResponse(BaseModel):
@@ -48,6 +56,9 @@ TARGETS: tuple[TargetEntry, ...] = (
         "Posição propagada para a primeira observação SPHEREx (a coordenada J2000 "
         "do desafio está ~3,5′ distante).",
         source=f"{_CATALOG} §3.3 (propagação de J2000 com μ de Kirkpatrick et al. 2021, via Wikipédia)",
+        pm_ra_cosdec_masyr=-8123.7,
+        pm_dec_masyr=673.2,
+        ref_epoch_jyear=2025.35,
     ),
     TargetEntry(
         name="Estrela de Barnard",
@@ -57,6 +68,9 @@ TARGETS: tuple[TargetEntry, ...] = (
         position_epoch="2025.60",
         note="Estrela com o maior movimento próprio conhecido (~10″/ano).",
         source=f"{_CATALOG} §3.1 (Gaia DR3 propagado)",
+        pm_ra_cosdec_masyr=-801.551,
+        pm_dec_masyr=10362.394,
+        ref_epoch_jyear=2025.60,
     ),
     TargetEntry(
         name="ε Indi",
@@ -67,6 +81,9 @@ TARGETS: tuple[TargetEntry, ...] = (
         note="Sistema próximo (A + anãs marrons B). A componente B não é separada "
         "da A na resolução do SPHEREx.",
         source=f"{_CATALOG} §3.2 (Gaia DR3 propagado)",
+        pm_ra_cosdec_masyr=3966.661,
+        pm_dec_masyr=-2536.192,
+        ref_epoch_jyear=2025.30,
     ),
     TargetEntry(
         name="RW Aurigae",
@@ -76,6 +93,9 @@ TARGETS: tuple[TargetEntry, ...] = (
         position_epoch="2016.0",
         note="Estrela jovem variável (componentes A e B inseparáveis no SPHEREx).",
         source=f"{_CATALOG} §3.4 (Gaia DR3)",
+        pm_ra_cosdec_masyr=2.641,
+        pm_dec_masyr=-27.398,
+        ref_epoch_jyear=2016.0,
     ),
     TargetEntry(
         name="R Draconis",
@@ -85,6 +105,9 @@ TARGETS: tuple[TargetEntry, ...] = (
         position_epoch="2016.0",
         note="Variável de longo período em campo profundo do SPHEREx: muitas épocas.",
         source=f"{_CATALOG} §3.5 (Gaia DR3)",
+        pm_ra_cosdec_masyr=-20.643,
+        pm_dec_masyr=6.149,
+        ref_epoch_jyear=2016.0,
     ),
 )
 

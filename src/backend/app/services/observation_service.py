@@ -19,7 +19,7 @@ import logging
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from app.api.errors import (
     ImageNotFoundError,
@@ -51,9 +51,24 @@ from app.services.irsa_client import (
     pick,
     radius_from_fov,
 )
+from app.services.astrometry import (
+    ProperMotion,
+    jyear_from_datetime,
+    propagate_position,
+)
 from app.services.sky_coverage import parse_s_region, polygon_contains_position
 
 logger = logging.getLogger(__name__)
+
+#: ``position_source`` values published in the metadata of each observation.
+POSITION_REQUESTED = "requested"
+POSITION_PROPER_MOTION = "proper_motion"
+
+#: Middle of the SPHEREx survey window used to centre the archive query of a
+#: moving target, and half of the window covered by the widened search cone.
+#: DR1 epochs observed so far span 2025.3-2026.8 (docs/science/target-catalog.md).
+_MOTION_QUERY_EPOCH_JYEAR = 2026.0
+_MOTION_QUERY_HALF_SPAN_YEARS = 1.5
 
 #: Reference instant used to keep the ordering deterministic.
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -107,6 +122,8 @@ class _BuiltObservation:
 
     observation: Observation
     record: dict[str, Any]
+    #: Cutout centre (RA, Dec) of this observation; ``None`` = query position.
+    center: tuple[float, float] | None = None
 
 
 class ObservationService:
@@ -130,8 +147,23 @@ class ObservationService:
         self._image_locks_guard = threading.Lock()
 
     # -- public API -------------------------------------------------------------
-    def search(self, ra_deg: float, dec_deg: float, fov_arcmin: float) -> ObservationResponse:
+    def search(
+        self,
+        ra_deg: float,
+        dec_deg: float,
+        fov_arcmin: float,
+        motion: ProperMotion | None = None,
+    ) -> ObservationResponse:
         """Query the archive and return the observations in chronological order.
+
+        Args:
+            ra_deg: Right ascension (ICRS, degrees); with ``motion``, the
+                position at ``motion.ref_epoch_jyear``.
+            dec_deg: Declination (ICRS, degrees), same convention.
+            fov_arcmin: Side of the cutout, in arcminutes.
+            motion: Optional proper motion of the target. When given, every
+                observation is filtered and cut at the position propagated to
+                its own epoch (DECISÃO 007, item 8).
 
         Raises:
             InvalidParametersError: The parameters are outside the accepted
@@ -141,20 +173,44 @@ class ObservationService:
         """
         self._validate(ra_deg, dec_deg, fov_arcmin)
 
-        records = self._query_records(ra_deg, dec_deg, fov_arcmin)
+        query_ra, query_dec, margin_deg = ra_deg, dec_deg, 0.0
+        if motion is not None:
+            # Centre the cone on the middle of the SPHEREx survey and widen it by
+            # the motion over half the window, so every epoch is covered.
+            query_ra, query_dec = propagate_position(
+                ra_deg, dec_deg, motion, _MOTION_QUERY_EPOCH_JYEAR
+            )
+            margin_deg = motion.total_masyr * _MOTION_QUERY_HALF_SPAN_YEARS / 3_600_000.0
+
+        records = self._query_records(query_ra, query_dec, fov_arcmin, margin_deg)
         if not records:
             raise NoObservationsFoundError(
                 "Nenhuma observação foi encontrada para os parâmetros informados."
             )
 
-        records = self._filter_by_footprint(records, ra_deg, dec_deg)
+        def center_of(record: Mapping[str, Any]) -> tuple[float, float, str]:
+            if motion is None:
+                return ra_deg, dec_deg, POSITION_REQUESTED
+            observed_at = self._extract_observed_at(record)[0]
+            if observed_at is None:
+                return ra_deg, dec_deg, POSITION_REQUESTED
+            ra, dec = propagate_position(
+                ra_deg, dec_deg, motion, jyear_from_datetime(observed_at)
+            )
+            return ra, dec, POSITION_PROPER_MOTION
+
+        records = self._filter_by_footprint(records, ra_deg, dec_deg, center_of=center_of)
         if not records:
             raise NoObservationsFoundError(
                 "Nenhuma observação cobre a posição informada: os produtos "
                 "encontrados apenas tocam a borda da região consultada."
             )
 
-        built = self._build_observations(records, ra_deg, dec_deg, fov_arcmin)
+        query_signature = self._query_signature(ra_deg, dec_deg, fov_arcmin, motion)
+        built = self._build_observations(
+            records, ra_deg, dec_deg, fov_arcmin,
+            center_of=center_of, query_signature=query_signature,
+        )
         built = self._sort_observations(built)
         built = self._remove_duplicates(built)
         observations = [item.observation for item in built]
@@ -261,10 +317,10 @@ class ObservationService:
             )
 
     def _query_records(
-        self, ra_deg: float, dec_deg: float, fov_arcmin: float
+        self, ra_deg: float, dec_deg: float, fov_arcmin: float, margin_deg: float = 0.0
     ) -> list[dict[str, Any]]:
         """Return the records of the archive, using the cache when possible."""
-        cache_key = self._query_cache_key(ra_deg, dec_deg, fov_arcmin)
+        cache_key = self._query_cache_key(ra_deg, dec_deg, fov_arcmin, margin_deg)
         cached = self._cache.get_json(NAMESPACE_QUERIES, cache_key)
         if cached is not None:
             logger.info("Query cache hit for %s", cache_key)
@@ -273,15 +329,31 @@ class ObservationService:
         records = self._client.query_by_position(
             ra_deg,
             dec_deg,
-            radius_from_fov(fov_arcmin),
+            radius_from_fov(fov_arcmin) + margin_deg,
             fov_arcmin=fov_arcmin,
         )
         self._cache.set_json(NAMESPACE_QUERIES, cache_key, records)
         return records
 
     @staticmethod
+    def _query_signature(
+        ra_deg: float, dec_deg: float, fov_arcmin: float, motion: ProperMotion | None
+    ) -> str:
+        """Identify the query, so that ids of different queries never collide."""
+        text = f"{ra_deg:.6f}|{dec_deg:.6f}|{fov_arcmin:.6f}"
+        if motion is not None:
+            text += (
+                f"|{motion.pm_ra_cosdec_masyr:.3f}|{motion.pm_dec_masyr:.3f}"
+                f"|{motion.ref_epoch_jyear:.4f}"
+            )
+        return text
+
+    @staticmethod
     def _filter_by_footprint(
-        records: list[dict[str, Any]], ra_deg: float, dec_deg: float
+        records: list[dict[str, Any]],
+        ra_deg: float,
+        dec_deg: float,
+        center_of: Callable[[Mapping[str, Any]], tuple[float, float, str]] | None = None,
     ) -> list[dict[str, Any]]:
         """Drop the products whose footprint does not contain the position.
 
@@ -293,8 +365,9 @@ class ObservationService:
         """
         kept: list[dict[str, Any]] = []
         for record in records:
+            ra, dec = (ra_deg, dec_deg) if center_of is None else center_of(record)[:2]
             polygon = parse_s_region(record.get("s_region"))
-            if polygon is None or polygon_contains_position(polygon, ra_deg, dec_deg):
+            if polygon is None or polygon_contains_position(polygon, ra, dec):
                 kept.append(record)
         dropped = len(records) - len(kept)
         if dropped:
@@ -303,15 +376,20 @@ class ObservationService:
             )
         return kept
 
-    def _query_cache_key(self, ra_deg: float, dec_deg: float, fov_arcmin: float) -> str:
+    def _query_cache_key(
+        self, ra_deg: float, dec_deg: float, fov_arcmin: float, margin_deg: float = 0.0
+    ) -> str:
         """Stable key of a query (disk cache)."""
-        return DiskCache.make_key(
+        parts = [
             "query",
             f"{ra_deg:.6f}",
             f"{dec_deg:.6f}",
             f"{fov_arcmin:.6f}",
             self._client.sia2_base_url,
-        )
+        ]
+        if margin_deg:
+            parts.append(f"{margin_deg:.6f}")
+        return DiskCache.make_key(*parts)
 
     def _image_cache_key(self, entry: ObservationEntry) -> str:
         """Stable key of a generated image (disk cache)."""
@@ -333,10 +411,17 @@ class ObservationService:
         ra_deg: float,
         dec_deg: float,
         fov_arcmin: float,
+        *,
+        center_of: Callable[[Mapping[str, Any]], tuple[float, float, str]] | None = None,
+        query_signature: str = "",
     ) -> list[_BuiltObservation]:
         """Translate the archive records into the schemas of the contract."""
         built: list[_BuiltObservation] = []
         for record in records:
+            center_ra, center_dec, position_source = (
+                center_of(record) if center_of is not None
+                else (ra_deg, dec_deg, POSITION_REQUESTED)
+            )
             product_id = _to_str(pick(record, "product_id"))
             band = _to_str(pick(record, "band"))
             detector = extract_detector(record)
@@ -360,9 +445,14 @@ class ObservationService:
                 cutout_size_pixels=None,
                 visual_normalization=VISUAL_NORMALIZATION_DESCRIPTION,
                 duplicate_count=0,
+                cutout_center_ra_deg=round(center_ra, 7),
+                cutout_center_dec_deg=round(center_dec, 7),
+                position_source=position_source,
             )
 
-            observation_id = self._build_observation_id(product_id, band, detector)
+            observation_id = self._build_observation_id(
+                product_id, band, detector, query_signature
+            )
             observation = Observation(
                 id=observation_id,
                 observed_at=observed_at,
@@ -371,7 +461,13 @@ class ObservationService:
                 image_url=f"/api/images/{observation_id}",
                 metadata=metadata,
             )
-            built.append(_BuiltObservation(observation=observation, record=record))
+            built.append(
+                _BuiltObservation(
+                    observation=observation,
+                    record=record,
+                    center=(center_ra, center_dec),
+                )
+            )
         return built
 
     def _strategy_value(self, record: Mapping[str, Any]) -> str | None:
@@ -388,10 +484,18 @@ class ObservationService:
 
     @staticmethod
     def _build_observation_id(
-        product_id: str | None, band: str | None, detector: str | None
+        product_id: str | None,
+        band: str | None,
+        detector: str | None,
+        query_signature: str = "",
     ) -> str:
-        """Return the deterministic internal identifier of an observation."""
-        canonical = f"{product_id or ''}|{band or ''}|{detector or ''}"
+        """Return the deterministic internal identifier of an observation.
+
+        The query signature (centre, field of view, proper motion) is part of
+        the identifier: the same product cut for two different queries is two
+        different images and must not share an id.
+        """
+        canonical = f"{product_id or ''}|{band or ''}|{detector or ''}|{query_signature}"
         digest = hashlib.sha1(canonical.encode("utf-8")).hexdigest()[:16]
         return f"obs_{digest}"
 
@@ -517,11 +621,13 @@ class ObservationService:
     ) -> None:
         """Keep the resolved records so that the image endpoint can find them."""
         for item in built:
+            # The cutout is centred where the target is at this exposure.
+            center_ra, center_dec = item.center or (ra_deg, dec_deg)
             entry = ObservationEntry(
                 observation_id=item.observation.id,
                 record=dict(item.record),
-                ra_deg=ra_deg,
-                dec_deg=dec_deg,
+                ra_deg=center_ra,
+                dec_deg=center_dec,
                 fov_arcmin=fov_arcmin,
             )
             self._registry[item.observation.id] = entry
