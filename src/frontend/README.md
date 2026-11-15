@@ -56,6 +56,18 @@ RA/Dec em graus. Para objetos de alto movimento próprio, a posição já vem pr
 épocas SPHEREx (WISE 0855 se deslocou ~3,5′ desde a coordenada J2000 do desafio).
 Se o endpoint falhar, a página avisa e a busca manual continua funcionando.
 
+### Movimento próprio
+Se o alvo trouxer `pm_ra_cosdec_masyr`, `pm_dec_masyr` (mas/ano) e `ref_epoch_jyear` (ano juliano),
+todos numéricos, o clique no botão guarda esse movimento (`state.motion`) e a busca envia os três
+parâmetros a `/api/observations`; o backend recorta cada observação na posição propagada para a data dela.
+- O movimento só vale para as coordenadas exatas do alvo: editar RA ou Dec, clicar no mapa do céu ou
+  abrir uma URL sem os três parâmetros o descarta. Mudar só o FOV o mantém.
+- A URL compartilhada inclui os três parâmetros (mais `alvo`, o nome exibido) e os restaura ao abrir.
+- Os detalhes do quadro mostram "Centro do recorte" (`metadata.cutout_center_ra_deg/dec_deg`) e indicam
+  quando `position_source` é `"proper_motion"`. A mensagem de status só cita a correção se o backend
+  confirmar em pelo menos uma observação. Sem esses campos (backend antigo), nada muda na interface.
+- No modo de dados fictícios o movimento é ignorado.
+
 ## Filtros por detector e comprimento de onda
 - O filtro por detector usa `detector` ("D1".."D6"). Para comparar épocas, deixe um detector só:
   cada detector vê outra faixa do infravermelho.
