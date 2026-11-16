@@ -2119,6 +2119,45 @@ const SPHEREX_PREFIX = "spherex:"; // valor das opções SPHEREx no <select>: "s
   el.ceuFundo.replaceChildren(spherex, outros);
 })();
 
+// O CDS publica cada mapa HiPS em dois espelhos (alasky e alaskybis). Em algumas regiões/redes um deles
+// responde 404; então testamos o arquivo "properties" de cada um e usamos o primeiro que responder.
+const HIPS_MIRRORS = ["https://alasky.cds.unistra.fr", "https://alaskybis.cds.unistra.fr"];
+// Servidores alternativos (fora do CDS) indicados pelo próprio CDS em cds.unistra.fr durante o incidente de nov/2026.
+// O SPHEREx só é publicado pelo CDS: não há alternativa confirmada para ele.
+const HIPS_ALT = {
+  "P/DSS2/color": ["https://skies.esac.esa.int/DSSColor"],
+  "P/2MASS/color": ["https://skies.esac.esa.int/2MASSColor"],
+  "P/allWISE/color": ["https://skies.esac.esa.int/AllWISEColor"],
+};
+const hipsCache = new Map();
+async function hipsOk(base) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const r = await fetch(`${base}/properties`, { signal: ctl.signal });
+    if (r.ok) return true;
+    console.warn(`Mapa do céu: ${base} respondeu ${r.status}.`);
+  } catch (err) {
+    console.warn(`Mapa do céu: não consegui falar com ${base}.`, err);
+  } finally { clearTimeout(timer); }
+  return false;
+}
+async function resolveSurvey(value) {
+  if (hipsCache.has(value)) return hipsCache.get(value);
+  let candidatos;
+  if (/^https?:\/\//.test(value)) {
+    const path = new URL(value).pathname;
+    candidatos = HIPS_MIRRORS.map((m) => m + path);
+  } else {
+    // ID (ex.: P/DSS2/color): tenta os servidores alternativos; se nenhum responder, deixa o Aladin usar o CDS
+    candidatos = HIPS_ALT[value] ?? [];
+    for (const c of candidatos) if (await hipsOk(c)) { hipsCache.set(value, c); return c; }
+    return value;
+  }
+  for (const c of candidatos) if (await hipsOk(c)) { hipsCache.set(value, c); return c; }
+  return null;
+}
+
 function setCeuStatus(msg, kind = "") {
   el.ceuStatus.textContent = msg;
   el.ceuStatus.className = "status " + kind;
@@ -2409,60 +2448,58 @@ el.ceuTudo.addEventListener("click", () => {
   try { sky.aladin.setFoV(360); } catch (err) { console.error("Mapa do céu:", err); }
 });
 
-el.ceuCentro.addEventListener("click", () => {
-  const c = skyTarget();
-  if (!c) { setCeuStatus("Faça uma busca primeiro para ter um alvo."); return; }
-  if (!sky.aladin) { openSky(); return; }
-  const f = state.frames[state.index];
-  centerSky(c, state.values.fov);
-  setCeuStatus(`Centralizado no alvo: RA ${c.ra.toFixed(4)}°, Dec ${c.dec.toFixed(4)}°` +
-    (f?.positionSource === "proper_motion" ? ` (posição em ${fmtDate(f.date)}, pelo movimento próprio).` : "."));
+el.ceuAbrir.addEventListener("click", async () => {
+  const v = state.values;
+  if (sky.aladin) {
+    if (v) updateSky({ recenter: true });
+    else setCeuStatus("Clique no mapa para escolher um ponto, ou faça uma busca.");
+    return;
+  }
+  el.ceuAbrir.disabled = true;
+  setCeuStatus("Carregando o mapa…", "carregando");
+  try {
+    sky.A = await loadAladin();
+    let fundo = await resolveSurvey(el.ceuFundo.value);
+    let aviso = "";
+    if (!fundo) {
+      // Nenhum espelho tem o mapa escolhido: abre com DSS2 (luz visível) para o mapa não ficar vazio
+      console.error("Mapa do céu: nenhum espelho do CDS tem", el.ceuFundo.value);
+      el.ceuFundo.value = "P/DSS2/color";
+      fundo = await resolveSurvey("P/DSS2/color");
+      aviso = " Os mapas do SPHEREx ficam nos servidores do CDS (Estrasburgo), que estão instáveis (incidente de segurança informado por eles em 09/11/2026). Mostrando DSS2 no lugar; tente de novo mais tarde.";
+    }
+    el.ceuMapa.hidden = false;
+    sky.aladin = sky.A.aladin("#ceu-mapa", {
+      survey: fundo, target: v ? `${v.ra} ${v.dec}` : "0 0",
+      fov: 360, projection: "AIT", showCooGrid: true, showFullscreenControl: true, // AIT: céu inteiro numa elipse
+    });
+    sky.aladin.on("click", onSkyClick);
+    el.ceuAbrir.textContent = "Recentrar na busca";
+    el.ceuAbrir.disabled = false;
+    setCeuStatus("Céu inteiro. Clique num ponto para pesquisar aquelas coordenadas." + aviso, aviso ? "erro" : "");
+    drawSkyLayers();
+  } catch (err) {
+    console.error("Mapa do céu:", err);
+    sky.aladin = null;
+    el.ceuMapa.hidden = true;
+    el.ceuAbrir.disabled = false;
+    setCeuStatus(
+      /webgl/i.test(String(err))
+        ? "O mapa precisa de WebGL2, que está indisponível neste navegador. Ative a aceleração de hardware nas configurações do navegador ou tente outro navegador."
+        : "Não foi possível carregar o mapa. Verifique a conexão com a internet e tente de novo (detalhes no console do navegador, tecla F12).",
+      "erro"
+    );
+  }
 });
 
-function openSky() {
-  if (sky.aladin) return Promise.resolve();
-  sky.opening ??= (async () => {
-    const t0 = performance.now();
-    el.ceuAbrir.disabled = true;
-    setCeuStatus("Carregando o mapa…", "carregando");
-    try {
-      // Código do Aladin e verificação do fundo em paralelo.
-      const [A, bg] = await Promise.all([loadAladin(), applyBackground(el.ceuFundo.value)]);
-      const tCode = performance.now();
-      const v = state.values;
-      el.ceuMapa.hidden = false;
-      sky.aladin = A.aladin("#ceu-mapa", {
-        survey: bg.url, target: v ? `${v.ra} ${v.dec}` : "0 0",
-        fov: 360, projection: "AIT", showCooGrid: true, showFullscreenControl: true, // AIT: céu inteiro numa elipse
-      });
-      sky.aladin.on("click", onSkyClick);
-      el.ceuAbrir.textContent = "Recentrar na busca";
-      sky.timing = { total_s: (performance.now() - t0) / 1000, code_s: (tCode - t0) / 1000, source: sky.source, background: bg.url };
-      console.info("Mapa do céu: aberto", sky.timing);
-      setCeuStatus(`Mapa aberto em ${sky.timing.total_s.toFixed(1).replace(".", ",")} s. Clique num ponto para pesquisar aquelas coordenadas.`);
-      drawSkyLayers();
-    } catch (err) {
-      console.error("Mapa do céu:", err);
-      sky.aladin = null;
-      el.ceuMapa.hidden = true;
-      setCeuStatus(
-        /webgl/i.test(String(err))
-          ? "O mapa precisa de WebGL2, que está indisponível neste navegador. Ative a aceleração de hardware nas configurações do navegador ou tente outro navegador."
-          : "Não foi possível carregar o mapa (nenhuma fonte do Aladin Lite respondeu a tempo). Verifique a conexão e clique em “Carregar mapa interativo” para tentar de novo.",
-        "erro"
-      );
-    } finally {
-      el.ceuAbrir.disabled = false;
-      sky.opening = null;
-    }
-  })();
-  return sky.opening;
-}
-
-el.ceuAbrir.addEventListener("click", () => {
-  if (!sky.aladin) { openSky(); return; }
-  if (state.values) updateSky({ recenter: true });
-  else setCeuStatus("Clique no mapa para escolher um ponto, ou faça uma busca.");
+el.ceuFundo.addEventListener("change", async () => {
+  if (!sky.aladin) return;
+  try {
+    const fundo = await resolveSurvey(el.ceuFundo.value);
+    if (!fundo) { setCeuStatus("Esse mapa não está disponível nos servidores do CDS agora. Tente outro fundo.", "erro"); return; }
+    setCeuStatus("Céu inteiro. Clique num ponto para pesquisar aquelas coordenadas.");
+    (sky.aladin.setBaseImageLayer ?? sky.aladin.setImageSurvey).call(sky.aladin, fundo);
+  } catch (err) { console.error("Mapa do céu:", err); }
 });
 
 // Abre sozinho quando a seção entra na tela (uma vez).
@@ -2656,3 +2693,62 @@ const spy = new IntersectionObserver(
   { rootMargin: "-20% 0px -70% 0px" }
 );
 sections.forEach((s) => spy.observe(s));
+
+
+/* ---------- Ícone SPHEREx: 1º clique = barra de coordenadas, 2º = + menu lateral (a barra continua aberta), 3º = fecha tudo ---------- */
+(function iconeSpherex() {
+  const btn = $("spx-btn"), barra = $("barra-coord"), menu = $("menu-lateral"), scrim = $("scrim");
+  const bRa = $("barra-ra"), bDec = $("barra-dec"), bFov = $("barra-fov"), msg = $("barra-msg");
+  const ROTULOS = ["Abrir a busca por coordenadas", "Abrir o menu lateral", "Fechar a busca e o menu lateral"];
+  const ERROS = ["ra-erro", "dec-erro", "fov-erro"];
+  let estado = 0; // 0 fechado · 1 barra de coordenadas · 2 barra + menu lateral
+
+  const syncBarra = () => { bRa.value = el.ra.value; bDec.value = el.dec.value; bFov.value = el.fov.value; };
+  // O menu lateral e o fundo escurecido começam logo abaixo da barra, que pode mudar de altura (quebra de linha)
+  const medeBarra = () =>
+    document.documentElement.style.setProperty("--barra-h", barra.hidden ? "0px" : barra.offsetHeight + "px");
+  const atualizaMsg = () => {
+    const erro = ERROS.map((id) => $(id).textContent.trim()).find(Boolean);
+    msg.textContent = erro || el.status.textContent.trim();
+    msg.classList.toggle("erro", Boolean(erro) || el.status.classList.contains("erro"));
+    medeBarra();
+  };
+
+  function ir(novo) {
+    const antes = estado;
+    estado = novo;
+    barra.hidden = estado === 0;
+    scrim.hidden = estado !== 2;
+    document.body.classList.toggle("barra-aberta", estado >= 1);
+    document.body.classList.toggle("menu-aberto", estado === 2);
+    btn.setAttribute("aria-expanded", String(estado !== 0));
+    btn.setAttribute("aria-label", ROTULOS[estado]);
+    btn.title = ROTULOS[estado];
+    if (antes === 0 && estado === 1) { syncBarra(); atualizaMsg(); bRa.focus(); }
+    medeBarra();
+    if (estado === 2) menu.querySelector("a")?.focus();
+  }
+
+  btn.addEventListener("click", () => ir((estado + 1) % 3));
+  scrim.addEventListener("click", () => ir(1));                       // fecha só o menu; a barra continua
+  menu.addEventListener("click", (e) => { if (e.target.closest("a")) ir(1); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || estado === 0) return;
+    ir(estado - 1);                                                   // Esc fecha uma camada por vez
+    btn.focus();
+  });
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(medeBarra).observe(barra);
+
+  // A barra usa o mesmo formulário e a mesma validação da pesquisa principal
+  barra.addEventListener("submit", (e) => {
+    e.preventDefault();
+    el.ra.value = bRa.value; el.dec.value = bDec.value; el.fov.value = bFov.value;
+    el.form.requestSubmit();
+    if (!ERROS.some((id) => $(id).textContent.trim())) $("observacoes").scrollIntoView();
+  });
+  // Cliques no mapa do céu, alvos de exemplo etc. também enviam o formulário: mantém a barra em dia
+  el.form.addEventListener("submit", () => { if (estado >= 1) syncBarra(); });
+  const mo = new MutationObserver(atualizaMsg);
+  [...ERROS, "status"].forEach((id) =>
+    mo.observe($(id), { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class"] }));
+})();
