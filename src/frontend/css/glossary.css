@@ -1,0 +1,96 @@
+/* SPHEREx Explorer — ajuda contextual (glossário).
+ * Usa as variáveis do tema (styles.css) com valores de reserva. */
+
+.gl-icon {
+  /* Alvo de toque de 24×24 px; o círculo visível é menor (::before). */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  margin: -4px 0 -4px 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--cyan, #6de3e8);
+  font: 700 11px/1 var(--sans, system-ui, sans-serif);
+  letter-spacing: 0;
+  text-transform: none;
+  vertical-align: middle;
+  cursor: help;
+  flex: none;
+  box-shadow: none;
+}
+.gl-icon::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: var(--panel2, #0c1526);
+  z-index: -1;
+}
+.gl-icon { isolation: isolate; }
+.gl-icon:hover,
+.gl-icon[aria-expanded="true"] { color: var(--ink, #0e1129); }
+.gl-icon:hover::before,
+.gl-icon[aria-expanded="true"]::before { background: var(--cyan, #6de3e8); border-color: var(--cyan, #6de3e8); }
+.gl-icon:focus { outline: none; }
+.gl-icon:focus-visible { outline: 2px solid var(--cyan, #6de3e8); outline-offset: 1px; }
+
+/* Ícones postos ao lado de botões (ex.: detectores) */
+.detectores > .gl-icon { align-self: center; margin: 0 0 0 -4px; }
+
+/* Balão */
+.gl-pop {
+  position: fixed;
+  z-index: 10000;
+  box-sizing: border-box;
+  max-width: 320px;
+  padding: 12px 14px;
+  border: 1px solid var(--line, #22334c);
+  border-radius: 10px;
+  background: var(--panel, #101a2d);
+  color: var(--text, #e8f0fb);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+  font: 400 13px/1.5 var(--sans, system-ui, sans-serif);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.gl-pop[hidden] { display: none; }
+.gl-pop::after {
+  content: "";
+  position: absolute;
+  left: var(--gl-seta, 50%);
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  background: inherit;
+  border: inherit;
+  transform: rotate(45deg);
+}
+.gl-pop[data-lado="abaixo"]::after { top: -6px; border-right: 0; border-bottom: 0; }
+.gl-pop[data-lado="acima"]::after { bottom: -6px; border-left: 0; border-top: 0; }
+.gl-pop-titulo { display: block; margin: 0 0 4px; font-size: 14px; color: var(--cyan, #6de3e8); }
+.gl-pop-curto, .gl-pop-detalhe { margin: 0 0 6px; }
+.gl-pop-detalhe { color: #c3cfdf; font-size: 12px; }
+.gl-pop-link {
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
+  color: var(--cyan, #6de3e8);
+  font-weight: 600;
+  text-decoration: underline;
+}
+.gl-pop-link:focus-visible { outline: 2px solid var(--cyan, #6de3e8); outline-offset: 2px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .gl-pop:not([hidden]) { animation: gl-aparece .12s ease-out; }
+  @keyframes gl-aparece { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+}
+
+@media print { .gl-icon, .gl-pop { display: none !important; } }

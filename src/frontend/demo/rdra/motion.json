@@ -1,0 +1,519 @@
+{
+ "id": "rdra",
+ "name": "R Draconis",
+ "center_ra_deg": 248.16774,
+ "center_dec_deg": 66.754964,
+ "fov_arcmin": 4,
+ "pm_total_arcsec_per_year": 0.022,
+ "track_extent_arcmin": 0.03,
+ "span_years": [
+  1955.31,
+  2026.87
+ ],
+ "track": [
+  [
+   0.4969,
+   0.5009
+  ],
+  [
+   0.4972,
+   0.5008
+  ],
+  [
+   0.4975,
+   0.5008
+  ],
+  [
+   0.4977,
+   0.5007
+  ],
+  [
+   0.498,
+   0.5006
+  ],
+  [
+   0.4983,
+   0.5005
+  ],
+  [
+   0.4985,
+   0.5004
+  ],
+  [
+   0.4988,
+   0.5004
+  ],
+  [
+   0.4991,
+   0.5003
+  ],
+  [
+   0.4993,
+   0.5002
+  ],
+  [
+   0.4996,
+   0.5001
+  ],
+  [
+   0.4999,
+   0.5
+  ],
+  [
+   0.5001,
+   0.5
+  ],
+  [
+   0.5004,
+   0.4999
+  ],
+  [
+   0.5007,
+   0.4998
+  ],
+  [
+   0.5009,
+   0.4997
+  ],
+  [
+   0.5012,
+   0.4996
+  ],
+  [
+   0.5015,
+   0.4996
+  ],
+  [
+   0.5017,
+   0.4995
+  ],
+  [
+   0.502,
+   0.4994
+  ],
+  [
+   0.5023,
+   0.4993
+  ],
+  [
+   0.5025,
+   0.4992
+  ],
+  [
+   0.5028,
+   0.4992
+  ],
+  [
+   0.5031,
+   0.4991
+  ]
+ ],
+ "frames": [
+  {
+   "id": "dss1_red",
+   "kind": "survey",
+   "survey": "DSS",
+   "label": "DSS1 vermelho",
+   "wavelength": "luz visível",
+   "date": "1955-04-23",
+   "jyear": 1955.306,
+   "file": "demo/rdra/motion/dss1_red.png",
+   "target_xy": [
+    0.4969,
+    0.5009
+   ],
+   "credit": "Digitized Sky Survey (STScI; placas Palomar e UK Schmidt), via IRSA Finder Chart",
+   "source_url": "https://irsa.ipac.caltech.edu/applications/finderchart/servlet/api?mode=getImage&RA=248.167740&DEC=66.754964&subsetsize=4&thumbnail_size=large&survey=dss&dss_bands=poss1_red&type=jpgurl"
+  },
+  {
+   "id": "dss2_red",
+   "kind": "survey",
+   "survey": "DSS",
+   "label": "DSS2 vermelho",
+   "wavelength": "luz visível",
+   "date": "1993-08-13",
+   "jyear": 1993.614,
+   "file": "demo/rdra/motion/dss2_red.png",
+   "target_xy": [
+    0.5002,
+    0.4999
+   ],
+   "credit": "Digitized Sky Survey (STScI; placas Palomar e UK Schmidt), via IRSA Finder Chart",
+   "source_url": "https://irsa.ipac.caltech.edu/applications/finderchart/servlet/api?mode=getImage&RA=248.167740&DEC=66.754964&subsetsize=4&thumbnail_size=large&survey=dss&dss_bands=poss2ukstu_red&type=jpgurl"
+  },
+  {
+   "id": "dss2_ir",
+   "kind": "survey",
+   "survey": "DSS",
+   "label": "DSS2 infravermelho",
+   "wavelength": "~0,85 µm",
+   "date": "1996-06-22",
+   "jyear": 1996.472,
+   "file": "demo/rdra/motion/dss2_ir.png",
+   "target_xy": [
+    0.5005,
+    0.4999
+   ],
+   "credit": "Digitized Sky Survey (STScI; placas Palomar e UK Schmidt), via IRSA Finder Chart",
+   "source_url": "https://irsa.ipac.caltech.edu/applications/finderchart/servlet/api?mode=getImage&RA=248.167740&DEC=66.754964&subsetsize=4&thumbnail_size=large&survey=dss&dss_bands=poss2ukstu_ir&type=jpgurl"
+  },
+  {
+   "id": "2mass_k",
+   "kind": "survey",
+   "survey": "2MASS",
+   "label": "2MASS K",
+   "wavelength": "2,16 µm",
+   "date": "1999-05-26",
+   "jyear": 1999.396,
+   "file": "demo/rdra/motion/2mass_k.png",
+   "target_xy": [
+    0.5007,
+    0.4998
+   ],
+   "credit": "2MASS (UMass e IPAC/Caltech; NASA/NSF), via IRSA Finder Chart",
+   "source_url": "https://irsa.ipac.caltech.edu/applications/finderchart/servlet/api?mode=getImage&RA=248.167740&DEC=66.754964&subsetsize=4&thumbnail_size=large&survey=2mass&twomass_bands=k&type=jpgurl"
+  },
+  {
+   "id": "wise_w1",
+   "kind": "survey",
+   "survey": "WISE",
+   "label": "WISE W1",
+   "wavelength": "3,4 µm",
+   "date": "2010-06-09",
+   "jyear": 2010.435,
+   "file": "demo/rdra/motion/wise_w1.png",
+   "target_xy": [
+    0.5017,
+    0.4995
+   ],
+   "credit": "WISE/AllWISE (NASA/JPL-Caltech/UCLA), via IRSA Finder Chart; soma de exposições de 2010–2011",
+   "source_url": "https://irsa.ipac.caltech.edu/applications/finderchart/servlet/api?mode=getImage&RA=248.167740&DEC=66.754964&subsetsize=4&thumbnail_size=large&survey=wise&wise_bands=1&type=jpgurl"
+  },
+  {
+   "id": "wise_w2",
+   "kind": "survey",
+   "survey": "WISE",
+   "label": "WISE W2",
+   "wavelength": "4,6 µm",
+   "date": "2010-06-09",
+   "jyear": 2010.435,
+   "file": "demo/rdra/motion/wise_w2.png",
+   "target_xy": [
+    0.5017,
+    0.4995
+   ],
+   "credit": "WISE/AllWISE (NASA/JPL-Caltech/UCLA), via IRSA Finder Chart; soma de exposições de 2010–2011",
+   "source_url": "https://irsa.ipac.caltech.edu/applications/finderchart/servlet/api?mode=getImage&RA=248.167740&DEC=66.754964&subsetsize=4&thumbnail_size=large&survey=wise&wise_bands=2&type=jpgurl"
+  },
+  {
+   "id": "spherex_D3_obs_a114ed72f66e615b",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D3",
+   "label": "SPHEREx D3",
+   "wavelength": "1,63–2,43 µm",
+   "date": "2025-04-24",
+   "jyear": 2025.312,
+   "file": "demo/rdra/motion/spherex_D3_obs_a114ed72f66e615b.png",
+   "target_xy": [
+    0.5029,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1_deep?2025W17_4B_0021_1/D3",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D6_obs_a3eaf3c53af49930",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D6",
+   "label": "SPHEREx D6",
+   "wavelength": "4,41–5,01 µm",
+   "date": "2025-04-24",
+   "jyear": 2025.312,
+   "file": "demo/rdra/motion/spherex_D6_obs_a3eaf3c53af49930.png",
+   "target_xy": [
+    0.5029,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1_deep?2025W17_4B_0021_1/D6",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D3_obs_4169aa62ea7dda24",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D3",
+   "label": "SPHEREx D3",
+   "wavelength": "1,63–2,43 µm",
+   "date": "2025-06-02",
+   "jyear": 2025.417,
+   "file": "demo/rdra/motion/spherex_D3_obs_4169aa62ea7dda24.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W23_1C_0021_2/D3",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D6_obs_d1df978be9f48b9b",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D6",
+   "label": "SPHEREx D6",
+   "wavelength": "4,41–5,01 µm",
+   "date": "2025-06-02",
+   "jyear": 2025.417,
+   "file": "demo/rdra/motion/spherex_D6_obs_d1df978be9f48b9b.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W23_1C_0021_2/D6",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D1_obs_e4718ecf73454332",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D1",
+   "label": "SPHEREx D1",
+   "wavelength": "0,75–1,12 µm",
+   "date": "2025-06-06",
+   "jyear": 2025.429,
+   "file": "demo/rdra/motion/spherex_D1_obs_e4718ecf73454332.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W23_2B_0206_1/D1",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D4_obs_374de7c4801fc3a5",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D4",
+   "label": "SPHEREx D4",
+   "wavelength": "2,40–3,85 µm",
+   "date": "2025-06-06",
+   "jyear": 2025.429,
+   "file": "demo/rdra/motion/spherex_D4_obs_374de7c4801fc3a5.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W23_2B_0206_1/D4",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D2_obs_2fe5dd570e4d9f7f",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D2",
+   "label": "SPHEREx D2",
+   "wavelength": "1,10–1,65 µm",
+   "date": "2025-06-08",
+   "jyear": 2025.435,
+   "file": "demo/rdra/motion/spherex_D2_obs_2fe5dd570e4d9f7f.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W23_2B_0696_1/D2",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D5_obs_76b1bbf1fe9af716",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D5",
+   "label": "SPHEREx D5",
+   "wavelength": "3,81–4,43 µm",
+   "date": "2025-06-08",
+   "jyear": 2025.435,
+   "file": "demo/rdra/motion/spherex_D5_obs_76b1bbf1fe9af716.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W23_2B_0696_1/D5",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D1_obs_0d697a94ce9234c7",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D1",
+   "label": "SPHEREx D1",
+   "wavelength": "0,75–1,12 µm",
+   "date": "2025-10-19",
+   "jyear": 2025.799,
+   "file": "demo/rdra/motion/spherex_D1_obs_0d697a94ce9234c7.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W42_2A_0617_2/D1",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D2_obs_b296c546854d3dc1",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D2",
+   "label": "SPHEREx D2",
+   "wavelength": "1,10–1,65 µm",
+   "date": "2025-11-18",
+   "jyear": 2025.882,
+   "file": "demo/rdra/motion/spherex_D2_obs_b296c546854d3dc1.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W47_1A_0388_2/D2",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D5_obs_2cc5e12bc6b61005",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D5",
+   "label": "SPHEREx D5",
+   "wavelength": "3,81–4,43 µm",
+   "date": "2025-11-18",
+   "jyear": 2025.882,
+   "file": "demo/rdra/motion/spherex_D5_obs_2cc5e12bc6b61005.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W47_1A_0388_3/D5",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D2_obs_2791943cfe311178",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D2",
+   "label": "SPHEREx D2",
+   "wavelength": "1,10–1,65 µm",
+   "date": "2025-12-14",
+   "jyear": 2025.953,
+   "file": "demo/rdra/motion/spherex_D2_obs_2791943cfe311178.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W50_2A_0799_1/D2",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D5_obs_691ffc108b69eb3c",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D5",
+   "label": "SPHEREx D5",
+   "wavelength": "3,81–4,43 µm",
+   "date": "2025-12-14",
+   "jyear": 2025.953,
+   "file": "demo/rdra/motion/spherex_D5_obs_691ffc108b69eb3c.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_dr1?2025W50_2A_0799_1/D5",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D3_obs_939c56ce996207d6",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D3",
+   "label": "SPHEREx D3",
+   "wavelength": "1,63–2,43 µm",
+   "date": "2026-06-07",
+   "jyear": 2026.433,
+   "file": "demo/rdra/motion/spherex_D3_obs_939c56ce996207d6.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_qr3?2026W23_2A_0642_4/D3",
+   "coverage_fraction": 0.872
+  },
+  {
+   "id": "spherex_D6_obs_bfc22854f1b58fe1",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D6",
+   "label": "SPHEREx D6",
+   "wavelength": "4,41–5,01 µm",
+   "date": "2026-06-07",
+   "jyear": 2026.433,
+   "file": "demo/rdra/motion/spherex_D6_obs_bfc22854f1b58fe1.png",
+   "target_xy": [
+    0.503,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_qr3?2026W23_2A_0642_4/D6",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D1_obs_8784ee51a6ecc57b",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D1",
+   "label": "SPHEREx D1",
+   "wavelength": "0,75–1,12 µm",
+   "date": "2026-09-21",
+   "jyear": 2026.722,
+   "file": "demo/rdra/motion/spherex_D1_obs_8784ee51a6ecc57b.png",
+   "target_xy": [
+    0.5031,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_qr3_deep?2026W39_1A_0191_1/D1",
+   "coverage_fraction": 1.0
+  },
+  {
+   "id": "spherex_D4_obs_9ab67252181bc035",
+   "kind": "spherex",
+   "survey": "SPHEREx",
+   "detector": "D4",
+   "label": "SPHEREx D4",
+   "wavelength": "2,40–3,85 µm",
+   "date": "2026-09-21",
+   "jyear": 2026.722,
+   "file": "demo/rdra/motion/spherex_D4_obs_9ab67252181bc035.png",
+   "target_xy": [
+    0.5031,
+    0.4991
+   ],
+   "credit": "SPHEREx (NASA/JPL-Caltech), dados IRSA/IPAC; recorte IBE reamostrado norte para cima",
+   "product_id": "ivo://irsa.ipac/spherex_qr3_deep?2026W39_1A_0191_1/D4",
+   "coverage_fraction": 1.0
+  }
+ ],
+ "skipped": [
+  "SPHEREx D4 2025-10-19: A fonte científica não pôde ser consultada."
+ ],
+ "note": "Mesmo campo do céu em todas as imagens (norte para cima, leste à esquerda). A marca é a posição PREVISTA pelo movimento próprio do catálogo, não uma medida. Brilho e nitidez variam entre telescópios e comprimentos de onda; um alvo fraco numa banda pode não aparecer nela."
+}

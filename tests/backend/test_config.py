@@ -6,21 +6,32 @@ import pytest
 
 from app.core.config import (
     DEFAULT_CORS_ORIGINS,
+    ENV_ALLOWED_DOWNLOAD_HOSTS,
     ENV_CUTOUT_MODE,
     ENV_IRSA_SIA2_URL,
+    VERIFIED_IRSA_SIA_URL,
     ConfigurationError,
     Settings,
     get_settings,
 )
 
 
-def test_default_settings_have_no_irsa_address() -> None:
-    """Without configuration the IRSA source must stay unavailable."""
+def test_default_settings_use_the_verified_sia_endpoint() -> None:
+    """Without configuration the verified IRSA SIA v2 endpoint is used."""
     settings = Settings.from_env(env={})
-    assert settings.irsa_sia2_base_url == ""
+    assert settings.irsa_sia2_base_url == VERIFIED_IRSA_SIA_URL
+    assert settings.irsa_sia2_configured is True
+    # IRSA has no standalone cutout service (IBE cutouts use the access_url).
     assert settings.irsa_cutout_base_url == ""
-    assert settings.irsa_sia2_configured is False
     assert settings.irsa_cutout_configured is False
+    assert settings.allowed_download_hosts == ("irsa.ipac.caltech.edu",)
+
+
+def test_allowed_download_hosts_can_be_overridden() -> None:
+    settings = Settings.from_env(
+        env={ENV_ALLOWED_DOWNLOAD_HOSTS: "a.example.invalid, b.example.invalid"}
+    )
+    assert settings.allowed_download_hosts == ("a.example.invalid", "b.example.invalid")
 
 
 def test_settings_read_prefixed_environment_variables() -> None:

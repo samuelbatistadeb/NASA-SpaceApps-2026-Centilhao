@@ -10,14 +10,33 @@ Interface web (HTML, CSS e JavaScript puro, sem dependências).
 - `assets/`: imagens e ícones estáticos
 
 ## Como executar
-1. Inicie o backend (FastAPI) em `http://localhost:8000` com CORS habilitado.
-2. Na pasta `src/frontend`, rode: `python -m http.server 5500`
-3. Abra `http://localhost:5500`.
+1. Na raiz do repositório, inicie o backend:
+   `.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --port 8000`
+2. Na pasta `src/frontend`, rode: `python -m http.server 5173`
+3. Abra `http://localhost:5173`.
+
+Use a porta **5173** (ou 3000): o CORS do backend só libera `localhost`/`127.0.0.1` nas portas
+5173, 3000 e 8000. Para outra porta, defina `SPHEREX_CORS_ORIGINS=http://localhost:<porta>` antes de
+subir o backend. Abrir `index.html` direto do disco (`file://`) não funciona.
 
 Sem backend, marque "Usar dados fictícios" para testar a interface.
 
-## Configuração
-Ajuste `CONFIG` e `normalizeObservation()` no topo de `js/app.js` conforme `docs/architecture/api-contract.md`.
+## Contrato com o backend
+`GET /api/observations?ra_deg=&dec_deg=&fov_arcmin=` devolve `{ observations: [...] }` em ordem
+cronológica. Cada observação é **uma exposição de um detector**: `id`, `observed_at` (UTC),
+`detector` ("D1".."D6"), `band`, `image_url` (`/api/images/{id}`, PNG) e `metadata`
+(`product_id`, `wavelength_min_nm`/`wavelength_max_nm`, `exposure_time_s`, `data_release`...).
+Erros chegam como `{ error: { code, message } }`. A conversão para o formato interno está em
+`normalizeObservation()` (`js/app.js`).
+
+Cada imagem é recortada no IRSA sob demanda (~10–15 s na primeira vez, depois fica em cache);
+por isso a galeria mostra só as `CONFIG.GALLERY_MAX` primeiras e as baixa em fila:
+- no máximo `CONFIG.THUMB_CONCURRENCY` (2) miniaturas por vez (o IRSA responde 503 com muitos pedidos simultâneos);
+- a fila só avança quando a imagem principal termina de carregar (ou falha); ao trocar de quadro ela volta a ter prioridade.
+  Miniaturas já em download não são interrompidas;
+- nova busca ou filtro descarta a fila anterior: miniaturas antigas que ainda não começaram nunca são pedidas;
+- miniatura com erro mostra "falha ao carregar" e a fila segue;
+- no modo fictício (imagens `data:`) as miniaturas carregam direto, sem fila.
 
 ## Link por coordenadas e incorporação
 - `index.html?ra=133.79513&dec=-7.24515&fov=3`: abre e já executa a busca.
@@ -27,40 +46,100 @@ Ajuste `CONFIG` e `normalizeObservation()` no topo de `js/app.js` conforme `docs
 
 ## Alvos de exemplo (vindos do backend)
 O frontend não guarda coordenadas. Os botões de alvo são carregados de `GET /api/targets`
-(`CONFIG.TARGETS_PATH`), que deve retornar, por exemplo:
+(`CONFIG.TARGETS_PATH`, implementado em `src/backend/app/api/targets.py`), que retorna:
 
 ```json
-[{ "name": "WISE 0855", "ra": 133.79513, "dec": -7.24515, "fov": 3, "note": "opcional" }]
+{ "targets": [{ "name": "WISE 0855", "ra": 133.737467, "dec": -7.240406, "fov": 3,
+  "position_epoch": "2025.35", "note": "...", "source": "docs/science/target-catalog.md §3.3 ..." }] }
 ```
-RA/Dec em graus. Se o endpoint falhar, a página avisa e a busca manual continua funcionando.
+RA/Dec em graus. Para objetos de alto movimento próprio, a posição já vem propagada para as
+épocas SPHEREx (WISE 0855 se deslocou ~3,5′ desde a coordenada J2000 do desafio).
+Se o endpoint falhar, a página avisa e a busca manual continua funcionando.
+
+### Movimento próprio
+Se o alvo trouxer `pm_ra_cosdec_masyr`, `pm_dec_masyr` (mas/ano) e `ref_epoch_jyear` (ano juliano),
+todos numéricos, o clique no botão guarda esse movimento (`state.motion`) e a busca envia os três
+parâmetros a `/api/observations`; o backend recorta cada observação na posição propagada para a data dela.
+- O movimento só vale para as coordenadas exatas do alvo: editar RA ou Dec, clicar no mapa do céu ou
+  abrir uma URL sem os três parâmetros o descarta. Mudar só o FOV o mantém.
+- A URL compartilhada inclui os três parâmetros (mais `alvo`, o nome exibido) e os restaura ao abrir.
+- Os detalhes do quadro mostram "Centro do recorte" (`metadata.cutout_center_ra_deg/dec_deg`) e indicam
+  quando `position_source` é `"proper_motion"`. A mensagem de status só cita a correção se o backend
+  confirmar em pelo menos uma observação. Sem esses campos (backend antigo), nada muda na interface.
+- No modo de dados fictícios o movimento é ignorado.
+
+### Seguir o alvo
+Com movimento próprio, aparece o checkbox "Seguir o movimento do alvo" (marcado por padrão). Desmarcado,
+a busca **não** envia os três parâmetros: o quadro fica fixo no céu e dá para ver o alvo se deslocar.
+Mudar o checkbox refaz a busca; a URL guarda `seguir=0` quando desmarcado.
+
+## Seletor de FOV e cobertura
+Régua logarítmica (0,5′ a 30′) sincronizada com o campo numérico (que continua sendo validado no envio),
+com paradas 1′ Detalhe, 3′ Objeto, 5′ Vizinhança, 10′ Região e 30′ Campo amplo. Mostra ao vivo o lado em
+pixels SPHEREx (6,15″/px), a comparação com a Lua (~31′) e, quando houver, os números de
+`GET /api/coverage?ra_deg=&dec_deg=[&pm_ra_cosdec_masyr=&pm_dec_masyr=&ref_epoch_jyear=]`
+(`{ fovs: [{ fov_arcmin, pixels, observations, complete, partial, estimated_kb_per_image }], recommended_fov_arcmin,
+motion_arcsec_over_survey, pixel_scale_arcsec }`). O pedido sai 600 ms depois de RA/Dec ficarem válidos, cancela o
+anterior e falha em silêncio. Os parâmetros de movimento só vão quando "Seguir o alvo" está marcado (mesmo
+quadro que a busca usará). Para FOV fora da lista, o custo por imagem é escalado pela área a partir do FOV
+listado mais próximo e marcado com "≈". O retângulo do FOV no mapa do céu acompanha a régua.
+
+## Quadros parciais e área sem dados
+- `metadata.coverage_fraction` (0–1) vira `coverage`; quadro parcial = `< 0,999` (mesmo limiar do backend).
+- Legenda e detalhes mostram "Cobertura do quadro: 72%"; a galeria marca o quadro com o selo "parcial".
+- "Só quadros completos" (nos filtros, desligado a cada busca) esconde os parciais; quadros sem a informação ficam visíveis.
+- Imagens e miniaturas têm fundo hachurado: pixel transparente = fora do detector. Pixels na cor #B03060
+  são inválidos dentro do detector (núcleo saturado, pixel defeituoso). A legenda abaixo da imagem explica.
+
+## Combinar épocas
+`GET /api/composite?op=mean&a=ids` e `?op=diff&a=ids&b=ids` (PNG). Exige um único detector ativo no filtro.
+- Somar: até 40 observações visíveis do detector; com mais, prioriza as de maior `coverage`.
+- Diferença: A = metade mais recente, B = metade mais antiga (até 20 cada, as mais distantes no tempo).
+  Claro = mais brilho em A, escuro = mais brilho em B, cinza = sem mudança.
+- Erros `{ error: { code, message } }` aparecem na seção; em modo fictício nada é pedido (aviso).
+- Os cabeçalhos `X-SpherEx-*` só são usados se o CORS os expuser; a legenda não depende deles.
 
 ## Filtros por detector e comprimento de onda
-Cada observação da API deve trazer (nomes aceitos entre parênteses):
-- `detector` (ou `detector_id`): 1 a 6, também aceita "D3"
-- `wavelength_um` (ou `wavelength`): comprimento de onda em micrômetros
-- `band_index` (ou `band`): número da banda (1 a 102)
-
-Sem `detector` ou sem `wavelength`, o filtro correspondente fica oculto e as observações nunca são descartadas por ele.
+- O filtro por detector usa `detector` ("D1".."D6"). Para comparar épocas, deixe um detector só:
+  cada detector vê outra faixa do infravermelho.
+- O filtro de comprimento de onda fica oculto com dados reais: cada imagem SPHEREx cobre uma
+  **faixa** (o comprimento de onda varia ao longo do detector), não um valor único. A faixa do
+  detector aparece nos detalhes do quadro.
 
 ## Espectro de um ponto
 Clique na imagem (ou foque nela, use as setas e Enter) para marcar o ponto A (alvo) e o ponto B (fundo do céu).
-O frontend converte a posição clicada em RA/Dec, assumindo imagem quadrada com lado = FOV, centrada na busca,
-com norte para cima e leste à esquerda (`CONFIG.IMAGE_EAST_LEFT`). Depois chama:
+As imagens vêm no quadro comum (TAN, norte para cima, leste à esquerda, lado = FOV, pixel 6,15″), então o
+frontend converte o clique em RA/Dec usando como centro `metadata.cutout_center_ra_deg/dec_deg` **do quadro em
+exibição** (com "Seguir o movimento do alvo" ativo, cada quadro tem o centro propagado). A conversão é plana
+(erro muito menor que um pixel para FOV de poucos minutos de arco). Depois chama:
 
-`GET /api/spectrum?ra=<graus>&dec=<graus>&radius=<segundos de arco>`
+`GET /api/spectrum?ra_deg=&dec_deg=[&pm_ra_cosdec_masyr=&pm_dec_masyr=&ref_epoch_jyear=]&aperture_arcsec=9&max_exposures=60`
 
-Resposta esperada (lista direta ou objeto com `points`):
-```json
-{ "unit": "MJy/sr", "points": [
-  { "wavelength_um": 0.78, "flux": 12.3, "flux_err": 0.4, "detector": 1, "band_index": 1 }
-] }
-```
-`flux_err`, `detector` e `band_index` são opcionais. O gráfico usa uma cor por detector (paleta Okabe-Ito),
-círculos para A e losangos para B, e há uma tabela e um CSV com os mesmos dados.
+- O movimento próprio só é enviado para o **próprio alvo**: botão "Espectro do alvo" ou clique a ≤ 1 pixel do
+  centro com "Seguir" ativo (aí RA/Dec enviados são as coordenadas do alvo na época `ref_epoch_jyear`). Qualquer
+  outro ponto (ex.: fundo do céu B) é fixo no céu e vai sem movimento.
+- O raio da UI vira `aperture_arcsec` (padrão 9″, limitado a 3–30″). Timeout de 240 s; enquanto espera, barra de
+  progresso indeterminada e aviso de que a primeira vez é lenta (~1–2 s por exposição).
+- Resposta: `{ unit, points: [{ wavelength_um, bandwidth_um, flux, flux_err, detector, observed_at,
+  observation_id, flagged, flags }], n_exposures, aperture_arcsec, wavelength_source, data_source }`.
+  Erros no envelope `{ error: { code, message } }`.
+
+Gráfico: X = λ (µm), Y = fluxo (unidade do backend), barra de erro = `flux_err`, cor = detector (Okabe-Ito),
+círculos para A e losangos para B. Medidas com `flagged: true` (contaminação na abertura) aparecem com símbolo
+vazado, ficam fora da linha e podem ser escondidas ("Ocultar contaminados"). A nota abaixo do gráfico mostra
+`wavelength_source` (λ aproximado). Tabela e CSV: uma linha por medida, com largura de banda, data, id da
+observação, contaminado e flags. No modo de dados fictícios o espectro é gerado localmente no mesmo formato.
+
+## Contaminação no alvo (detalhes do quadro)
+Depois que a imagem principal carrega, o frontend pede `GET /api/observations/{id}/quality` (sem bloquear; 404 e
+erros são ignorados e a linha não aparece). A linha "Contaminação no alvo" mostra "nenhuma" ou os nomes das flags
+em português (tabela `FLAG_NAMES` em `app.js`; `GHOST*` → "reflexo (ghost)"), com a `description` do backend e as
+maiores frações de pixels sinalizados no quadro como dica (tooltip). Flags listadas em `informational`
+(ex.: `SOURCE`) não contam como contaminação. Não é pedido para a galeria.
 
 ## Mapa de observações (plano cartesiano)
-Gráfico gerado só com os dados já devolvidos pela busca: eixo X = data (`obs_date`), eixo Y = comprimento de onda
-(`wavelength_um`), cor = detector. Sem `wavelength_um`, o eixo Y passa a ser o detector. Clicar num ponto abre o quadro
+Gráfico gerado só com os dados já devolvidos pela busca: eixo X = data (`observed_at`), eixo Y = detector,
+cor = detector. Clicar num ponto abre o quadro
 correspondente, e o anel branco acompanha o quadro em exibição. Pontos escondidos pelos filtros ficam apagados.
 Não exige endpoint novo.
 
@@ -68,6 +147,13 @@ Não exige endpoint novo.
 Carregado sob demanda (botão "Carregar mapa interativo") a partir de `CONFIG.ALADIN_URL`. Mostra o retângulo do FOV,
 o centro da busca, os pontos A/B e, opcionalmente, catálogos Gaia DR3 e AllWISE (via VizieR/CDS).
 Depende de internet e de serviços externos do CDS. Depois de testar, troque a URL `latest` por uma versão fixa.
+
+Gaia/AllWISE (testado em 2026-11-15): `A.catalogFromVizieR` do Aladin 3.8.1 consulta `vizier.unistra.fr`,
+domínio que não resolve no DNS, então as camadas vinham vazias. Agora o frontend monta a consulta VOTable e usa o
+primeiro espelho que responder em `CONFIG.VIZIER_HOSTS` (CDS, depois CfA/Harvard, que tem CORS). No teste, para
+RA 269.446358, Dec 4.767053 e FOV 3′: Gaia DR3 = 300 fontes (limite `-out.max`), AllWISE = 91, via CfA.
+Nesse dia o CDS (alasky, alaskybis, vizier.cds) respondia "Page unavailable": os fundos DSS2/2MASS/AllWISE passaram
+a usar os espelhos do IRSA, mas os mapas SPHEREx (só no CDS) ficaram indisponíveis enquanto o CDS estiver fora.
 
 ### Clique no mapa
 O mapa abre com o céu todo (projeção AIT, `fov: 360`). Clicar num ponto (sem arrastar) preenche RA/Dec no formulário,

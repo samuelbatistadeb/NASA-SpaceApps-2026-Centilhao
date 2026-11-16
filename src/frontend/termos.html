@@ -5,31 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Aprenda os termos — SPHEREx Explorer</title>
   <meta name="description" content="Glossário em linguagem simples para entender RA, Dec, FOV, bandas e outros termos do SPHEREx Explorer.">
+  <meta name="theme-color" content="#03050b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <script src="js/theme.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#conteudo">Ir para o conteúdo</a>
 
   <div class="layout">
-  <aside class="sidebar">
-    <div>
-      <a class="brand" href="index.html#busca"><span class="brand-mark">✳</span><span>SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
-      <div class="nav-label">EXPLORE</div>
-      <nav aria-label="Menu principal"><ul>
-        <li><a href="index.html#busca" ><span class="nav-icon">⌕</span>Explorar o céu</a></li>
-        <li><a href="index.html#observacoes"><span class="nav-icon">◉</span>Observações</a></li>
-        <li><a href="index.html#ceu"><span class="nav-icon">✧</span>Mapa do céu</a></li>
-        <li><a href="index.html#mapa"><span class="nav-icon">⌖</span>Mapa de observações</a></li>
-        <li><a href="index.html#espectro"><span class="nav-icon">∿</span>Espectro</a></li>
-        <li><a href="index.html#galeria"><span class="nav-icon">▦</span>Galeria</a></li>
-        <li><a href="termos.html"><span class="nav-icon">⌁</span>Guia de termos</a></li>
-      </ul></nav>
+  <header class="sidebar navbar">
+    <div class="sidebar-head">
+      <button type="button" class="probe-toggle" aria-expanded="false" aria-controls="menu-principal" hidden><img class="probe-img" src="assets/nasa/spherex-probe-cutout.png" srcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x" alt="" width="40" height="30"><span class="sr-only">Menu de navegação</span></button>
+      <a class="brand" href="index.html#busca"><span class="brand-probe" aria-hidden="true"><img class="probe-img" src="assets/nasa/spherex-probe-cutout.png" srcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x" alt="" width="72" height="54"></span><span class="brand-txt">SPHEREx<span class="brand-sub">EXPLORER · MISSÃO NASA</span></span></a>
     </div>
-    <div class="sidebar-bottom">
-      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small>Arquivo científico · IRSA/IPAC</small></div>
-      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
-    </div>
-  </aside>
+    <span class="feixe" aria-hidden="true"></span>
+    <nav id="menu-principal" aria-label="Menu principal"><ul>
+      <li style="--i:0"><a href="index.html#busca"><span class="nav-icon" aria-hidden="true">⌕</span>Explorar o céu</a></li>
+      <li style="--i:1"><a href="index.html#observacoes"><span class="nav-icon" aria-hidden="true">◉</span>Observações</a></li>
+      <li style="--i:2"><a href="index.html#ceu"><span class="nav-icon" aria-hidden="true">✧</span>Mapa do céu</a></li>
+      <li style="--i:3"><a href="index.html#mapa"><span class="nav-icon" aria-hidden="true">⌖</span>Mapa de observações</a></li>
+      <li style="--i:4"><a href="index.html#espectro"><span class="nav-icon" aria-hidden="true">∿</span>Espectro</a></li>
+      <li style="--i:5"><a href="index.html#galeria"><span class="nav-icon" aria-hidden="true">▦</span>Galeria</a></li>
+      <li style="--i:6"><a href="termos.html" aria-current="page"><span class="nav-icon" aria-hidden="true">⌁</span>Guia de termos</a></li>
+    </ul></nav>
+  </header>
 
   <div class="content">
   <header class="top">
@@ -46,23 +49,23 @@
     <section id="missao" class="panel" aria-labelledby="t-missao">
       <h2 id="t-missao">A missão e os dados</h2>
       <dl class="glossary">
-        <dt>SPHEREx</dt>
+        <dt id="termo-spherex">SPHEREx</dt>
         <dd>Telescópio espacial da NASA que mapeia o céu inteiro em infravermelho. Ele observa a mesma região do céu em momentos diferentes, e isso permite ver o que muda com o tempo.</dd>
-        <dt>Infravermelho</dt>
+        <dt id="termo-infravermelho">Infravermelho</dt>
         <dd>Luz que nossos olhos não enxergam. Ela revela objetos frios ou escondidos por poeira. As imagens que você vê aqui são convertidas para tons que a tela consegue mostrar.</dd>
-        <dt>IRSA/IPAC</dt>
+        <dt id="termo-irsa">IRSA/IPAC</dt>
         <dd>O arquivo científico oficial onde os dados do SPHEREx ficam guardados. É de lá que o projeto busca as observações.</dd>
-        <dt>Produto de dados e identificador</dt>
+        <dt id="termo-produto">Produto de dados e identificador</dt>
         <dd>Cada observação é um arquivo (produto) com um identificador próprio. Esse código permite conferir a origem de qualquer imagem no arquivo científico.</dd>
-        <dt>DR1 e QR3</dt>
+        <dt id="termo-dr1-qr3">DR1 e QR3</dt>
         <dd>Nomes de conjuntos de produtos de dados do SPHEREx. Eles podem ter processamentos diferentes, então não devem ser misturados sem cuidado ao comparar imagens.</dd>
-        <dt>HiPS</dt>
+        <dt id="termo-hips">HiPS</dt>
         <dd>Um formato de mapa do céu em “ladrilhos”, que permite dar zoom do céu inteiro até regiões pequenas sem baixar tudo de uma vez. O mapa do SPHEREx neste site usa esse formato.</dd>
-        <dt>Mapa do céu, Gaia e WISE</dt>
+        <dt id="termo-gaia-wise">Mapa do céu, Gaia e WISE</dt>
         <dd>O mapa do céu mostra onde fica a sua região sobre imagens de outros telescópios. Gaia (missão europeia que mede posição e movimento de estrelas) e WISE (telescópio infravermelho da NASA) têm catálogos que ajudam a ver se algo que aparece no SPHEREx já é um objeto conhecido.</dd>
         <dt>FITS</dt>
         <dd>Formato de arquivo usado na astronomia. Guarda a imagem e muitas informações sobre ela. O sistema converte o FITS para uma imagem comum antes de mostrá-la.</dd>
-        <dt>Dados fictícios</dt>
+        <dt id="termo-ficticios">Dados fictícios</dt>
         <dd>Imagens inventadas, usadas só para testar a interface. Elas sempre aparecem com um aviso e nunca representam observações científicas.</dd>
       </dl>
     </section>
@@ -72,15 +75,15 @@
       <dl class="glossary">
         <dt>Coordenadas celestes</dt>
         <dd>Um endereço para pontos do céu, como latitude e longitude na Terra. Aqui usamos dois números: RA e Dec.</dd>
-        <dt>Ascensão reta (RA)</dt>
+        <dt id="termo-ra">Ascensão reta (RA)</dt>
         <dd>É a “longitude” do céu. Neste site é informada em graus, de 0 a 360. Em catálogos ela também aparece em horas (0 a 24 h), onde 1 hora equivale a 15 graus. O site aceita os dois formatos, por exemplo 133.795 ou 08h55m10.831s.</dd>
-        <dt>Declinação (Dec)</dt>
+        <dt id="termo-dec">Declinação (Dec)</dt>
         <dd>É a “latitude” do céu, em graus. Vai de −90 (polo sul celeste) a +90 (polo norte celeste), e 0 é o equador celeste.</dd>
-        <dt>Campo de visão (FOV)</dt>
+        <dt id="termo-fov">Campo de visão (FOV)</dt>
         <dd>O tamanho da região recortada ao redor do ponto escolhido. Aqui é medido em minutos de arco. Quanto maior o valor, mais céu aparece e menos detalhe cabe em cada ponto.</dd>
-        <dt>Minuto de arco</dt>
+        <dt id="termo-arcmin">Minuto de arco</dt>
         <dd>Unidade de ângulo: 1 grau tem 60 minutos de arco. Como referência, a Lua cheia vista da Terra tem cerca de 30 minutos de arco de largura.</dd>
-        <dt>Recorte</dt>
+        <dt id="termo-recorte">Recorte</dt>
         <dd>Um pedaço da imagem original do SPHEREx, centrado nas coordenadas que você informou. Os recortes são menores e mais rápidos de carregar do que a imagem inteira.</dd>
       </dl>
     </section>
@@ -88,27 +91,33 @@
     <section id="tempo" class="panel" aria-labelledby="t-tempo">
       <h2 id="t-tempo">Como ler a sequência</h2>
       <dl class="glossary">
-        <dt>Época de observação</dt>
+        <dt id="termo-epoca">Época de observação</dt>
         <dd>A data em que a imagem foi registrada. Cada quadro da sequência é uma época diferente, ordenada da mais antiga para a mais recente.</dd>
-        <dt>Comprimento de onda</dt>
+        <dt id="termo-comprimento-onda">Comprimento de onda</dt>
         <dd>A “cor” da luz infravermelha, medida em micrômetros (µm). O SPHEREx cobre aproximadamente de 0,75 a 5 µm, dividido em 102 bandas.</dd>
-        <dt>Banda espectral</dt>
+        <dt id="termo-banda">Banda espectral</dt>
         <dd>Uma faixa de cor (comprimento de onda) em que o telescópio observa. Bandas diferentes não são momentos diferentes: por isso o site nunca as trata como passagem de tempo.</dd>
-        <dt>Detector</dt>
+        <dt id="termo-detector">Detector</dt>
         <dd>O sensor do telescópio que registrou a imagem. O SPHEREx tem seis conjuntos de detectores, e cada um cobre uma parte do espectro. Neste site eles aparecem como D1 a D6. As 102 bandas se dividem em 17 por detector, e os detectores 1 a 6 cobrem, em ordem, do menor ao maior comprimento de onda.</dd>
-        <dt>Movimento próprio</dt>
+        <dt id="termo-movimento-proprio">Movimento próprio</dt>
         <dd>Algumas estrelas e objetos mudam de posição no céu ao longo dos anos. Em poucos meses o deslocamento é pequeno, mas pode ser notado entre quadros.</dd>
-        <dt>Mapa de observações</dt>
+        <dt id="termo-mapa-observacoes">Mapa de observações</dt>
         <dd>Um gráfico em plano cartesiano: cada ponto é uma observação, com a data no eixo horizontal e o comprimento de onda no vertical. Mostra de uma vez quando e em que “cores” a região foi observada.</dd>
-        <dt>Espectro</dt>
-        <dd>Um gráfico do brilho de um ponto em cada comprimento de onda. Mostra “de que cores infravermelhas” o objeto é feito e ajuda a distinguir tipos de objeto.</dd>
-        <dt>Abertura (raio)</dt>
-        <dd>O tamanho do círculo, em segundos de arco, ao redor do ponto clicado. O brilho é somado dentro dele. Um círculo maior capta mais luz, mas também mais ruído do fundo.</dd>
-        <dt>Fundo do céu</dt>
+        <dt id="termo-espectro">Espectro</dt>
+        <dd>Um gráfico do brilho de um ponto em cada comprimento de onda. Mostra “de que cores infravermelhas” o objeto é feito e ajuda a distinguir tipos de objeto. No SPHEREx, cada imagem registra comprimentos de onda diferentes em partes diferentes do detector (filtro linear variável); por isso cada ponto do gráfico vem de uma exposição diferente, em que o objeto caiu numa posição diferente do detector. O comprimento de onda de cada medida é aproximado.</dd>
+        <dt id="termo-abertura">Abertura (raio)</dt>
+        <dd>O tamanho do círculo, em segundos de arco, ao redor do ponto clicado (padrão 9″, de 3″ a 30″). O fluxo é a média dentro do círculo menos o fundo local, medido num anel em volta. Um círculo maior capta mais luz, mas também mais ruído e mais estrelas vizinhas.</dd>
+        <dt id="termo-contaminacao">Contaminação (flags)</dt>
+        <dd>Cada imagem do SPHEREx vem com uma máscara que marca pixels problemáticos: raio cósmico, saturação, pixel morto ou quente, reflexo (ghost), rastro de satélite e outros. Uma medida “contaminada” tem algum desses pixels dentro da abertura e merece desconfiança; no gráfico ela aparece com símbolo vazado. A marca “fonte conhecida” (SOURCE) é só informativa e não conta como contaminação.</dd>
+        <dt id="termo-quadro-comum">Quadro comum</dt>
+        <dd>Todas as imagens são reprojetadas para a mesma grade: norte para cima, leste à esquerda, pixel de 6,15″ e lado igual ao FOV. Assim, o mesmo pixel corresponde ao mesmo ponto do céu em todas as datas. Com “Seguir o movimento do alvo”, o centro de cada quadro acompanha a posição do alvo naquela data.</dd>
+        <dt id="termo-cobertura">Cobertura</dt>
+        <dd>A fração do quadro que caiu dentro do detector naquela exposição. Um quadro com cobertura parcial tem uma parte sem dados (hachurada), que não é céu escuro.</dd>
+        <dt id="termo-fundo-ceu">Fundo do céu</dt>
         <dd>Uma região sem o objeto de interesse. Comparar o alvo (A) com o fundo (B) mostra o que vem do objeto e o que vem do céu ao redor.</dd>
-        <dt>Resolução espacial</dt>
+        <dt id="termo-resolucao">Resolução espacial</dt>
         <dd>O nível de detalhe da imagem. As imagens do SPHEREx mostram os objetos com poucos pontos, então não espere fotos nítidas como as de câmeras comuns.</dd>
-        <dt>Brilho e comparação</dt>
+        <dt id="termo-brilho">Brilho e comparação</dt>
         <dd>Um objeto parecer mais claro ou escuro entre dois quadros não prova que ele mudou. A comparação de brilho exige análise científica e está fora deste protótipo.</dd>
       </dl>
     </section>
@@ -136,8 +145,29 @@
     <p><a class="link-btn" href="index.html#busca">Voltar à pesquisa</a></p>
   </main>
 
-  <footer>
-    As explicações têm fins educativos. Para detalhes científicos, consulte a documentação oficial da missão SPHEREx e do IRSA.
+  <footer class="site-footer">
+    <section class="sobre-missao" aria-labelledby="t-sobre">
+      <h2 id="t-sobre">Sobre a missão SPHEREx</h2>
+      <p>O SPHEREx é um telescópio espacial da NASA que mapeia o céu inteiro em infravermelho, em 102 cores. Como ele observa a mesma região em datas diferentes, dá para comparar o céu ao longo do tempo.</p>
+      <div class="missao-galeria">
+        <figure>
+          <img src="assets/nasa/spherex-in-orbit-pia26531.jpg" width="800" height="450" loading="lazy" alt="Ilustração da sonda SPHEREx em órbita da Terra: um grande escudo em forma de cone sobre o corpo da nave, com um painel solar ao lado.">
+          <figcaption>Ilustração (conceito artístico) do SPHEREx em órbita. Os escudos fotônicos em forma de cone bloqueiam a luz e o calor do Sol e da Terra.
+            <span class="credito">Crédito: <a href="https://www.jpl.nasa.gov/images/pia26531-spherex-in-orbit-artists-concept/" rel="noopener">NASA/JPL-Caltech (PIA26531)</a></span></figcaption>
+        </figure>
+        <figure>
+          <img src="assets/nasa/spherex-all-sky-map-pia26600.jpg" width="960" height="540" loading="lazy" alt="Primeiro mapa do céu inteiro feito pelo SPHEREx: uma elipse com a faixa brilhante da Via Láctea no centro, poeira em tons de vermelho e gás hidrogênio quente em azul.">
+          <figcaption>Primeiro mapa do céu inteiro do SPHEREx, em 102 cores infravermelhas (observações de maio a dezembro de 2025). Azul: gás hidrogênio quente; vermelho: poeira.
+            <span class="credito">Crédito: <a href="https://www.jpl.nasa.gov/images/pia26600-spherexs-first-all-sky-map/" rel="noopener">NASA/JPL-Caltech (PIA26600)</a></span></figcaption>
+        </figure>
+      </div>
+    </section>
+    <div class="footer-meta">
+      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small>Arquivo científico · IRSA/IPAC</small></div>
+      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
+    </div>
+    <p class="rodape-texto">As explicações têm fins educativos. Para detalhes científicos, consulte a documentação oficial da missão SPHEREx e do IRSA.</p>
+    <p class="rodape-texto">Imagens da missão: NASA/JPL-Caltech, usadas conforme as diretrizes de mídia da NASA e do JPL (<a href="assets/CREDITS.md">créditos e fontes</a>). Projeto independente, sem endosso da NASA, do JPL ou do Caltech. Sonda na barra de navegação: render oficial do SPHEREx com fundo transparente, Courtesy NASA/JPL-Caltech (Caltech SPHEREx Science Center), reduzido. Ícone e fundo estrelado: criação do projeto.</p>
   </footer>
   </div>
   </div>

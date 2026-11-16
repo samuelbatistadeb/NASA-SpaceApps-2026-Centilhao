@@ -18,6 +18,7 @@ import hashlib
 import json
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -68,12 +69,24 @@ class DiskCache:
         return age > self.ttl_seconds
 
     # -- JSON -------------------------------------------------------------------
-    def get_json(self, namespace: str, key: str) -> Any | None:
-        """Return a cached JSON payload, or ``None`` when missing or expired."""
+    def get_json(self, namespace: str, key: str, *, allow_stale: bool = False) -> Any | None:
+        """Return a cached JSON payload, or ``None`` when missing or expired.
+
+        ``allow_stale`` ignores the time to live (used as a fallback when the
+        archive is unavailable, and for immutable entries).
+        """
+        entry = self.get_json_entry(namespace, key)
+        if entry is None:
+            return None
+        payload, _created_at, expired = entry
+        if expired and not allow_stale:
+            return None
+        return payload
+
+    def get_json_entry(self, namespace: str, key: str) -> tuple[Any, float, bool] | None:
+        """Return ``(payload, created_at, expired)`` or ``None`` when missing."""
         path = self.path(namespace, key)
         if not path.exists():
-            return None
-        if self._is_expired(path):
             return None
         try:
             envelope = json.loads(path.read_text(encoding="utf-8"))
@@ -81,24 +94,46 @@ class DiskCache:
             return None
         if not isinstance(envelope, dict) or "payload" not in envelope:
             return None
-        return envelope["payload"]
+        created_at = float(envelope.get("created_at") or path.stat().st_mtime)
+        return envelope["payload"], created_at, self._is_expired(path)
 
     def set_json(self, namespace: str, key: str, payload: Any) -> None:
         """Store a JSON payload in the cache."""
-        self._ensure_directory(namespace)
         envelope = {"created_at": time.time(), "payload": payload}
+        self._write_atomic(namespace, key, json.dumps(envelope).encode("utf-8"))
+
+    def _write_atomic(self, namespace: str, key: str, content: bytes) -> None:
+        """Write through a temporary file unique to this thread, then rename.
+
+        Several threads may store the same key at once (same image, same
+        calibration). On Windows the rename fails while another process
+        (another writer, an antivirus, OneDrive sync) holds the target; the
+        write is retried and, as a last resort, skipped: the cache is an
+        optimisation, never a reason to fail a request.
+        """
+        self._ensure_directory(namespace)
         path = self.path(namespace, key)
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(envelope), encoding="utf-8")
-        os.replace(temporary, path)
+        temporary = path.with_name(f"{path.stem}.{os.getpid()}.{threading.get_ident()}.tmp")
+        temporary.write_bytes(content)
+        for attempt in range(5):
+            try:
+                os.replace(temporary, path)
+                return
+            except PermissionError:
+                time.sleep(0.05 * (attempt + 1))
+        logger.warning("Cache entry %s/%s not written (file in use)", namespace, key)
+        try:
+            temporary.unlink()
+        except OSError:  # pragma: no cover - best effort
+            pass
 
     # -- bytes ------------------------------------------------------------------
-    def get_bytes(self, namespace: str, key: str) -> bytes | None:
+    def get_bytes(self, namespace: str, key: str, *, allow_stale: bool = False) -> bytes | None:
         """Return cached binary content, or ``None`` when missing or expired."""
         path = self.path(namespace, key)
         if not path.exists():
             return None
-        if self._is_expired(path):
+        if not allow_stale and self._is_expired(path):
             return None
         try:
             return path.read_bytes()
@@ -107,8 +142,4 @@ class DiskCache:
 
     def set_bytes(self, namespace: str, key: str, payload: bytes) -> None:
         """Store binary content in the cache."""
-        self._ensure_directory(namespace)
-        path = self.path(namespace, key)
-        temporary = path.with_suffix(".tmp")
-        temporary.write_bytes(payload)
-        os.replace(temporary, path)
+        self._write_atomic(namespace, key, payload)

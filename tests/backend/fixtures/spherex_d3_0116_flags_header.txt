@@ -1,0 +1,186 @@
+XTENSION= 'IMAGE   '           / Image extension                                
+BITPIX  =                   32 / array data type                                
+NAXIS   =                    2 / number of array dimensions                     
+NAXIS1  =                   29                                                  
+NAXIS2  =                   29                                                  
+PCOUNT  =                    0 / number of parameters                           
+GCOUNT  =                    1 / number of groups                               
+EXTNAME = 'FLAGS   '           / name of this binary table extension            
+BUNIT   = '' / Unit of flag pixel value (dimensionless)                         
+EXTTYPE = 'MASK    '           / Extension can be used as a mask overlay        
+WCSAXES =                    2 / Number of coordinate axes                      
+CRPIX1  =                686.5 / Pixel coordinate of reference point            
+CRPIX2  =                872.5 / Pixel coordinate of reference point            
+PC1_1   =     0.00162109325783 / Coordinate transformation matrix element       
+PC1_2   =   -0.000480883137386 / Coordinate transformation matrix element       
+PC2_1   =   -0.000545275460402 / Coordinate transformation matrix element       
+PC2_2   =    -0.00163988082407 / Coordinate transformation matrix element       
+CDELT1  =                  1.0 / [deg] Coordinate increment at reference point  
+CDELT2  =                  1.0 / [deg] Coordinate increment at reference point  
+CUNIT1  = 'deg'                / Units of coordinate increment and value        
+CUNIT2  = 'deg'                / Units of coordinate increment and value        
+CTYPE1  = 'RA---TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+CTYPE2  = 'DEC--TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+CRVAL1  =        134.414675682 / [deg] Coordinate value at reference point      
+CRVAL2  =        -9.0062724739 / [deg] Coordinate value at reference point      
+LONPOLE =                180.0 / [deg] Native longitude of celestial pole       
+LATPOLE =        -9.0062724739 / [deg] Native latitude of celestial pole        
+MJDREF  =                  0.0 / [d] MJD of fiducial time                       
+RADESYS = 'ICRS'               / Equatorial coordinate system                   
+A_ORDER =                    3 / SIP polynomial order, axis 0, detector to sky  
+A_0_0   =      -0.405191259862 / SIP distortion coefficient                     
+A_0_1   =    9.64767108344E-05 / SIP distortion coefficient                     
+A_0_2   =    1.39036943423E-06 / SIP distortion coefficient                     
+A_0_3   =    3.19543979171E-11 / SIP distortion coefficient                     
+A_1_0   =   -2.85362604877E-05 / SIP distortion coefficient                     
+A_1_1   =    4.16953952278E-06 / SIP distortion coefficient                     
+A_1_2   =    6.03418536762E-10 / SIP distortion coefficient                     
+A_2_0   =    1.59683498851E-06 / SIP distortion coefficient                     
+A_2_1   =    1.40715238481E-10 / SIP distortion coefficient                     
+A_3_0   =    5.72088608098E-10 / SIP distortion coefficient                     
+B_ORDER =                    3 / SIP polynomial order, axis 1, detector to sky  
+B_0_0   =       -1.16491682327 / SIP distortion coefficient                     
+B_0_1   =    -9.1471658011E-05 / SIP distortion coefficient                     
+B_0_2   =     1.9958373108E-06 / SIP distortion coefficient                     
+B_0_3   =    4.91694854655E-10 / SIP distortion coefficient                     
+B_1_0   =   -2.54797440042E-05 / SIP distortion coefficient                     
+B_1_1   =    7.46675132731E-07 / SIP distortion coefficient                     
+B_1_2   =    5.56014268844E-11 / SIP distortion coefficient                     
+B_2_0   =    6.65706232777E-06 / SIP distortion coefficient                     
+B_2_1   =    6.24685153401E-10 / SIP distortion coefficient                     
+B_3_0   =     3.4553034759E-11 / SIP distortion coefficient                     
+AP_ORDER=                    3 / SIP polynomial order, axis 0, sky to detector  
+AP_0_0  =        0.40296071148 / SIP distortion coefficient                     
+AP_0_1  =   -0.000101645442925 / SIP distortion coefficient                     
+AP_0_2  =   -1.38443636263E-06 / SIP distortion coefficient                     
+AP_0_3  =   -2.02406915658E-11 / SIP distortion coefficient                     
+AP_1_0  =    2.14209063099E-05 / SIP distortion coefficient                     
+AP_1_1  =   -4.15143694935E-06 / SIP distortion coefficient                     
+AP_1_2  =   -5.69063972127E-10 / SIP distortion coefficient                     
+AP_2_0  =   -1.58857618208E-06 / SIP distortion coefficient                     
+AP_2_1  =     -9.832585057E-11 / SIP distortion coefficient                     
+AP_3_0  =   -5.37379960645E-10 / SIP distortion coefficient                     
+BP_ORDER=                    3 / SIP polynomial order, axis 1, sky to detector  
+BP_0_0  =        1.15988228277 / SIP distortion coefficient                     
+BP_0_1  =    8.56159677122E-05 / SIP distortion coefficient                     
+BP_0_2  =    -1.9838851992E-06 / SIP distortion coefficient                     
+BP_0_3  =   -4.81144857448E-10 / SIP distortion coefficient                     
+BP_1_0  =    1.90626047114E-05 / SIP distortion coefficient                     
+BP_1_1  =   -7.39698695731E-07 / SIP distortion coefficient                     
+BP_1_2  =   -2.91266968748E-11 / SIP distortion coefficient                     
+BP_2_0  =   -6.63855643872E-06 / SIP distortion coefficient                     
+BP_2_1  =   -5.38963345658E-10 / SIP distortion coefficient                     
+BP_3_0  =   -8.19603209264E-12 / SIP distortion coefficient                     
+WCSAXESA=                    2 / Number of coordinate axes                      
+CRPIX1A =               -333.0 / Pixel coordinate of reference point            
+CRPIX2A =               -147.0 / Pixel coordinate of reference point            
+CDELT1A =                  1.0 / [pixel] Coordinate increment at reference point
+CDELT2A =                  1.0 / [pixel] Coordinate increment at reference point
+CUNIT1A = 'pixel'              / Units of coordinate increment and value        
+CUNIT2A = 'pixel'              / Units of coordinate increment and value        
+CTYPE1A = 'LINEAR'             / Coordinate type code                           
+CTYPE2A = 'LINEAR'             / Coordinate type code                           
+CRVAL1A =                  0.0 / [pixel] Coordinate value at reference point    
+CRVAL2A =                  0.0 / [pixel] Coordinate value at reference point    
+LATPOLEA=                 90.0 / [deg] Native latitude of celestial pole        
+WCSNAMEA= '0-based active pixel coordinates' / Coordinate system title          
+TIMESYS = 'UTC'                / Time scale                                     
+DATE-OBS= '2025-05-05T16:48:02.459' / ISO-8601 time of observation              
+MJD-OBS =      60800.700028461 / [d] MJD of observation                         
+DATE-BEG= '2025-05-05T16:48:02.459' / ISO-8601 time at start of observation     
+MJD-BEG =      60800.700028461 / [d] MJD at start of observation                
+DATE-AVG= '2025-05-05T16:49:00.018' / ISO-8601 time at midpoint of observation  
+MJD-AVG =       60800.70069465 / [d] MJD at midpoint of observation             
+DATE-END= '2025-05-05T16:49:57.577' / ISO-8601 time at end of observation       
+MJD-END =      60800.701360839 / [d] MJD at end of observation                  
+XPOSURE =             113.5826 / [s] Exposure (integration) time                
+TELAPSE =             118.1873 / [s] Elapsed time (start to stop)               
+WCSAXESW=                    2 / Two output axes: wavelength and bandwidth      
+WCSNAMEW= 'Approximated per-pixel wavelength and bandwidth' / WCS label         
+CNAME1W = 'Wavelength'         / First output axis is central wavelength        
+CNAME2W = 'Bandwidth'          / Second output axis is bandwidth                
+CRPIX1W =               -333.0 / Lookup table is in raw FITS coordinates        
+CRPIX2W =               -147.0 / Lookup table is in raw FITS coordinates        
+CDELT1W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+CDELT2W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+CUNIT1W = 'um      '           / Wavelength is reported in microns              
+CUNIT2W = 'um      '           / Bandpass is reported in microns                
+CTYPE1W = 'WAVE-TAB'           / Bilinear lookup table, FITS Paper 3, Sect 6.1  
+CTYPE2W = 'WAVE-TAB'           / Bilinear lookup table, FITS Paper 3, Sect 6.1  
+CRVAL1W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+CRVAL2W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+PV1_3W  =                    1 / Index of wavelength in VALUES array            
+PV2_3W  =                    2 / Index of bandwidth in VALUES array             
+PS1_0W  = 'WCS-WAVE'           / Extension with wavelength lookup table         
+PS2_0W  = 'WCS-WAVE'           / Extension with bandwidth lookup table          
+PS1_1W  = 'VALUES  '           / Column with values for wavelength              
+PS2_1W  = 'VALUES  '           / Column with values for bandwidth               
+PS1_2W  = 'X       '           / Column with control points for detector in X   
+PS2_2W  = 'Y       '           / Column with control points for detector in Y   
+MSKN0000= 'TRANSIENT'          / Name for mask plane 0                          
+MSKM0000=                    1 / Bitmask for plane n=0; always 1<<n             
+MSKD0000= 'Transient detected during SUR'                                       
+MSKN0001= 'OVERFLOW'           / Name for mask plane 1                          
+MSKM0001=                    2 / Bitmask for plane n=1; always 1<<n             
+MSKD0001= 'Overflow detected during SUR'                                        
+MSKN0002= 'SUR_ERROR'          / Name for mask plane 2                          
+MSKM0002=                    4 / Bitmask for plane n=2; always 1<<n             
+MSKD0002= 'Error in onboard processing'                                         
+MSKN0006= 'NONFUNC '           / Name for mask plane 6                          
+MSKM0006=                   64 / Bitmask for plane n=6; always 1<<n             
+MSKD0006= 'Permanently unusable'                                                
+MSKN0007= 'DICHROIC'           / Name for mask plane 7                          
+MSKM0007=                  128 / Bitmask for plane n=7; always 1<<n             
+MSKD0007= 'Low efficiency due to dichroic'                                      
+MSKN0009= 'MISSING_DATA'       / Name for mask plane 9                          
+MSKM0009=                  512 / Bitmask for plane n=9; always 1<<n             
+MSKD0009= 'Onboard data lost'                                                   
+MSKN0010= 'HOT     '           / Name for mask plane 10                         
+MSKM0010=                 1024 / Bitmask for plane n=10; always 1<<n            
+MSKD0010= 'Hot pixel'                                                           
+MSKN0011= 'COLD    '           / Name for mask plane 11                         
+MSKM0011=                 2048 / Bitmask for plane n=11; always 1<<n            
+MSKD0011= 'Anomalously low signal'                                              
+MSKN0012= 'FULLSAMPLE'         / Name for mask plane 12                         
+MSKM0012=                 4096 / Bitmask for plane n=12; always 1<<n            
+MSKD0012= 'Pixel full sample history is available'                              
+MSKN0014= 'PHANMISS'           / Name for mask plane 14                         
+MSKM0014=                16384 / Bitmask for plane n=14; always 1<<n            
+MSKD0014= 'Phantom correction was not applied'                                  
+MSKN0015= 'NONLINEAR'          / Name for mask plane 15                         
+MSKM0015=                32768 / Bitmask for plane n=15; always 1<<n            
+MSKD0015= 'Nonlinearity correction cannot be applied reliably'                  
+MSKN0017= 'PERSIST '           / Name for mask plane 17                         
+MSKM0017=               131072 / Bitmask for plane n=17; always 1<<n            
+MSKD0017= 'Persistent charge above threshold'                                   
+MSKN0019= 'OUTLIER '           / Name for mask plane 19                         
+MSKM0019=               524288 / Bitmask for plane n=19; always 1<<n            
+MSKD0019= 'Pixel flagged by Detect Outliers'                                    
+MSKN0020= 'CROSSTALK'          / Name for mask plane 20                         
+MSKM0020=              1048576 / Bitmask for plane n=20; always 1<<n            
+MSKD0020= 'Pixel affected by crosstalk.'                                        
+MSKN0021= 'SOURCE  '           / Name for mask plane 21                         
+MSKM0021=              2097152 / Bitmask for plane n=21; always 1<<n            
+MSKD0021= 'Pixel mapped to a known source'                                      
+MSKN0022= 'GHOST   '           / Name for mask plane 22                         
+MSKM0022=              4194304 / Bitmask for plane n=22; always 1<<n            
+MSKD0022= 'Affected by a bright source inside the exposure'                     
+MSKN0023= 'GHOST_FPA'          / Name for mask plane 23                         
+MSKM0023=              8388608 / Bitmask for plane n=23; always 1<<n            
+MSKD0023= 'Affected by a bright source on another detector'                     
+MSKN0024= 'GHOST_EXT'          / Name for mask plane 24                         
+MSKM0024=             16777216 / Bitmask for plane n=24; always 1<<n            
+MSKD0024= 'Pixel affected by a bright source outside FOV'                       
+MSKN0025= 'STREAK  '           / Name for mask plane 25                         
+MSKM0025=             33554432 / Bitmask for plane n=25; always 1<<n            
+MSKD0025= 'Pixel affected by a streak'                                          
+MSKN0026= 'BLOOM   '           / Name for mask plane 26                         
+MSKM0026=             67108864 / Bitmask for plane n=26; always 1<<n            
+MSKD0026= 'Pixel part of a bloom artifact'                                      
+MSKN0027= 'SNOWBALL'           / Name for mask plane 27                         
+MSKM0027=            134217728 / Bitmask for plane n=27; always 1<<n            
+MSKD0027= 'Pixel part of a snowball artifact'                                   
+MSKN0028= 'HALO    '           / Name for mask plane 28                         
+MSKM0028=            268435456 / Bitmask for plane n=28; always 1<<n            
+MSKD0028= 'Pixel part of a transient halo'                                      
+END                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    

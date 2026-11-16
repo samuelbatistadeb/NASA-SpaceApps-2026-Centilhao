@@ -6,17 +6,18 @@ it must be provided through an environment variable (a local ``.env`` file is
 already ignored by git).
 
 This module is the single place where the IRSA service addresses are read. The
-official SPHEREx endpoints hosted by IRSA/IPAC were **not verified yet** (see
-``docs/science/data-sources.md``), therefore every address defaults to an empty
-string. An empty address means "source not configured": the API then answers
-``SOURCE_UNAVAILABLE`` instead of querying an unverified URL or returning
-fictitious observations.
+SIA v2 endpoint ``https://irsa.ipac.caltech.edu/SIA`` was verified by real
+queries (DECISÃO 007 and DECISÃO 009) and is the default. IRSA has no
+standalone cutout service: cutouts are requested from the IBE address of each
+product (``<access_url>?center=..&size=..``), so the cutout address stays empty
+by default.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
@@ -43,6 +44,45 @@ ENV_CACHE_TTL = "SPHEREX_CACHE_TTL_SECONDS"
 ENV_CORS_ORIGINS = "SPHEREX_CORS_ORIGINS"
 ENV_PORT = "SPHEREX_PORT"
 ENV_CUTOUT_MODE = "SPHEREX_CUTOUT_MODE"
+ENV_ALLOWED_DOWNLOAD_HOSTS = "SPHEREX_ALLOWED_DOWNLOAD_HOSTS"
+ENV_MAX_CONCURRENT_PRODUCT_REQUESTS = "SPHEREX_MAX_CONCURRENT_PRODUCT_REQUESTS"
+ENV_COLLECTIONS = "SPHEREX_COLLECTIONS"
+ENV_COLLECTIONS_DISCOVERY_TTL = "SPHEREX_COLLECTIONS_DISCOVERY_TTL_SECONDS"
+ENV_HIPS_BASE = "SPHEREX_HIPS_BASE"
+
+#: SIA v2 collections queried by default (docs/research.md, DECISÃO 009):
+#: the Spectral Image MEFs of DR1 and QR3, wide and deep surveys. The DR1
+#: All-Sky Cube (``spherex_dr1_cube``) is not a per-observation image.
+DEFAULT_SPHEREX_COLLECTIONS: tuple[str, ...] = (
+    "spherex_dr1",
+    "spherex_qr3",
+    "spherex_dr1_deep",
+    "spherex_qr3_deep",
+)
+
+#: Special value of ``SPHEREX_COLLECTIONS`` that enables the discovery of the
+#: collections published by the IRSA SIA v2 self-description.
+COLLECTIONS_AUTO = "auto"
+
+#: How long (seconds) a successful discovery of collections is reused.
+DEFAULT_COLLECTIONS_DISCOVERY_TTL_SECONDS = 6 * 3600
+
+#: HiPS maps of SPHEREx used by the frontend (CDS, QR2, one per detector; the
+#: detector number 1..6 is appended). Registered in the CDS MocServer as
+#: ``CDS/P/SPHEREx/QR2/D1..D6`` (checked on 2026-11-15; no DR1 HiPS listed).
+DEFAULT_SPHEREX_HIPS_BASE = "https://alasky.cds.unistra.fr/SPHEREx/D"
+
+#: Safe shape of a collection name (it is sent as a query parameter).
+_COLLECTION_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+#: Simultaneous cutouts/downloads sent to IRSA (it answers 503 when overloaded).
+DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS = 3
+
+#: SIA v2 endpoint of IRSA, verified on 2026-11-14 (DECISÃO 007 / 009).
+VERIFIED_IRSA_SIA_URL = "https://irsa.ipac.caltech.edu/SIA"
+
+#: Hosts from which scientific files may be downloaded (RNF-006).
+DEFAULT_ALLOWED_DOWNLOAD_HOSTS: tuple[str, ...] = ("irsa.ipac.caltech.edu",)
 
 #: Default user agent sent to IRSA. It identifies the project and the challenge.
 DEFAULT_USER_AGENT = "SPHERExExplorer/0.1 (NASA Space Apps Challenge 2026)"
@@ -146,15 +186,25 @@ class Settings:
     Attributes are immutable; a new instance is created by :meth:`from_env`.
     """
 
-    # --- IRSA services (addresses pending verification by the researcher) ---
-    irsa_sia2_base_url: str = ""
+    # --- IRSA services ---
+    irsa_sia2_base_url: str = VERIFIED_IRSA_SIA_URL
     irsa_cutout_base_url: str = ""
     irsa_data_base_url: str = ""
+    allowed_download_hosts: tuple[str, ...] = DEFAULT_ALLOWED_DOWNLOAD_HOSTS
+
+    # --- SPHEREx data releases ---
+    #: Collections sent to the SIA v2 (and the fallback when discovery fails).
+    spherex_collections: tuple[str, ...] = DEFAULT_SPHEREX_COLLECTIONS
+    #: Discover the collections from the SIA self-description (``=auto``).
+    discover_collections: bool = False
+    collections_discovery_ttl_seconds: int = DEFAULT_COLLECTIONS_DISCOVERY_TTL_SECONDS
+    hips_base_url: str = DEFAULT_SPHEREX_HIPS_BASE
 
     # --- HTTP behaviour ---
     http_timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     http_max_attempts: int = DEFAULT_MAX_ATTEMPTS
     user_agent: str = DEFAULT_USER_AGENT
+    max_concurrent_product_requests: int = DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS
 
     # --- Processing guards ---
     max_cutout_pixels: int = DEFAULT_MAX_CUTOUT_PIXELS
@@ -190,6 +240,8 @@ class Settings:
             raise ConfigurationError("http_timeout_seconds must be greater than zero")
         if self.http_max_attempts < 1:
             raise ConfigurationError("http_max_attempts must be >= 1")
+        if self.max_concurrent_product_requests < 1:
+            raise ConfigurationError("max_concurrent_product_requests must be >= 1")
         if self.max_fits_bytes <= 0:
             raise ConfigurationError("max_fits_bytes must be greater than zero")
         if self.default_cutout_pixels <= 0:
@@ -205,6 +257,15 @@ class Settings:
         if self.cutout_mode not in CUTOUT_MODES:
             raise ConfigurationError(
                 f"cutout_mode must be one of {CUTOUT_MODES}, got {self.cutout_mode!r}"
+            )
+        if not self.spherex_collections:
+            raise ConfigurationError("spherex_collections must not be empty")
+        for name in self.spherex_collections:
+            if not _COLLECTION_NAME_PATTERN.match(name):
+                raise ConfigurationError(f"invalid collection name: {name!r}")
+        if self.collections_discovery_ttl_seconds <= 0:
+            raise ConfigurationError(
+                "collections_discovery_ttl_seconds must be greater than zero"
             )
         return self
 
@@ -240,8 +301,36 @@ class Settings:
             else DEFAULT_CACHE_DIR
         )
 
+        raw_hosts = environment.get(ENV_ALLOWED_DOWNLOAD_HOSTS)
+        if raw_hosts and raw_hosts.strip():
+            hosts = tuple(h.strip() for h in raw_hosts.split(",") if h.strip())
+        else:
+            hosts = DEFAULT_ALLOWED_DOWNLOAD_HOSTS
+
+        # SPHEREX_COLLECTIONS: comma separated list, or "auto" (discovery with
+        # the default list as fallback). Empty/missing = default list.
+        raw_collections = (environment.get(ENV_COLLECTIONS) or "").strip()
+        discover = raw_collections.lower() == COLLECTIONS_AUTO
+        if raw_collections and not discover:
+            collections = tuple(
+                dict.fromkeys(c.strip() for c in raw_collections.split(",") if c.strip())
+            )
+        else:
+            collections = DEFAULT_SPHEREX_COLLECTIONS
+
         settings = cls(
-            irsa_sia2_base_url=_get_str(environment, ENV_IRSA_SIA2_URL, ""),
+            spherex_collections=collections,
+            discover_collections=discover,
+            collections_discovery_ttl_seconds=_get_int(
+                environment,
+                ENV_COLLECTIONS_DISCOVERY_TTL,
+                DEFAULT_COLLECTIONS_DISCOVERY_TTL_SECONDS,
+            ),
+            hips_base_url=_get_str(environment, ENV_HIPS_BASE, DEFAULT_SPHEREX_HIPS_BASE),
+            irsa_sia2_base_url=_get_str(
+                environment, ENV_IRSA_SIA2_URL, VERIFIED_IRSA_SIA_URL
+            ),
+            allowed_download_hosts=hosts,
             irsa_cutout_base_url=_get_str(environment, ENV_IRSA_CUTOUT_URL, ""),
             irsa_data_base_url=_get_str(environment, ENV_IRSA_DATA_BASE_URL, ""),
             http_timeout_seconds=_get_float(
@@ -251,6 +340,11 @@ class Settings:
                 environment, ENV_HTTP_MAX_ATTEMPTS, DEFAULT_MAX_ATTEMPTS
             ),
             user_agent=_get_str(environment, ENV_USER_AGENT, DEFAULT_USER_AGENT),
+            max_concurrent_product_requests=_get_int(
+                environment,
+                ENV_MAX_CONCURRENT_PRODUCT_REQUESTS,
+                DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS,
+            ),
             max_cutout_pixels=_get_int(
                 environment, ENV_MAX_CUTOUT_PIXELS, DEFAULT_MAX_CUTOUT_PIXELS
             ),

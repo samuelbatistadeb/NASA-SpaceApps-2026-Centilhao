@@ -919,3 +919,24 @@ Fonte: https://caltech-ipac.github.io/irsa-tutorials/spherex/ — **consultados 
    `s_pixel_scale` (6.15").
 9. **Normalização visual por frame** (ou por banda): R Dra varia ~6.5 mag em V — um
    *stretch* fixo tornará a sequência ilegível.
+
+## 18. Atualização de releases (coleções SPHEREx) — verificação de 2026-11-15
+
+Requisito do desafio: a ferramenta deve ser fácil de atualizar com as versões de dados
+mais recentes. Implementação: `SPHEREX_COLLECTIONS` (lista ou `auto`), `GET /api/releases`
+(`src/backend/app/api/releases.py`).
+
+| Fonte | Comando / URL | Resultado em 2026-11-15 |
+|---|---|---|
+| Self-description do SIA v2 | `GET https://irsa.ipac.caltech.edu/SIA?MAXREC=0` | **HTTP 502** (Proxy Error) em todas as tentativas |
+| Resposta real do SIA salva em 2026-11-14 | `tests/backend/fixtures/sia_spherex_dr1_wise0855.xml` | **FATO**: `<RESOURCE type="meta">` contém `<PARAM name="COLLECTION">` com 124 `<OPTION>`; as SPHEREx são `spherex_dr1`, `spherex_dr1_cube`, `spherex_dr1_deep`, `spherex_qr3`, `spherex_qr3_deep` |
+| TAP | `GET https://irsa.ipac.caltech.edu/TAP/sync?QUERY=SELECT DISTINCT obs_collection, dataproduct_type FROM spherex.obscore&FORMAT=csv` | **HTTP 502**; nome da tabela `spherex.obscore` confirmado pelo registro (linha abaixo), consulta **não executada** |
+| Registro VO (CDS MocServer) | `https://alasky.cds.unistra.fr/MocServer/query?expr=...SPHEREx...&get=id&fmt=ascii` | HTTP 200: `irsa.ipac/tap/spherex.obscore` (`tap_tablename = spherex.obscore`), `irsa.ipac/spherex/images/qr` e `qr_deep` — estes ainda apontam para `COLLECTION=spherex_qr2` (**registro desatualizado**, não usar como fonte de coleções) |
+| HiPS SPHEREx no CDS | mesmo MocServer, `ID=*SPHEREx*` | Somente `CDS/P/SPHEREx/QR2/D1..D6` e `QR2/color` (`hips_service_url = https://alasky.cds.unistra.fr/SPHEREx/D<n>`). **Nenhum HiPS DR1 registrado.** Os tiles/`properties` responderam 404 nesta data (inclusive o HiPS DSS de referência), portanto a disponibilidade do HiPS não foi confirmada hoje |
+| Documentação oficial | SPHEREx Data Access (caltech-ipac, `spherex-archive-documentation/spherex-data-access`) | Confirma `spherex_dr1_cube` = "DR1 All-Sky Cube FITS files" (não é imagem por observação) e que o SIA2 tem ~1 dia de atraso em relação ao TAP |
+
+Critério de filtro (modo `auto`): o self-description lista só nomes, sem tipo de produto;
+mantêm-se os nomes `spherex_<dr|qr><n>[_deep]`. FATO: cobre as 4 coleções de imagens
+observadas e exclui o cubo. HIPÓTESE: releases futuras seguem o mesmo padrão; se não
+seguirem, usar lista explícita em `SPHEREX_COLLECTIONS`. Falha da descoberta → última
+lista descoberta, ou a lista padrão (`source = "fallback"`).

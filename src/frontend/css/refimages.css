@@ -1,0 +1,35 @@
+/* Imagens salvas dos alvos de teste (js/refimages.js), dentro do painel #alternativas. */
+.alt-imagens { margin: 14px 0 18px; }
+.ref-bloco h4 { margin: 0 0 4px; font-size: 1rem; }
+.ref-bloco .alt-botoes { margin: 8px 0 12px; }
+.ref-grade {
+  display: grid; gap: 14px; margin-top: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+}
+.ref-fig { margin: 0; text-align: center; font-size: 12px; color: var(--muted, #9fb1c8); }
+.ref-fig figcaption { margin-top: 6px; font: 11px/1.4 var(--mono, monospace); color: #a6bbcf; }
+.ref-fig strong { color: var(--text, #e8eef7); }
+.ref-thumb, .ref-alvo {
+  display: block; width: 100%; padding: 0; border: 1px solid #22344b; border-radius: 12px;
+  background: #02050b; overflow: hidden; cursor: zoom-in;
+  box-shadow: 0 10px 28px #0009; transition: transform .2s ease, box-shadow .2s ease, border-color .2s;
+}
+.ref-thumb img { display: block; width: 100%; height: auto; aspect-ratio: 1; image-rendering: pixelated; }
+.ref-thumb:hover, .ref-alvo:hover, .ref-thumb:focus-visible, .ref-alvo:focus-visible {
+  transform: translateY(-3px); border-color: #ff6a3d99; box-shadow: 0 16px 36px #000c, 0 0 18px #ff6a3d33;
+}
+.ref-alvos { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); margin-top: 10px; }
+.ref-alvo { cursor: pointer; padding-bottom: 8px; color: var(--text, #e8eef7); font: inherit; }
+.ref-alvo img { display: block; width: 100%; height: auto; aspect-ratio: 1; image-rendering: pixelated; margin-bottom: 6px; }
+.ref-alvo span { display: block; font-weight: 600; font-size: 13px; }
+.ref-alvo small { color: var(--muted, #9fb1c8); font-size: 11px; }
+.ref-alvo[aria-pressed="true"] { border-color: #ff6a3d; box-shadow: 0 0 0 2px #ff6a3d55, 0 16px 36px #000c; }
+.ref-detalhe:not(:empty) { margin-top: 18px; }
+.ref-dialog {
+  max-width: min(92vw, 720px); padding: 16px; border: 1px solid #2a3e58; border-radius: 16px;
+  background: #050912; color: var(--text, #e8eef7); box-shadow: 0 30px 80px #000;
+}
+.ref-dialog::backdrop { background: #000c; backdrop-filter: blur(3px); }
+.ref-dialog img { display: block; width: min(80vw, 640px); max-height: 70vh; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; margin: 0 auto; }
+.ref-dialog p { font-size: 13px; color: var(--muted, #9fb1c8); max-width: 640px; }
+@media (prefers-reduced-motion: reduce) { .ref-thumb, .ref-alvo { transition: none; } .ref-thumb:hover, .ref-alvo:hover { transform: none; } }

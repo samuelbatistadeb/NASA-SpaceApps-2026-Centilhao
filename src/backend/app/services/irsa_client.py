@@ -1,27 +1,17 @@
 """Client for the IRSA / IPAC services that archive the SPHEREx mission data.
 
-.. warning::
+Verified behaviour (DECISÃO 007 and DECISÃO 009, real queries on 2026-11-14):
 
-   **The official service addresses are still PENDING VERIFICATION.**
+* Discovery: SIA v2 at ``https://irsa.ipac.caltech.edu/SIA`` (``/SIA2`` is 404),
+  answering a VOTable whose FIELDs carry ``ID="col_N"`` and ObsCore names.
+* Cutout: there is no standalone cutout service. The IBE serves a cutout of
+  each product by appending ``?center=<ra>,<dec>d&size=<deg>`` to its
+  ``access_url`` (:meth:`IrsaClient.fetch_ibe_cutout`). HTTP 422 ("Arrays do
+  not overlap.") and 500 mean that the product does not cover the position.
 
-   ``docs/science/data-sources.md`` states that the SIA2 endpoint, the cutout
-   service and the download addresses have to be confirmed against the official
-   IRSA documentation. Because of that, the module level constants below are
-   intentionally **empty**: an empty address means "source not configured" and
-   the client raises :class:`SourceUnavailableError`, which the API publishes as
-   ``SOURCE_UNAVAILABLE``. The backend never queries an unverified address and
-   never returns fictitious observations.
-
-   Points to be completed once the researcher confirms the official addresses:
-
-   * ``IRSA_SIA2_BASE_URL`` -- official SIA2 endpoint of the SPHEREx archive.
-   * ``IRSA_CUTOUT_BASE_URL`` -- official cutout service of IRSA (if it exists).
-   * ``IrsaClient._build_sia2_params`` -- exact accepted parameter names.
-   * ``IrsaClient._build_cutout_params`` -- exact accepted cutout parameters.
-   * ``IrsaClient._parse_sia2_payload`` -- real response format and column names.
-
-The HTTP transport is injectable so that the test-suite never touches the
-network.
+An empty SIA address still means "source not configured" and raises
+:class:`SourceUnavailableError`. The HTTP transport is injectable so that the
+test-suite never touches the network.
 """
 
 from __future__ import annotations
@@ -30,6 +20,8 @@ import io
 import json
 import logging
 import math
+import re
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Protocol, Sequence
@@ -39,22 +31,34 @@ import httpx
 import numpy as np
 
 from app.api.errors import (
+    ImageNotFoundError,
     MalformedResponseError,
     SourceUnavailableError,
 )
+from app.core.config import DEFAULT_SPHEREX_COLLECTIONS
 
 logger = logging.getLogger(__name__)
 
-# --- Addresses pending verification by the researcher --------------------------
-# TODO(RESEARCHER-PENDING): replace with the official IRSA addresses and
-# document them in ``docs/science/data-sources.md``.
-IRSA_SIA2_BASE_URL: str = ""
+# --- Service addresses -----------------------------------------------------------
+#: SIA v2 endpoint verified on 2026-11-14 (DECISÃO 007 / 009).
+IRSA_SIA2_BASE_URL: str = "https://irsa.ipac.caltech.edu/SIA"
+#: IRSA has no standalone cutout service; see :meth:`IrsaClient.fetch_ibe_cutout`.
 IRSA_CUTOUT_BASE_URL: str = ""
+
+#: Path fragment that identifies an IBE product address (cutout capable).
+IBE_DATA_PATH = "/ibe/data/"
+
+#: HTTP statuses of an IBE cutout meaning "the product does not cover the
+#: position" (observed: 422 "Arrays do not overlap.", and 500). Not retried.
+IBE_NO_OVERLAP_STATUS_CODES = frozenset({422, 500})
 
 #: Default HTTP timeout, in seconds.
 DEFAULT_TIMEOUT_SECONDS = 30.0
 #: Default number of attempts for transient failures.
 DEFAULT_MAX_ATTEMPTS = 3
+#: Default maximum number of simultaneous product requests (cutouts and
+#: downloads). IRSA answers 503 "Server busy" under many parallel requests.
+DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS = 3
 #: Default user agent identifying the project.
 DEFAULT_USER_AGENT = "SPHERExExplorer/0.1 (NASA Space Apps Challenge 2026)"
 
@@ -81,7 +85,9 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "title": ("obs_title", "title"),
     "description": ("obs_description", "description"),
     "instrument": ("instrument_name", "instrument", "facility_name"),
-    "detector": ("detector_name", "detector", "instrument_name"),
+    # ``instrument_name`` is NOT an alias: on SPHEREx it is always "SPHEREx"
+    # and would be shown as if it were the detector. See ``extract_detector``.
+    "detector": ("detector_name", "detector"),
     "band": (
         "energy_bandpassname",
         "band_name",
@@ -109,6 +115,80 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "cutout_service_ref": ("cutout_service_ref", "service_ref", "cutout_service"),
     "data_release": ("data_release", "collection_name", "obs_collection"),
 }
+
+
+#: Size of a FITS block and of a header card.
+_FITS_BLOCK = 2880
+_FITS_CARD = 80
+
+
+def _fits_card_value(card: str) -> str:
+    """Return the raw value of a FITS header card (``KEY = value / comment``)."""
+    value = card[10:] if card[8:10] == "= " else ""
+    if value.lstrip().startswith("'"):
+        text = value.lstrip()[1:]
+        return text.split("'", 1)[0].strip()
+    return value.split("/", 1)[0].strip()
+
+
+def fits_bytes_through_extension(
+    buffer: bytes | bytearray, extname: str = "IMAGE"
+) -> int | None:
+    """Return how many bytes of ``buffer`` hold every HDU up to ``extname``.
+
+    FITS files are sequential (header blocks, then data padded to 2880 bytes),
+    so a client may stop reading once the wanted extension is complete. SPHEREx
+    Level 2 products store ``IMAGE`` right after the primary HDU, while the
+    large ``EPSF`` table (~3.9 MB, unused here) comes last (verified on a real
+    IBE cutout, 2026-11-14). Returns ``None`` while the buffer is not enough
+    (or the extension is not found), which means "keep reading".
+    """
+    position = 0
+    size = len(buffer)
+    while position + _FITS_BLOCK <= size:
+        cards: dict[str, str] = {}
+        header_end = None
+        cursor = position
+        while cursor + _FITS_BLOCK <= size and header_end is None:
+            block = buffer[cursor:cursor + _FITS_BLOCK].decode("ascii", errors="replace")
+            cursor += _FITS_BLOCK
+            for offset in range(0, _FITS_BLOCK, _FITS_CARD):
+                card = block[offset:offset + _FITS_CARD]
+                key = card[:8].strip()
+                if key == "END":
+                    header_end = cursor
+                    break
+                if key and key not in cards:
+                    cards[key] = _fits_card_value(card)
+        if header_end is None:
+            return None
+        try:
+            bitpix = abs(int(cards.get("BITPIX", "8")))
+            naxis = int(cards.get("NAXIS", "0"))
+            pcount = int(cards.get("PCOUNT", "0"))
+            gcount = int(cards.get("GCOUNT", "1"))
+            axes = [int(cards.get(f"NAXIS{i}", "0")) for i in range(1, naxis + 1)]
+        except ValueError:
+            return None
+        elements = math.prod(axes) if axes else 0
+        data_bytes = (bitpix // 8) * gcount * (pcount + elements) if naxis else 0
+        data_end = header_end + math.ceil(data_bytes / _FITS_BLOCK) * _FITS_BLOCK
+        if cards.get("EXTNAME", "").upper() == extname.upper():
+            return data_end if data_end <= size else None
+        position = data_end
+    return None
+
+
+def _stop_after(extname: str) -> Callable[[bytes | bytearray], int | None]:
+    def stop(buffer: bytes | bytearray) -> int | None:
+        return fits_bytes_through_extension(buffer, extname)
+
+    return stop
+
+
+#: Level 2 HDU order: PRIMARY, IMAGE, FLAGS, VARIANCE, ZODI, EPSF, WCS-WAVE.
+_STOP_AFTER_VARIANCE = _stop_after("VARIANCE")
+_STOP_AFTER_FLAGS = _stop_after("FLAGS")
 
 
 @dataclass(frozen=True)
@@ -150,8 +230,13 @@ class HttpTransport(Protocol):
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
         max_bytes: int | None = None,
+        stop_when: Callable[[bytes], int | None] | None = None,
     ) -> HttpResponse:
-        """Perform an HTTP request and return the response."""
+        """Perform an HTTP request and return the response.
+
+        ``stop_when`` (optional) receives the body read so far and returns the
+        number of bytes that are enough; the transport may then stop reading.
+        """
         ...
 
 
@@ -171,9 +256,14 @@ class HttpxTransport:
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
         max_bytes: int | None = None,
+        stop_when: Callable[[bytes], int | None] | None = None,
     ) -> HttpResponse:
-        """Perform an HTTP request, optionally aborting above ``max_bytes``."""
-        if max_bytes is None:
+        """Perform an HTTP request, optionally aborting above ``max_bytes``.
+
+        With ``stop_when`` the body is streamed and the connection is closed as
+        soon as the callback says the bytes read so far are enough.
+        """
+        if max_bytes is None and stop_when is None:
             response = self._client.request(
                 method, url, params=params, headers=headers, timeout=timeout
             )
@@ -184,22 +274,26 @@ class HttpxTransport:
                 url=str(response.url),
             )
 
-        chunks: list[bytes] = []
-        total = 0
+        body = bytearray()
         with self._client.stream(
             method, url, params=params, headers=headers, timeout=timeout
         ) as response:
+            watch = stop_when is not None and response.status_code == 200
             for chunk in response.iter_bytes():
-                total += len(chunk)
-                if total > max_bytes:
+                body.extend(chunk)
+                if max_bytes is not None and len(body) > max_bytes:
                     raise SourceUnavailableError(
                         "O arquivo excede o tamanho máximo permitido pelo aplicativo.",
                         detail=f"download above {max_bytes} bytes aborted",
                     )
-                chunks.append(chunk)
+                if watch:
+                    enough = stop_when(body)  # no copy: only headers are parsed
+                    if enough is not None and len(body) >= enough:
+                        del body[enough:]
+                        break  # leaving the context manager closes the stream
             return HttpResponse(
                 status_code=response.status_code,
-                content=b"".join(chunks),
+                content=bytes(body),
                 headers=dict(response.headers),
                 url=str(response.url),
             )
@@ -266,6 +360,39 @@ def pick(record: Mapping[str, Any], key: str) -> Any:
     return None
 
 
+#: ``obs_publisher_did`` of SPHEREx ends with the detector, e.g.
+#: ``ivo://irsa.ipac/spherex_dr1?2025W19_1B_0116_1/D3``.
+_DID_DETECTOR_PATTERN = re.compile(r"/D(\d+)$")
+#: ``energy_bandpassname`` of SPHEREx names the detector, e.g. ``SPHEREx-D3``.
+_BANDPASS_DETECTOR_PATTERN = re.compile(r"^SPHEREx-D(\d+)$", re.IGNORECASE)
+
+
+def extract_detector(record: Mapping[str, Any]) -> str | None:
+    """Return the detector of a record (``"D1"`` .. ``"D6"``) or ``None``.
+
+    The IRSA SIA v2 answer for SPHEREx has no detector column (verified on
+    2026-11-14). The detector is published in ``obs_publisher_did`` (suffix
+    ``/D<n>``) and in ``energy_bandpassname`` (``SPHEREx-D<n>``). An explicit
+    detector column, when present, wins. Nothing is guessed.
+    """
+    explicit = pick(record, "detector")
+    if explicit not in (None, ""):
+        return str(explicit).strip()
+
+    did = _to_str(record.get("obs_publisher_did"))
+    if did:
+        match = _DID_DETECTOR_PATTERN.search(did)
+        if match:
+            return f"D{match.group(1)}"
+
+    bandpass = _to_str(record.get("energy_bandpassname"))
+    if bandpass:
+        match = _BANDPASS_DETECTOR_PATTERN.match(bandpass)
+        if match:
+            return f"D{match.group(1)}"
+    return None
+
+
 class IrsaClient:
     """Query the IRSA archive and retrieve the products it describes."""
 
@@ -281,7 +408,18 @@ class IrsaClient:
         max_fits_bytes: int = 512 * 1024 * 1024,
         sleep: Callable[[float], None] = time.sleep,
         allowed_download_hosts: Sequence[str] = (),
+        max_concurrent_product_requests: int = DEFAULT_MAX_CONCURRENT_PRODUCT_REQUESTS,
+        collections: Sequence[str] | Callable[[], Sequence[str]] | None = None,
     ) -> None:
+        #: SIA ``COLLECTION`` values: a fixed list, or a provider called at each
+        #: query (e.g. the release resolver, so a discovered list takes effect).
+        self._collections_source = (
+            collections if collections is not None else DEFAULT_SPHEREX_COLLECTIONS
+        )
+        #: Limits simultaneous cutouts/downloads across all request threads.
+        self._product_slots = threading.BoundedSemaphore(
+            max(1, int(max_concurrent_product_requests))
+        )
         self.sia2_base_url = (sia2_base_url or "").strip()
         self.cutout_base_url = (cutout_base_url or "").strip()
         self.data_base_url = (data_base_url or "").strip()
@@ -298,6 +436,46 @@ class IrsaClient:
     def is_configured(self) -> bool:
         """Whether a SIA2 endpoint address is available."""
         return bool(self.sia2_base_url)
+
+    @property
+    def collections(self) -> tuple[str, ...]:
+        """SIA v2 collections queried now (never empty: falls back to default)."""
+        source = self._collections_source
+        names = source() if callable(source) else source
+        unique = tuple(dict.fromkeys(str(n).strip() for n in names if str(n).strip()))
+        return unique or DEFAULT_SPHEREX_COLLECTIONS
+
+    @property
+    def query_signature(self) -> str:
+        """Identity of the archive queried: endpoint plus collections.
+
+        Meant for cache keys, so a cached answer of another data release (other
+        collection list) is never served.
+        """
+        return f"{self.sia2_base_url}|COLLECTION={','.join(sorted(self.collections))}"
+
+    def list_sia_collections(self) -> list[str]:
+        """Return every ``COLLECTION`` advertised by the SIA v2 self-description.
+
+        IRSA's answer starts with ``<RESOURCE type="meta">`` holding
+        ``<PARAM name="COLLECTION">`` and one ``<OPTION>`` per collection
+        (verified in the real answer saved on 2026-11-14,
+        ``tests/backend/fixtures/sia_spherex_dr1_wise0855.xml``). ``MAXREC=0``
+        is the IVOA way of asking for metadata only.
+
+        Raises:
+            SourceUnavailableError: Not configured, unreachable or HTTP error.
+            MalformedResponseError: No COLLECTION parameter in the answer.
+        """
+        if not self.is_configured:
+            raise SourceUnavailableError(
+                "A fonte científica IRSA não está configurada neste ambiente.",
+                detail="IRSA_SIA2_BASE_URL is empty",
+            )
+        response = self._request_with_retry(
+            "GET", self.sia2_base_url, params={"MAXREC": 0}
+        )
+        return parse_sia_collection_options(response.content)
 
     # -- public API -------------------------------------------------------------
     def query_by_position(
@@ -377,6 +555,66 @@ class IrsaClient:
         response = self._request_with_retry("GET", url, params=params)
         return response.content
 
+    @staticmethod
+    def supports_ibe_cutout(access_url: str | None) -> bool:
+        """Whether ``access_url`` is an IRSA IBE product address."""
+        if not access_url:
+            return False
+        parsed = urlparse(access_url)
+        return parsed.scheme == "https" and IBE_DATA_PATH in parsed.path
+
+    def fetch_ibe_cutout(
+        self,
+        access_url: str,
+        ra_deg: float,
+        dec_deg: float,
+        size_deg: float,
+    ) -> bytes:
+        """Request an IBE cutout of one product: ``<access_url>?center=..&size=..``.
+
+        Args:
+            access_url: IBE address of the full FITS product (from the SIA).
+            ra_deg: Right ascension of the cutout centre (ICRS, degrees).
+            dec_deg: Declination of the cutout centre (ICRS, degrees).
+            size_deg: Side of the square cutout, in degrees.
+
+        Raises:
+            ImageNotFoundError: The product does not cover the position.
+            SourceUnavailableError: The address is invalid or IRSA failed.
+        """
+        if not self.supports_ibe_cutout(access_url):
+            raise SourceUnavailableError(
+                "O produto não oferece recorte pelo IRSA.",
+                detail=f"not an IBE address: {access_url}",
+            )
+        if access_url.split("#", 1)[0].find("?") != -1:
+            raise SourceUnavailableError(
+                "Endereço de arquivo científico inválido.",
+                detail=f"access_url already has a query string: {access_url}",
+            )
+        self._validate_download_url(access_url)
+        params = {
+            "center": f"{ra_deg:.6f},{dec_deg:.6f}d",
+            "size": f"{size_deg:.6f}",
+        }
+        with self._product_slots:
+            response = self._request_with_retry(
+                "GET",
+                access_url,
+                params=params,
+                max_bytes=self.max_fits_bytes,
+                terminal_statuses=IBE_NO_OVERLAP_STATUS_CODES,
+                # IMAGE, FLAGS and VARIANCE come first (~3x the IMAGE size);
+                # ZODI, the 3.9 MB EPSF and WCS-WAVE are not downloaded.
+                stop_when=_STOP_AFTER_VARIANCE,
+            )
+        if response.status_code in IBE_NO_OVERLAP_STATUS_CODES:
+            raise ImageNotFoundError(
+                "Este produto não cobre a posição solicitada.",
+                detail=f"IBE cutout HTTP {response.status_code}: {response.text[:200]}",
+            )
+        return response.content
+
     def download_fits(self, url: str) -> bytes:
         """Download a scientific file, enforcing the size guard.
 
@@ -386,10 +624,38 @@ class IrsaClient:
         """
         target = self._resolve_data_url(url)
         self._validate_download_url(target)
-        response = self._request_with_retry(
-            "GET", target, max_bytes=self.max_fits_bytes
-        )
+        with self._product_slots:
+            response = self._request_with_retry(
+                "GET",
+                target,
+                max_bytes=self.max_fits_bytes,
+                # Full product: IMAGE + FLAGS end at ~27 MiB of 65.8 MB.
+                stop_when=_STOP_AFTER_FLAGS,
+            )
         return response.content
+
+    def fetch_tail(self, url: str, nbytes: int) -> bytes:
+        """Return the last ``nbytes`` of a product (HTTP Range ``bytes=-n``).
+
+        Used to read the small WCS-WAVE table stored at the end of SPHEREx
+        products (the server answers 206 Partial Content).
+        """
+        target = self._resolve_data_url(url)
+        self._validate_download_url(target)
+        with self._product_slots:
+            response = self._request_with_retry(
+                "GET",
+                target,
+                max_bytes=max(nbytes * 4, 65536),
+                extra_headers={"Range": f"bytes=-{int(nbytes)}"},
+            )
+        if response.status_code not in (200, 206):
+            raise SourceUnavailableError(
+                "Não foi possível ler a calibração espectral do produto.",
+                detail=f"HTTP {response.status_code} for tail of {target}",
+            )
+        content = response.content
+        return content[-nbytes:] if response.status_code == 200 else content
 
     # -- internals --------------------------------------------------------------
     def _build_sia2_params(
@@ -410,12 +676,7 @@ class IrsaClient:
                 f"CIRCLE {ra_deg:.6f} "
                 f"{dec_deg:.6f} {radius_deg:.6f}"
             ),
-            "COLLECTION": [
-                "spherex_dr1",
-                "spherex_qr3",
-                "spherex_dr1_deep",
-                "spherex_qr3_deep",
-            ],
+            "COLLECTION": list(self.collections),
             "RESPONSEFORMAT": "votable",
             "MAXREC": 1000,
         }
@@ -452,11 +713,19 @@ class IrsaClient:
         *,
         params: Mapping[str, Any] | None = None,
         max_bytes: int | None = None,
+        terminal_statuses: frozenset[int] = frozenset(),
+        stop_when: Callable[[bytes], int | None] | None = None,
+        extra_headers: Mapping[str, str] | None = None,
     ) -> HttpResponse:
-        """Execute a request, retrying transient failures."""
-        headers = {"User-Agent": self.user_agent, "Accept": "*/*"}
+        """Execute a request, retrying transient failures.
+
+        Statuses in ``terminal_statuses`` are returned to the caller at once,
+        without retry and without raising, so it can interpret them.
+        """
+        headers = {"User-Agent": self.user_agent, "Accept": "*/*", **dict(extra_headers or {})}
         last_error: Exception | None = None
 
+        extra: dict[str, Any] = {"stop_when": stop_when} if stop_when is not None else {}
         for attempt in range(1, self.max_attempts + 1):
             try:
                 response = self._transport.request(
@@ -466,6 +735,7 @@ class IrsaClient:
                     headers=headers,
                     timeout=self.timeout,
                     max_bytes=max_bytes,
+                    **extra,
                 )
             except SourceUnavailableError:
                 raise
@@ -476,6 +746,8 @@ class IrsaClient:
                 last_error = exc
                 logger.warning("Transport error contacting %s: %s", url, exc)
             else:
+                if response.status_code in terminal_statuses:
+                    return response
                 if response.status_code in RETRYABLE_STATUS_CODES and attempt < self.max_attempts:
                     last_error = SourceUnavailableError(
                         "A fonte científica respondeu com erro temporário.",
@@ -546,11 +818,17 @@ class IrsaClient:
         records: list[dict[str, Any]] = []
         for table in votable.iter_tables():
             array = table.array
-            names = array.dtype.names or ()
+            columns = array.dtype.names or ()
+            # astropy names the array columns after the FIELD ``ID`` when it
+            # exists. IRSA declares ``ID="col_N"``, so the public ``name`` must
+            # be used as key (verified on a real SIA answer, 2026-11-14).
+            field_names = [field.name or field.ID for field in table.fields]
+            if len(field_names) != len(columns):
+                field_names = list(columns)
             for row in array:
                 record: dict[str, Any] = {}
-                for name in names:
-                    record[str(name).strip().lower()] = _to_python(row[name])
+                for column, name in zip(columns, field_names):
+                    record[str(name).strip().lower()] = _to_python(row[column])
                 records.append(record)
         return records
 
@@ -628,6 +906,38 @@ class IrsaClient:
     def _join(base: str, path: str) -> str:
         """Join a base address and a relative path."""
         return f"{base.rstrip('/')}/{path.lstrip('/')}"
+
+
+def parse_sia_collection_options(content: bytes) -> list[str]:
+    """Return the ``OPTION`` values of the ``COLLECTION`` PARAM of a VOTable.
+
+    Raises:
+        MalformedResponseError: The XML is invalid or has no COLLECTION PARAM.
+    """
+    import xml.etree.ElementTree as ElementTree
+
+    try:
+        root = ElementTree.fromstring(content)
+    except ElementTree.ParseError as exc:
+        raise MalformedResponseError(
+            "Não foi possível interpretar a resposta da fonte científica.",
+            detail=f"SIA self-description is not XML: {exc}",
+        ) from exc
+
+    def local(tag: str) -> str:
+        return tag.rsplit("}", 1)[-1]
+
+    for element in root.iter():
+        if local(element.tag) == "PARAM" and element.get("name", "").upper() == "COLLECTION":
+            return [
+                option.get("value", "").strip()
+                for option in element.iter()
+                if local(option.tag) == "OPTION" and option.get("value", "").strip()
+            ]
+    raise MalformedResponseError(
+        "Não foi possível interpretar a resposta da fonte científica.",
+        detail="SIA self-description without a COLLECTION parameter",
+    )
 
 
 def radius_from_fov(fov_arcmin: float) -> float:

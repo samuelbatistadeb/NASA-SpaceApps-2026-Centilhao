@@ -34,6 +34,10 @@ from app.services.irsa_client import IrsaClient
 logger = logging.getLogger(__name__)
 
 
+#: Side of the IBE cutout relative to the field of view (see _build_remote_cutout).
+IBE_SIZE_FACTOR = 1.5
+
+
 class CutoutStrategy(str, Enum):
     """How the displayed pixels were obtained."""
 
@@ -63,6 +67,17 @@ class CutoutResult:
     metadata: dict[str, Any] = field(default_factory=dict)
     header: dict[str, Any] = field(default_factory=dict)
     observed_at: datetime | None = None
+    #: Pixels and celestial WCS of the source (IBE cutout or full detector),
+    #: used to resample onto the common frame. ``None`` when unavailable.
+    source_data: np.ndarray | None = None
+    source_wcs: Any = None
+    #: IMAGE header of the source (spectral WCS 'W', CRPIX of the cutout).
+    source_header: Any = None
+    #: FLAGS bitmask and VARIANCE planes aligned with ``source_data`` (optional).
+    source_flags: np.ndarray | None = None
+    source_variance: np.ndarray | None = None
+    #: Header of the FLAGS HDU (bit names MSKN/MSKM/MSKD).
+    flags_header: Any = None
 
 
 class CutoutService:
@@ -76,7 +91,11 @@ class CutoutService:
     def decide_strategy(self, request: CutoutRequest) -> CutoutStrategy:
         """Return the strategy to be used for the given request."""
         mode = self._settings.cutout_mode
-        remote_available = bool(self._client.cutout_base_url)
+        ibe_available = self._client.supports_ibe_cutout(request.access_url)
+        remote_available = ibe_available or bool(self._client.cutout_base_url)
+
+        if ibe_available and mode in ("auto", "remote"):
+            return CutoutStrategy.REMOTE_CUTOUT
 
         if mode == "local":
             return CutoutStrategy.LOCAL_DOWNLOAD
@@ -109,18 +128,30 @@ class CutoutService:
     def _build_remote_cutout(
         self, request: CutoutRequest, strategy: CutoutStrategy
     ) -> CutoutResult:
-        """Ask the IRSA cutout service for the region."""
+        """Ask IRSA for the region (IBE cutout of the product, when possible)."""
         size_arcsec = max(request.fov_arcmin * 60.0, 1.0)
-        content = self._client.fetch_cutout(
-            request.ra_deg,
-            request.dec_deg,
-            size_arcsec,
-            product_url=request.access_url,
-        )
+        if self._client.supports_ibe_cutout(request.access_url):
+            # The IBE cuts along the detector axes; the common frame is north
+            # up. A side 1.5x the FOV (> sqrt 2) covers the frame at any angle.
+            content = self._client.fetch_ibe_cutout(
+                request.access_url,
+                request.ra_deg,
+                request.dec_deg,
+                size_arcsec * IBE_SIZE_FACTOR / 3600.0,
+            )
+            center_source = "ibe_cutout"
+        else:
+            content = self._client.fetch_cutout(
+                request.ra_deg,
+                request.dec_deg,
+                size_arcsec,
+                product_url=request.access_url,
+            )
+            center_source = "remote_cutout_service"
         image = fits_processor.load_image(content)
         metadata: dict[str, Any] = {
             "cutout_strategy": strategy.value,
-            "cutout_center_source": "remote_cutout_service",
+            "cutout_center_source": center_source,
             "cutout_size_pixels": [int(image.data.shape[1]), int(image.data.shape[0])],
             "source_bytes": len(content),
         }
@@ -131,6 +162,9 @@ class CutoutService:
             metadata=metadata,
             header=fits_processor.extract_header_metadata(image.header),
             observed_at=fits_processor.extract_observation_datetime(image.header),
+            source_data=image.data,
+            source_wcs=fits_processor.extract_wcs(image.header),
+            **_auxiliary(content, image),
         )
 
     def _build_local_cutout(
@@ -178,4 +212,21 @@ class CutoutService:
             metadata=metadata,
             header=header_metadata,
             observed_at=fits_processor.extract_observation_datetime(image.header),
+            source_data=image.data,
+            source_wcs=wcs,
+            **_auxiliary(content, image),
         )
+
+
+def _auxiliary(content: bytes, image: fits_processor.FitsImage) -> dict[str, Any]:
+    """FLAGS / VARIANCE planes matching the IMAGE plane, plus the IMAGE header."""
+    planes = fits_processor.load_auxiliary_planes(content)
+    shape = np.shape(image.data)
+    flags = planes.get("FLAGS")
+    variance = planes.get("VARIANCE")
+    return {
+        "source_header": image.header,
+        "source_flags": flags[0] if flags and flags[0].shape == shape else None,
+        "flags_header": flags[1] if flags else None,
+        "source_variance": variance[0] if variance and variance[0].shape == shape else None,
+    }

@@ -162,6 +162,23 @@ o **sistema**, mas o **componente B isolado não é observável** com a resoluç
 
 ### 3.3 WISE 0855
 
+> **CORREÇÃO DE 15/11/2026 (DECISÃO 019) — prevalece sobre o texto abaixo.**
+>
+> 1. **A coordenada do desafio NÃO é a posição na época J2000.0.** É a posição embutida no nome do objeto
+>    (`WISE J085510.83−071442.5`), da época da descoberta nos dados WISE (~2010).
+> 2. **Fonte primária** (SIMBAD, via Sesame do CDS, consultado em 15/11/2026; referência
+>    `2021ApJS..253....7K`, Kirkpatrick et al. 2021):
+>    - posição J2000: RA **133.81890825°**, Dec **−7.247048°**;
+>    - μα* **−8123,7 ± 1,3** mas/ano, μδ **+673,2 ± 1,3** mas/ano, paralaxe 439,0 ± 2,4 mas.
+>
+>    O μ coincide com o valor usado até aqui, que agora tem confirmação na fonte primária.
+> 3. **Evidência nas imagens:**
+>    - Propagando a posição J2000 do SIMBAD para 2010,3, ela cai a ~1″ da coordenada do desafio.
+>    - No campo de 14′ do AllWISE, a fonte com maior excesso W2 (4,6 µm) sobre W1 (3,4 µm) está a 1,4″ da posição prevista. É a assinatura esperada de uma anã marrom Y.
+>    - A propagação antiga (da coordenada do desafio tratada como J2000) errava por **~84–85″**.
+> 4. **Posição usada pelo projeto em 2025,35:** RA **133.761244°**, Dec **−7.242304°**. A posição antiga era 133.737467 / −7.240406.
+> 5. **Pendente (Integrante 2):** conferir no artigo de Kirkpatrick et al. 2021 a época de referência da posição citada pelo SIMBAD. Admitimos J2000.0, o padrão do SIMBAD, e as imagens confirmam esse valor dentro de ~1–2″.
+
 **Nome:** WISE 0855−0714 · **Identificadores:** WISE J085510.83−071442.5 ·
 HD 2MASS J08551083−0714425 · anã marrom Y4.
 

@@ -1,0 +1,543 @@
+{
+ "unit": "MJy/sr",
+ "points": [
+  {
+   "wavelength_um": 0.74155,
+   "bandwidth_um": 0.0176,
+   "flux": 579.006045,
+   "flux_err": 2.143669,
+   "background": 7.385663,
+   "n_pixels": 7,
+   "detector": "D1",
+   "observed_at": "2026-07-31T17:34:53.011200+00:00",
+   "observation_id": "obs_557b85a8aa57f02f",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 0.74173,
+   "bandwidth_um": 0.01706,
+   "flux": 1106.298894,
+   "flux_err": 3.485657,
+   "background": 9.201337,
+   "n_pixels": 7,
+   "detector": "D1",
+   "observed_at": "2026-08-10T15:34:24.528000+00:00",
+   "observation_id": "obs_23c1abbbecd2f18c",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 0.77605,
+   "bandwidth_um": 0.01838,
+   "flux": 310.134657,
+   "flux_err": 1.360488,
+   "background": 1.651946,
+   "n_pixels": 9,
+   "detector": "D1",
+   "observed_at": "2025-10-09T04:42:08.697600+00:00",
+   "observation_id": "obs_5e9908694be90ef6",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 0.82555,
+   "bandwidth_um": 0.02022,
+   "flux": 1534.865249,
+   "flux_err": 6.012378,
+   "background": 18.768641,
+   "n_pixels": 3,
+   "detector": "D1",
+   "observed_at": "2025-11-14T06:11:00.355200+00:00",
+   "observation_id": "obs_708240af6e26302a",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 0.82751,
+   "bandwidth_um": 0.02078,
+   "flux": 1615.955734,
+   "flux_err": 3.877974,
+   "background": 12.783629,
+   "n_pixels": 7,
+   "detector": "D1",
+   "observed_at": "2025-10-25T13:23:18.412800+00:00",
+   "observation_id": "obs_cf513daf7c50a8f4",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 0.92975,
+   "bandwidth_um": 0.02402,
+   "flux": 850.748883,
+   "flux_err": 4.791238,
+   "background": 21.274943,
+   "n_pixels": 3,
+   "detector": "D1",
+   "observed_at": "2025-09-03T16:13:48.432000+00:00",
+   "observation_id": "obs_ff282fcc33e99b77",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 0.93281,
+   "bandwidth_um": 0.02406,
+   "flux": 1209.873513,
+   "flux_err": 3.375471,
+   "background": 16.629539,
+   "n_pixels": 5,
+   "detector": "D1",
+   "observed_at": "2025-09-15T02:03:10.483200+00:00",
+   "observation_id": "obs_830160fe4ab1575c",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 0.96533,
+   "bandwidth_um": 0.02538,
+   "flux": 796.785891,
+   "flux_err": 4.598746,
+   "background": 33.854979,
+   "n_pixels": 1,
+   "detector": "D1",
+   "observed_at": "2026-08-05T21:31:24.297600+00:00",
+   "observation_id": "obs_1be19143f0b4d087",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 1.06042,
+   "bandwidth_um": 0.02838,
+   "flux": 2578.675619,
+   "flux_err": 9.857432,
+   "background": 41.96525,
+   "n_pixels": 2,
+   "detector": "D1",
+   "observed_at": "2025-09-09T15:39:22.608000+00:00",
+   "observation_id": "obs_96922d28759016cb",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 1.30927,
+   "bandwidth_um": 0.03148,
+   "flux": 1927.070921,
+   "flux_err": 11.865623,
+   "background": 51.614382,
+   "n_pixels": 1,
+   "detector": "D2",
+   "observed_at": "2025-06-15T10:44:11.731200+00:00",
+   "observation_id": "obs_0518d0f69864e88b",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 1.36945,
+   "bandwidth_um": 0.03292,
+   "flux": 1736.525284,
+   "flux_err": 7.204244,
+   "background": 28.637161,
+   "n_pixels": 2,
+   "detector": "D2",
+   "observed_at": "2025-12-02T06:00:11.404800+00:00",
+   "observation_id": "obs_72f33540e41ab273",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 1.40469,
+   "bandwidth_um": 0.03372,
+   "flux": 1728.128319,
+   "flux_err": 7.982661,
+   "background": 34.271706,
+   "n_pixels": 2,
+   "detector": "D2",
+   "observed_at": "2025-06-08T18:54:21.686400+00:00",
+   "observation_id": "obs_01217591636053fb",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 1.89497,
+   "bandwidth_um": 0.04645,
+   "flux": 1338.906445,
+   "flux_err": 10.171045,
+   "background": 98.423512,
+   "n_pixels": 1,
+   "detector": "D3",
+   "observed_at": "2025-12-30T03:38:58.243200+00:00",
+   "observation_id": "obs_a302c57e7516b458",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 2.42179,
+   "bandwidth_um": 0.04378,
+   "flux": 3559.727802,
+   "flux_err": 16.347291,
+   "background": 76.316998,
+   "n_pixels": 2,
+   "detector": "D4",
+   "observed_at": "2026-08-10T15:34:24.528000+00:00",
+   "observation_id": "obs_e2206e1429dc4c94",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "DICHROIC",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 3.93084,
+   "bandwidth_um": 0.03611,
+   "flux": 5366.340546,
+   "flux_err": 23.971648,
+   "background": 70.813507,
+   "n_pixels": 2,
+   "detector": "D5",
+   "observed_at": "2025-12-01T00:34:40.944000+00:00",
+   "observation_id": "obs_8cbc0c2390413e5a",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 3.96583,
+   "bandwidth_um": 0.03663,
+   "flux": 5769.976387,
+   "flux_err": 25.18668,
+   "background": 105.342216,
+   "n_pixels": 2,
+   "detector": "D5",
+   "observed_at": "2025-07-02T21:44:44.275200+00:00",
+   "observation_id": "obs_cb8d3243aea7dcaa",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.06364,
+   "bandwidth_um": 0.03679,
+   "flux": 6202.399708,
+   "flux_err": 21.454718,
+   "background": 78.610546,
+   "n_pixels": 3,
+   "detector": "D5",
+   "observed_at": "2025-12-12T11:59:03.580800+00:00",
+   "observation_id": "obs_216fa1b858694f8d",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.14102,
+   "bandwidth_um": 0.03678,
+   "flux": 4435.439842,
+   "flux_err": 19.531189,
+   "background": 73.500221,
+   "n_pixels": 2,
+   "detector": "D5",
+   "observed_at": "2025-12-02T06:00:11.404800+00:00",
+   "observation_id": "obs_b0a58a55f11640bb",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.29394,
+   "bandwidth_um": 0.03756,
+   "flux": 3304.516712,
+   "flux_err": 12.923501,
+   "background": 62.069918,
+   "n_pixels": 3,
+   "detector": "D5",
+   "observed_at": "2025-11-18T17:41:35.376000+00:00",
+   "observation_id": "obs_cc64bfdc42d44292",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.39953,
+   "bandwidth_um": 0.03823,
+   "flux": 5301.475639,
+   "flux_err": 35.418808,
+   "background": 98.600533,
+   "n_pixels": 1,
+   "detector": "D5",
+   "observed_at": "2025-06-09T12:54:52.272000+00:00",
+   "observation_id": "obs_847a0b867563659f",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.41033,
+   "bandwidth_um": 0.03659,
+   "flux": 4513.667315,
+   "flux_err": 20.756299,
+   "background": 117.937584,
+   "n_pixels": 3,
+   "detector": "D6",
+   "observed_at": "2025-06-05T04:28:08.976000+00:00",
+   "observation_id": "obs_9321834e2b636083",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.42627,
+   "bandwidth_um": 0.03719,
+   "flux": 4008.799128,
+   "flux_err": 19.627462,
+   "background": 108.889755,
+   "n_pixels": 3,
+   "detector": "D6",
+   "observed_at": "2025-05-08T09:39:14.400000+00:00",
+   "observation_id": "obs_6e0ea4b4184b3d2a",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.4439,
+   "bandwidth_um": 0.03678,
+   "flux": 4936.140232,
+   "flux_err": 15.554612,
+   "background": 94.795803,
+   "n_pixels": 6,
+   "detector": "D6",
+   "observed_at": "2025-04-24T21:06:38.390400+00:00",
+   "observation_id": "obs_a9b09966e2e9d01d",
+   "flagged": true,
+   "flags": [
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.47595,
+   "bandwidth_um": 0.03614,
+   "flux": 4912.170532,
+   "flux_err": 17.349693,
+   "background": 88.500305,
+   "n_pixels": 4,
+   "detector": "D6",
+   "observed_at": "2025-04-27T11:06:26.611200+00:00",
+   "observation_id": "obs_1158f09935cdab18",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.5383,
+   "bandwidth_um": 0.03585,
+   "flux": 3354.995338,
+   "flux_err": 20.503418,
+   "background": 97.370079,
+   "n_pixels": 2,
+   "detector": "D6",
+   "observed_at": "2025-06-12T15:57:11.289600+00:00",
+   "observation_id": "obs_69e44497671c18a5",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.58688,
+   "bandwidth_um": 0.03642,
+   "flux": 5208.83849,
+   "flux_err": 24.38802,
+   "background": 91.340832,
+   "n_pixels": 2,
+   "detector": "D6",
+   "observed_at": "2025-05-01T14:37:02.006400+00:00",
+   "observation_id": "obs_44d747f40fb5b754",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.58708,
+   "bandwidth_um": 0.03642,
+   "flux": 3101.753087,
+   "flux_err": 13.878981,
+   "background": 97.117722,
+   "n_pixels": 3,
+   "detector": "D6",
+   "observed_at": "2025-04-29T07:09:29.836800+00:00",
+   "observation_id": "obs_58c94c8288d3eb4c",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.59036,
+   "bandwidth_um": 0.03621,
+   "flux": 2866.888867,
+   "flux_err": 9.610204,
+   "background": 58.798058,
+   "n_pixels": 7,
+   "detector": "D6",
+   "observed_at": "2026-05-22T03:15:10.483200+00:00",
+   "observation_id": "obs_b4abffb08d358dba",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.69919,
+   "bandwidth_um": 0.03735,
+   "flux": 4805.274632,
+   "flux_err": 16.747227,
+   "background": 84.219753,
+   "n_pixels": 4,
+   "detector": "D6",
+   "observed_at": "2025-12-30T03:43:16.147200+00:00",
+   "observation_id": "obs_7e50dff62441a1e8",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  },
+  {
+   "wavelength_um": 4.83622,
+   "bandwidth_um": 0.03656,
+   "flux": 4724.491411,
+   "flux_err": 14.1349,
+   "background": 211.154724,
+   "n_pixels": 7,
+   "detector": "D6",
+   "observed_at": "2026-01-03T13:41:13.228800+00:00",
+   "observation_id": "obs_b0ddfc42dc3f000b",
+   "flagged": true,
+   "flags": [
+    "TRANSIENT",
+    "OVERFLOW",
+    "SUR_ERROR",
+    "BLOOM"
+   ]
+  }
+ ],
+ "n_exposures": 60,
+ "aperture_arcsec": 9.0,
+ "frame_fov_arcmin": 1.2,
+ "wavelength_source": "WCS-WAVE (aproximada; Explanatory Supplement §4.3.1)",
+ "flux_definition": "média do brilho superficial na abertura menos a mediana de um anel de fundo (2 a 3 raios); erro a partir do plano VARIANCE",
+ "data_source": "live"
+}

@@ -74,8 +74,8 @@ class ObservationMetadata(BaseModel):
         None,
         description=(
             "How the observation time was resolved: 'observation_date', "
-            "'mjd_observation_date', 'interval_start', 'release_date_fallback' "
-            "or 'unresolved'."
+            "'mjd_observation_date', 'interval_start' or 'unresolved'. The "
+            "release date of the product is never used as observation time."
         ),
     )
     instrument: str | None = Field(
@@ -129,6 +129,35 @@ class ObservationMetadata(BaseModel):
         ge=0,
         description="Number of duplicate archive records merged into this entry.",
     )
+    cutout_center_ra_deg: float | None = Field(
+        None, description="Right ascension (ICRS, degrees) at the centre of the cutout."
+    )
+    cutout_center_dec_deg: float | None = Field(
+        None, description="Declination (ICRS, degrees) at the centre of the cutout."
+    )
+    coverage_fraction: float | None = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Fraction of the requested square field that lies inside the "
+            "detector footprint (from s_region); 1 = complete frame."
+        ),
+    )
+    frame: str | None = Field(
+        None,
+        description=(
+            "Geometry of the image: 'common_north_up' (resampled onto a TAN "
+            "grid centred on the target, north up, east left)."
+        ),
+    )
+    position_source: str | None = Field(
+        None,
+        description=(
+            "'requested' (the position given in the query) or 'proper_motion' "
+            "(position propagated to the epoch of this exposure)."
+        ),
+    )
 
 
 class Observation(BaseModel):
@@ -180,6 +209,16 @@ class ObservationResponse(BaseModel):
     observations: list[Observation] = Field(
         default_factory=list,
         description="Observations ordered by observation time, oldest first.",
+    )
+    data_source: str | None = Field(
+        None,
+        description=(
+            "'live' (queried now), 'cache' (recent cached answer) or "
+            "'stale_cache' (IRSA unavailable: last cached answer, possibly outdated)."
+        ),
+    )
+    data_cached_at: str | None = Field(
+        None, description="When the cached answer was obtained (UTC ISO 8601)."
     )
 
 

@@ -5,8 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SPHEREx Explorer — o céu em infravermelho ao longo do tempo</title>
   <meta name="description" content="Explore imagens reais da missão SPHEREx da NASA e veja como uma região do céu muda entre observações.">
+  <meta name="theme-color" content="#03050b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/glossary.css">
+  <link rel="stylesheet" href="css/surveys.css">
+  <link rel="stylesheet" href="css/refimages.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/cinema.css">
+  <link rel="preload" as="image" href="assets/nasa/spherex-probe-cutout.png" imagesrcset="assets/nasa/spherex-probe-cutout.png 1x, assets/nasa/spherex-probe-cutout@2x.png 2x">
+  <script>
+    /* Esconde a barra até theme.js disparar o feixe que a "desenha" (evita piscar).
+       Não vale no modo incorporado nem com movimento reduzido; some sozinho em 3 s. */
+    (function (r) {
+      try {
+        if (/[?&]embed=1(&|$)/.test(location.search) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        r.classList.add("laser-pre");
+        setTimeout(function () { r.classList.remove("laser-pre"); }, 3000);
+      } catch (e) { r.classList.remove("laser-pre"); }
+    })(document.documentElement);
+  </script>
   <script src="js/app.js" defer></script>
+  <script src="js/surveys.js" defer></script>
+  <script src="js/motion.js" defer></script>
+  <script src="js/refimages.js" defer></script>
+  <script src="js/cinema.js" defer></script>
+  <script src="js/router.js" defer></script>
+  <script src="js/theme.js" defer></script>
+  <script src="js/glossary-data.js" defer></script>
+  <script src="js/glossary.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#busca">Ir para a pesquisa</a>
@@ -78,6 +108,24 @@
       </div>
 
       <form id="form" novalidate>
+        <div class="busca-extra">
+          <div class="field">
+            <label for="nome">Nome do objeto (opcional)</label>
+            <div class="input-wrap"><span>✦</span><input id="nome" name="nome" autocomplete="off" spellcheck="false" placeholder="Ex.: M42, Barnard's Star, NGC 5194" aria-describedby="nome-ajuda nome-status"><button type="button" id="nome-localizar" class="chip">Localizar</button></div>
+            <small id="nome-ajuda">Digite um nome e clique em “Localizar” (ou já busque): RA e Dec são preenchidos pelo serviço de nomes Sesame, do CDS (SIMBAD, NED e VizieR).</small>
+            <small id="nome-status" class="nome-status" role="status" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="base">Base de dados</label>
+            <div class="input-wrap"><span>⛁</span><select id="base" name="base" aria-describedby="base-ajuda">
+              <option value="spherex" selected>SPHEREx (linha do tempo)</option>
+              <option value="wise">WISE / AllWISE (infravermelho)</option>
+              <option value="2mass">2MASS (infravermelho próximo)</option>
+              <option value="dss">DSS2 (luz visível)</option>
+            </select></div>
+            <small id="base-ajuda">SPHEREx mostra a região ao longo do tempo. As outras bases são de outros telescópios: uma imagem por banda, só para comparação.</small>
+          </div>
+        </div>
         <div class="field">
           <label for="ra">Ascensão reta (RA), em graus</label>
           <input id="ra" name="ra" inputmode="text" autocomplete="off" required aria-describedby="ra-ajuda ra-erro">
@@ -96,35 +144,101 @@
           <small id="fov-ajuda">Quanto maior, mais céu aparece (e objetos rápidos ficam no quadro), mas o carregamento é mais lento. Entre 0,5 e 30.</small>
           <small id="fov-erro" class="erro" role="alert"></small>
         </div>
+        <div class="fov-seletor" role="group" aria-labelledby="fov-seletor-titulo">
+          <div class="fov-topo">
+            <span id="fov-seletor-titulo" data-term="pixel">Régua do FOV</span>
+            <small>Arraste ou escolha uma parada. O campo numérico acima continua valendo.</small>
+          </div>
+          <input type="range" id="fov-regua" min="0" max="1000" step="1" value="500"
+                 aria-labelledby="fov-seletor-titulo" aria-describedby="fov-info">
+          <div id="fov-paradas" class="fov-paradas"></div>
+          <p id="fov-info" class="fov-info" aria-live="polite"></p>
+        </div>
+        <div class="seguir" id="seguir-box" hidden>
+          <label class="check vis" data-term="seguir movimento-proprio"><input type="checkbox" id="seguir" checked> Seguir o movimento do alvo</label>
+          <small>Marcado: cada quadro é centrado onde o alvo estava naquela data. Desmarcado: quadro fixo no céu, para ver o alvo se deslocar.</small>
+        </div>
         <div class="actions">
           <button type="submit" id="buscar" class="primary">Buscar observações</button>
-          <label class="check">
+          <label class="check vis" data-term="mock">
             <input type="checkbox" id="mock"> Usar dados fictícios (só para testar a interface)
           </label>
         </div>
       </form>
+
+      <div id="outras-bases" class="outras-bases" role="region" aria-labelledby="ob-titulo" hidden>
+        <div class="ob-topo">
+          <h3 id="ob-titulo">Esta região em outra base de dados</h3>
+          <div class="alt-botoes">
+            <button type="button" id="ob-mapa" class="chip">Abrir esta posição no mapa interativo</button>
+            <button type="button" id="ob-spherex" class="chip">Voltar para o SPHEREx</button>
+          </div>
+        </div>
+        <p id="ob-aviso" class="ob-aviso"></p>
+        <p id="ob-status" class="status" role="status" aria-live="polite"></p>
+        <div class="ob-grade">
+          <figure class="ob-fig ob-interativo">
+            <div id="ob-viewer" class="ob-viewer" aria-label="Visualizador interativo da região (Aladin Lite)"></div>
+            <figcaption id="ob-viewer-legenda"></figcaption>
+          </figure>
+          <div id="ob-bandas" class="ob-bandas"></div>
+        </div>
+        <p id="ob-credito" class="note"></p>
+      </div>
     </section>
 
-    <section id="observacoes" class="panel viewer" aria-labelledby="t-viz">
+    <section id="observacoes" class="panel viewer page" data-page="observacoes" aria-labelledby="t-viz">
       <h2 id="t-viz">Observações</h2>
 
       <div id="status" class="status" role="status" aria-live="polite">
         Preencha as coordenadas ou escolha um alvo de exemplo para começar.
       </div>
 
+      <div id="alternativas" class="alternativas" role="region" aria-labelledby="alt-titulo" hidden>
+        <h3 id="alt-titulo">Outras formas de explorar esta região</h3>
+        <p id="alt-msg"></p>
+        <div class="alt-opcoes">
+          <div id="alt-demo" class="alt-opcao" hidden>
+            <div id="alt-demo-lista" class="alt-botoes"></div>
+            <small></small>
+          </div>
+          <div class="alt-opcao">
+            <div class="alt-botoes">
+              <button type="button" id="alt-retry" class="chip">Tentar de novo agora</button>
+              <button type="button" id="alt-cancelar" class="chip" hidden>Cancelar nova tentativa</button>
+            </div>
+            <small id="alt-contagem" aria-live="polite"></small>
+          </div>
+          <div class="alt-opcao">
+            <div class="alt-botoes">
+              <button type="button" id="alt-outras" class="chip">Ver esta região no WISE (outra missão da NASA)</button>
+              <button type="button" id="alt-mapa" class="chip">Explorar o mapa do céu enquanto isso</button>
+              <button type="button" id="alt-mock" class="chip">Testar a interface com dados fictícios</button>
+            </div>
+            <small>Os dados fictícios servem só para conhecer os controles: não são observações reais.</small>
+          </div>
+        </div>
+      </div>
+
       <div id="player" hidden>
         <p id="aviso-mock" class="mock" hidden>Dados fictícios: não representam observações científicas.</p>
+        <p id="aviso-demo" class="mock demo" hidden><span></span> <button type="button" id="demo-sair" class="chip">Tentar a busca ao vivo</button></p>
 
-        <fieldset class="filtros" id="filtros">
-          <legend>Filtrar por detector e comprimento de onda</legend>
-          <div id="detectores" class="detectores" role="group" aria-label="Detectores"></div>
-          <div id="faixa-wl" class="faixa" hidden>
-            <label for="wl-min">Mínimo: <output id="wl-min-out" for="wl-min"></output></label>
-            <input type="range" id="wl-min" min="0" max="0" value="0">
-            <label for="wl-max">Máximo: <output id="wl-max-out" for="wl-max"></output></label>
-            <input type="range" id="wl-max" min="0" max="0" value="0">
-          </div>
-          <p class="dica">Dica: para ver só a mudança ao longo do tempo, deixe um detector e uma faixa estreita de comprimento de onda.</p>
+        <fieldset class="filtros cine-filtros" id="filtros">
+          <legend data-term="detector comprimento-onda">Filtrar por detector e comprimento de onda</legend>
+          <div id="detectores" class="detectores" role="group" aria-label="Detectores: clique para ver só um; Ctrl, ⌘ ou Shift + clique para somar"></div>
+          <details class="filtros-mais">
+            <summary>Mais filtros <small>(faixa de comprimento de onda, quadros completos, combinar detectores)</small></summary>
+            <label class="check vis det-modo" id="det-modo" hidden><input type="checkbox" id="det-somar"> Combinar detectores (cada clique soma ou tira um; atalho: Ctrl/⌘/Shift + clique)</label>
+            <div id="faixa-wl" class="faixa" hidden>
+              <label for="wl-min" data-term="micrometro">Mínimo: <output id="wl-min-out" for="wl-min"></output></label>
+              <input type="range" id="wl-min" min="0" max="0" value="0">
+              <label for="wl-max">Máximo: <output id="wl-max-out" for="wl-max"></output></label>
+              <input type="range" id="wl-max" min="0" max="0" value="0">
+            </div>
+            <label class="check vis" id="so-completos-box" hidden data-term="quadro-parcial"><input type="checkbox" id="so-completos"> Só quadros completos <small id="so-completos-info"></small></label>
+            <p class="dica">Dica: clique num detector para ver só ele — assim a linha do tempo mostra só a mudança ao longo do tempo. O número em cada botão é a quantidade de observações; a faixa vem dos metadados das observações (≈ = aproximada).</p>
+          </details>
           <div class="filtro-rodape">
             <span id="contagem" role="status" aria-live="polite"></span>
             <button type="button" id="filtro-reset" class="chip">Limpar filtros</button>
@@ -135,91 +249,199 @@
           Nenhuma observação com esses filtros. Amplie a faixa de comprimento de onda ou ative mais detectores.
         </p>
 
-        <div id="visor">
-        <figure class="frame">
-          <div class="imgwrap" id="imgwrap" tabindex="0"
-               aria-label="Imagem da região. Clique para marcar um ponto, ou use as setas do teclado. Enter marca o centro.">
-            <img id="imagem" alt="">
+        <div id="visor" class="cine">
+          <div class="cine-abas" role="tablist" aria-label="Modo de visualização">
+            <button type="button" role="tab" id="aba-seq" aria-selected="true" aria-controls="painel-seq">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Sequência</button>
+            <button type="button" role="tab" id="aba-comparar" aria-selected="false" aria-controls="comparar" tabindex="-1">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v18h-2zM4 6h5v12H4zM15 6h5v12h-5z"/></svg>Comparar</button>
+            <button type="button" role="tab" id="aba-combinar" aria-selected="false" aria-controls="combinar" tabindex="-1">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4a8 8 0 1 0 0 16A8 8 0 0 0 9 4zm6 0a8 8 0 0 0-2.3.34 9.9 9.9 0 0 1 0 15.32A8 8 0 1 0 15 4z"/></svg>Combinar</button>
+            <button type="button" role="tab" id="aba-decadas" aria-selected="false" aria-controls="painel-decadas" tabindex="-1" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.4l4.2 2.5-1 1.7L11 13V7z"/></svg>Décadas</button>
           </div>
-          <figcaption id="legenda"></figcaption>
-        </figure>
 
-        <div class="controls" role="group" aria-label="Controles da sequência">
-          <button type="button" id="prev" aria-label="Observação anterior">◀</button>
-          <button type="button" id="play" aria-pressed="false">Reproduzir</button>
-          <button type="button" id="next" aria-label="Próxima observação">▶</button>
-          <label class="speed">Velocidade
-            <select id="speed">
-              <option value="1500">Lenta</option>
-              <option value="800" selected>Normal</option>
-              <option value="350">Rápida</option>
-            </select>
-          </label>
-        </div>
+          <div class="cine-painel" id="painel-seq" role="tabpanel" aria-labelledby="aba-seq">
+            <div class="cine-palco" id="cine-palco" tabindex="-1" aria-label="Visor das observações">
+              <div class="cine-vista" id="cine-vista">
+                <figure class="frame cine-frame">
+                  <div class="imgwrap" id="imgwrap" tabindex="0"
+                       aria-label="Imagem da região. Clique para marcar um ponto, ou use as setas do teclado. Enter marca o centro.">
+                    <img id="imagem" alt="">
+                  </div>
+                  <figcaption id="legenda" class="sr-only"></figcaption>
+                </figure>
+                <div class="cine-info" aria-hidden="true">
+                  <strong id="cine-data">—</strong>
+                  <span class="cine-tags"><span id="cine-det" class="cine-det">—</span><span id="cine-cont"></span><span id="cine-parcial" class="cine-parcial" hidden></span></span>
+                </div>
+                <div class="cine-zoom" role="group" aria-label="Zoom da imagem">
+                  <button type="button" id="zoom-mais" aria-label="Aproximar">+</button>
+                  <button type="button" id="zoom-menos" aria-label="Afastar">−</button>
+                  <button type="button" id="zoom-ajustar" class="cine-ajustar" hidden>Ajustar</button>
+                </div>
+                <button type="button" id="cine-sair" class="cine-sair" hidden>✕ Sair <kbd>Esc</kbd></button>
+                <div id="img-falha" class="img-falha" role="alert" hidden>
+                  <p id="img-falha-msg"></p>
+                  <div class="alt-botoes">
+                    <button type="button" id="img-retry" class="chip">Tentar de novo</button>
+                    <button type="button" id="img-prox" class="chip">Próxima observação</button>
+                  </div>
+                </div>
+              </div>
 
-        <div class="timeline">
-          <label for="slider">Linha do tempo</label>
-          <input type="range" id="slider" min="0" max="0" value="0">
-          <div class="ends"><span id="t-ini"></span><span id="t-fim"></span></div>
-        </div>
+              <div class="cine-barra" id="cine-barra">
+                <div class="controls cine-botoes" role="group" aria-label="Controles da sequência">
+                  <button type="button" id="prev" aria-label="Observação anterior" title="Anterior (←)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+                  <button type="button" id="play" aria-pressed="false" title="Reproduzir/pausar (Espaço)">
+                    <span class="ico" aria-hidden="true"></span><span class="txt">Reproduzir</span></button>
+                  <button type="button" id="next" aria-label="Próxima observação" title="Próxima (→)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+                </div>
+                <div class="timeline cine-linha">
+                  <label for="slider" class="sr-only">Linha do tempo</label>
+                  <div class="cine-trilho" id="cine-trilho">
+                    <span class="cine-bolha" id="cine-bolha" aria-hidden="true"></span>
+                    <input type="range" id="slider" min="0" max="0" value="0">
+                    <div class="cine-marcas" id="cine-marcas" aria-hidden="true"></div>
+                  </div>
+                  <div class="ends"><span id="t-ini"></span><span id="t-fim"></span></div>
+                </div>
+                <div class="cine-direita">
+                  <label class="speed">Velocidade
+                    <select id="speed">
+                      <option value="1500">Lenta</option>
+                      <option value="800" selected>Normal</option>
+                      <option value="350">Rápida</option>
+                    </select>
+                  </label>
+                  <button type="button" id="cine-btn" class="cine-btn" aria-pressed="false" title="Modo cinema (F)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z"/></svg><span>Modo cinema</span></button>
+                </div>
+              </div>
 
-        <dl id="meta" class="meta"></dl>
-        <div class="share">
-          <button type="button" id="copiar-link" class="chip">Copiar link desta busca</button>
-          <button type="button" id="copiar-embed" class="chip">Copiar código para incorporar</button>
-          <span id="copiado" role="status"></span>
-        </div>
-        <p class="note">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
+              <ol class="cine-tira" id="cine-tira" aria-label="Observações vizinhas"></ol>
+            </div>
+
+            <p class="legenda-sem-dados" data-term="fora-detector pixel-invalido quadro-comum"><span class="sw-sem-dados" aria-hidden="true"></span>Hachurado = fora do detector (sem dados), não céu escuro. <span class="sw-invalido" aria-hidden="true"></span>Vinho (#B03060) = pixel inválido dentro do detector (núcleo saturado de estrela brilhante ou pixel defeituoso). Norte para cima, leste à esquerda.</p>
+            <small class="atalhos">Atalhos: <kbd>←</kbd> <kbd>→</kbd> trocam o quadro · <kbd>Espaço</kbd> reproduz/pausa · <kbd>F</kbd> modo cinema · <kbd>Esc</kbd> sai · Ctrl + roda do mouse (ou pinça) aproxima.</small>
+
+            <details class="cine-detalhes">
+              <summary>Detalhes da observação</summary>
+              <dl id="meta" class="meta"></dl>
+              <div class="share">
+                <button type="button" id="copiar-link" class="chip">Copiar link desta busca</button>
+                <button type="button" id="copiar-embed" class="chip">Copiar código para incorporar</button>
+                <span id="copiado" role="status"></span>
+              </div>
+              <p class="note" data-term="banda normalizacao">Cada quadro é uma <strong>data de observação</strong> diferente. As faixas de cor (bandas) são mostradas nos detalhes, nunca como passagem de tempo.</p>
+            </details>
+          </div>
+
+          <div class="cine-painel comparar" id="comparar" role="tabpanel" aria-labelledby="aba-comparar" hidden>
+            <p class="dica">Compare duas datas do mesmo pedaço do céu: arraste a cortina ou deixe piscar entre A e B.</p>
+            <div class="cmp-controles">
+              <label>Data A <select id="cmp-a"></select></label>
+              <label>Data B <select id="cmp-b"></select></label>
+              <button type="button" id="cmp-trocar" class="chip">Trocar A ↔ B</button>
+              <fieldset class="cmp-modos">
+                <legend>Modo</legend>
+                <label><input type="radio" name="cmp-modo" value="cortina" checked> Cortina deslizante</label>
+                <label><input type="radio" name="cmp-modo" value="piscar"> Piscar A/B</label>
+              </fieldset>
+              <button type="button" id="cmp-piscar" class="chip" aria-pressed="false" hidden>Piscar</button>
+            </div>
+            <p id="cmp-aviso" class="dica" aria-live="polite"></p>
+            <div class="cine-vista cine-vista-cmp">
+              <div class="cmp-stage" id="cmp-stage" data-modo="cortina">
+                <img id="cmp-img-b" alt="">
+                <img id="cmp-img-a" alt="">
+                <div class="cmp-linha" aria-hidden="true"></div>
+                <input type="range" id="cmp-divisor" min="0" max="100" value="50" aria-label="Posição da cortina: à esquerda a data A, à direita a data B">
+              </div>
+            </div>
+            <p id="cmp-rotulo" class="cmp-rotulo" aria-live="polite"></p>
+          </div>
+
+          <div class="cine-painel combinar" id="combinar" role="tabpanel" aria-labelledby="aba-combinar" hidden>
+            <h3 id="t-combinar" data-term="media-epocas">Combinar épocas</h3>
+            <p class="dica">Junta várias observações do mesmo detector numa só imagem, calculada pelo servidor. O fundo de cada quadro (mediana) é subtraído antes de combinar. A primeira combinação pode levar 1–2 s por observação.</p>
+            <fieldset class="combinar-modos">
+              <legend>Modo</legend>
+              <label data-term="sinal-ruido"><input type="radio" name="comb-modo" value="mean" checked> Somar épocas (melhor sinal/ruído)</label>
+              <label data-term="diferenca"><input type="radio" name="comb-modo" value="diff"> Diferença entre épocas (o que mudou?)</label>
+            </fieldset>
+            <p class="dica" id="comb-explica">Na diferença, com “Seguir o movimento do alvo” desmarcado, uma estrela que se move aparece como um par claro/escuro; marcado, o alvo fica parado e se cancela, e são as estrelas de fundo que podem aparecer como pares.</p>
+            <div class="combinar-acoes">
+              <button type="button" id="comb-gerar" class="chip primary-chip">Combinar</button>
+              <span id="comb-selecao" class="comb-selecao"></span>
+            </div>
+            <p id="comb-status" class="status" role="status" aria-live="polite" hidden></p>
+            <figure class="frame cine-comb" id="comb-resultado" hidden>
+              <div class="cine-vista cine-vista-comb"><img id="comb-img" alt=""></div>
+              <figcaption id="comb-legenda"></figcaption>
+            </figure>
+          </div>
+
+          <div class="cine-painel decadas" id="painel-decadas" role="tabpanel" aria-labelledby="aba-decadas" hidden></div>
         </div>
       </div>
     </section>
 
-    <section id="ceu" class="panel" aria-labelledby="t-ceu">
-      <h2 id="t-ceu">Mapa do céu</h2>
-      <p class="dica">O mapa abre mostrando o céu todo, com imagens da própria missão SPHEREx (uma por detector). Regiões que o telescópio ainda não observou aparecem vazias. Clique em qualquer ponto para pesquisar aquelas coordenadas: elas são preenchidas no formulário e a busca é feita. Para mais precisão, aproxime o zoom e clique de novo. O retângulo rosa é a área (FOV) da busca. O mapa usa a biblioteca Aladin Lite, do Centro de Dados Astronômicos de Estrasburgo (CDS), e só é carregado quando você pedir.</p>
+    <section id="ceu" class="panel page" data-page="ceu" aria-labelledby="t-ceu">
+      <h2 id="t-ceu" data-term="hips">Mapa do céu</h2>
+      <p class="dica">O mapa abre mostrando o céu todo, de preferência com imagens da própria missão SPHEREx (uma por detector); se esse mapa estiver fora do ar, o aviso abaixo diz qual fundo está em uso. Clique em qualquer ponto para pesquisar aquelas coordenadas: elas são preenchidas no formulário e a busca é feita. Para mais precisão, aproxime o zoom e clique de novo. O retângulo rosa é a área (FOV) do quadro em exibição e o círculo rosa é o alvo naquela data. O mapa usa a biblioteca Aladin Lite, do Centro de Dados Astronômicos de Estrasburgo (CDS), e é carregado quando esta seção aparece na tela.</p>
 
       <div class="ceu-controles">
         <button type="button" id="ceu-abrir" class="primary">Carregar mapa interativo</button>
+        <button type="button" id="ceu-centro" class="chip">Centralizar no alvo</button>
         <button type="button" id="ceu-tudo" class="chip">Ver o céu todo</button>
         <label for="ceu-fundo">Imagem de fundo</label>
         <select id="ceu-fundo"></select>
-        <label class="check"><input type="checkbox" id="ceu-gaia"> Estrelas Gaia</label>
-        <label class="check"><input type="checkbox" id="ceu-wise"> Fontes WISE</label>
+        <label class="check vis" data-term="gaia"><input type="checkbox" id="ceu-gaia"> Estrelas Gaia</label>
+        <label class="check vis" data-term="allwise"><input type="checkbox" id="ceu-wise"> Fontes WISE</label>
       </div>
 
-      <p id="ceu-status" class="status" role="status" aria-live="polite">Clique em “Carregar mapa interativo” para ver o céu todo e escolher um ponto.</p>
+      <p id="ceu-fundo-info" class="note" aria-live="polite"></p>
+      <p id="ceu-status" class="status" role="status" aria-live="polite">O mapa abre sozinho quando esta seção aparece na tela (ou clique em “Carregar mapa interativo”).</p>
       <div id="ceu-mapa" class="ceu-mapa" hidden></div>
-      <p class="note">Mapas SPHEREx: NASA/JPL-Caltech, dados do IRSA/IPAC, ladrilhos HiPS do CDS (versão QR2). DSS2, 2MASS, AllWISE e os catálogos Gaia DR3 e AllWISE são de outros telescópios, só para comparação. Marcas: cruz = centro da busca, A e B = pontos do espectro.</p>
+      <p class="note" data-term="releases">Mapas SPHEREx: NASA/JPL-Caltech, dados do IRSA/IPAC, ladrilhos HiPS do CDS (versão QR2). DSS2, 2MASS, AllWISE e os catálogos Gaia DR3 e AllWISE são de outros telescópios, só para comparação. Marcas: cruz = centro da busca, círculo rosa = alvo no quadro em exibição, A e B = pontos do espectro.</p>
     </section>
 
-    <section id="mapa" class="panel" aria-labelledby="t-mapa">
-      <h2 id="t-mapa">Mapa de observações</h2>
+    <section id="mapa" class="panel page" data-page="mapa" aria-labelledby="t-mapa">
+      <h2 id="t-mapa" data-term="mapa-observacoes">Mapa de observações</h2>
       <p class="dica">Cada ponto é uma observação do arquivo da NASA: a posição horizontal é a data e a vertical é o comprimento de onda. A cor indica o detector. Clique num ponto para ver aquele quadro. Pontos apagados estão escondidos pelos filtros.</p>
       <p id="mapa-mock" class="mock" hidden>Dados fictícios: não representam observações científicas.</p>
       <p id="mapa-vazio" class="placeholder">O mapa aparece depois de uma busca.</p>
       <div id="mapa-grafico" class="grafico" hidden></div>
     </section>
 
-    <section id="espectro" class="panel" aria-labelledby="t-esp">
-      <h2 id="t-esp">Espectro de um ponto</h2>
-      <p class="dica">Clique na imagem (ou foque nela e use as setas) para ver o brilho do ponto em cada comprimento de onda. Marque um segundo ponto como fundo do céu para comparar. O espectro usa todas as observações disponíveis, não só o quadro mostrado.</p>
+    <section id="espectro" class="panel page" data-page="espectro" aria-labelledby="t-esp">
+      <h2 id="t-esp" data-term="espectro lvf">Espectro de um ponto</h2>
+      <p class="dica" data-term="exposicao">Clique na imagem (ou foque nela e use as setas) para medir o fluxo do ponto em cada comprimento de onda. Marque um segundo ponto como fundo do céu para comparar. O espectro usa as exposições disponíveis (até 60), não só o quadro mostrado: cada medida vem de uma exposição em que o ponto caiu numa posição diferente do detector. Com “Seguir o movimento do alvo” ativo, “Espectro do alvo” (ou um clique no centro do quadro) acompanha o alvo em cada data; os demais pontos ficam fixos no céu. A primeira medida de um ponto é lenta (cerca de 1–2 s por exposição).</p>
 
       <div class="esp-controles">
         <fieldset class="pt-sel">
           <legend>Ponto a marcar</legend>
-          <label><input type="radio" name="ponto" value="A" checked> A (alvo)</label>
-          <label><input type="radio" name="ponto" value="B"> B (fundo do céu)</label>
+          <label data-term="seguir"><input type="radio" name="ponto" value="A" checked> A (alvo)</label>
+          <label data-term="fundo"><input type="radio" name="ponto" value="B"> B (fundo do céu)</label>
         </fieldset>
         <div class="field">
-          <label for="raio">Raio da abertura (segundos de arco)</label>
-          <input id="raio" type="number" min="3" max="60" step="1" value="12">
+          <label for="raio" data-term="abertura arcsec">Raio da abertura (segundos de arco)</label>
+          <input id="raio" type="number" min="3" max="30" step="1" value="9">
         </div>
+        <button type="button" id="esp-alvo" class="chip">Espectro do alvo</button>
         <button type="button" id="esp-centro" class="chip">Marcar o centro</button>
         <button type="button" id="esp-limpar" class="chip">Limpar pontos</button>
+        <label class="check vis" data-term="flags"><input type="checkbox" id="esp-ocultar"> Ocultar contaminados</label>
       </div>
 
       <p id="esp-status" class="status" role="status" aria-live="polite">Faça uma busca e marque um ponto na imagem.</p>
+      <div id="esp-acoes" class="alt-botoes" hidden><button type="button" id="esp-retry" class="chip">Tentar de novo</button></div>
+      <progress id="esp-progresso" class="esp-progresso" hidden aria-label="Calculando o espectro"></progress>
       <div id="esp-grafico" class="grafico" hidden></div>
+      <p id="esp-nota" class="note" hidden></p>
       <details id="esp-tabela-box" hidden>
         <summary>Ver os dados em tabela</summary>
         <div class="tabela-scroll"><table id="esp-tabela"></table></div>
@@ -227,7 +449,7 @@
       </details>
     </section>
 
-    <section id="galeria" class="panel" aria-labelledby="t-gal">
+    <section id="galeria" class="panel page" data-page="galeria" aria-labelledby="t-gal">
       <h2 id="t-gal">Galeria de imagens</h2>
       <p id="galeria-vazio" class="placeholder">
         As imagens da sua busca aparecerão aqui, uma miniatura por data de observação.
@@ -235,15 +457,36 @@
       <ul id="galeria-lista" class="gallery" aria-label="Miniaturas das observações"></ul>
     </section>
 
-    <section class="panel teaser" aria-labelledby="t-ajuda">
+    <section class="panel teaser" data-page="busca" aria-labelledby="t-ajuda">
       <h2 id="t-ajuda">Novo por aqui?</h2>
       <p>RA, Dec, FOV, banda, movimento próprio: se algum termo parecer estranho, a página de termos explica tudo em linguagem simples.</p>
       <p><a class="link-btn" href="termos.html">Aprenda os termos</a></p>
     </section>
   </main>
 
-  <footer>
-    Dados: missão SPHEREx / NASA (JPL-Caltech), arquivo IRSA/IPAC. Protótipo criado para o NASA Space Apps Challenge 2026. O IRSA pede um texto de agradecimento oficial em materiais publicados; copie-o da página da missão no IRSA.
+  <footer class="site-footer">
+    <section class="sobre-missao" aria-labelledby="t-sobre">
+      <h2 id="t-sobre">Sobre a missão SPHEREx</h2>
+      <p>O SPHEREx é um telescópio espacial da NASA que mapeia o céu inteiro em infravermelho, em 102 cores. Como ele observa a mesma região em datas diferentes, dá para comparar o céu ao longo do tempo.</p>
+      <div class="missao-galeria">
+        <figure>
+          <img src="assets/nasa/spherex-in-orbit-pia26531.jpg" width="800" height="450" loading="lazy" alt="Ilustração da sonda SPHEREx em órbita da Terra: um grande escudo em forma de cone sobre o corpo da nave, com um painel solar ao lado.">
+          <figcaption>Ilustração (conceito artístico) do SPHEREx em órbita. Os escudos fotônicos em forma de cone bloqueiam a luz e o calor do Sol e da Terra.
+            <span class="credito">Crédito: <a href="https://www.jpl.nasa.gov/images/pia26531-spherex-in-orbit-artists-concept/" rel="noopener">NASA/JPL-Caltech (PIA26531)</a></span></figcaption>
+        </figure>
+        <figure>
+          <img src="assets/nasa/spherex-first-images-pia26280.jpg" width="800" height="518" loading="lazy" alt="Seis quadros de campos estrelados em cores diferentes, um para cada detector do SPHEREx.">
+          <figcaption>Primeiras imagens do SPHEREx, de 27 de março de 2025, ainda não calibradas: uma imagem por detector, seis em cada exposição.
+            <span class="credito">Crédito: <a href="https://www.jpl.nasa.gov/images/pia26280-first-images-from-nasas-spherex/" rel="noopener">NASA/JPL-Caltech (PIA26280)</a></span></figcaption>
+        </figure>
+      </div>
+    </section>
+    <div class="footer-meta">
+      <div class="mission-card"><span class="live-dot"></span><span>DADOS DA MISSÃO</span><strong>SPHEREx / NASA</strong><small data-term="irsa">Arquivo científico · IRSA/IPAC</small></div>
+      <div class="side-note">UM JEITO MAIS SIMPLES<br>DE EXPLORAR O UNIVERSO</div>
+    </div>
+    <p class="rodape-texto">Dados: missão SPHEREx / NASA (JPL-Caltech), arquivo IRSA/IPAC. Protótipo criado para o NASA Space Apps Challenge 2026. O IRSA pede um texto de agradecimento oficial em materiais publicados; copie-o da página da missão no IRSA.</p>
+    <p class="rodape-texto">Imagens da missão: NASA/JPL-Caltech, usadas conforme as diretrizes de mídia da NASA e do JPL (<a href="assets/CREDITS.md">créditos e fontes</a>). Projeto independente, sem endosso da NASA, do JPL ou do Caltech. Sonda na barra de navegação: render oficial do SPHEREx com fundo transparente, Courtesy NASA/JPL-Caltech (Caltech SPHEREx Science Center), reduzido. Ícone e fundo estrelado: criação do projeto.</p>
   </footer>
   </div>
   </div>

@@ -262,8 +262,13 @@ class FakeTransport:
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
         max_bytes: int | None = None,
+        stop_when: Any = None,
     ) -> HttpResponse:
-        """Record the request and return (or raise) the queued answer."""
+        """Record the request and return (or raise) the queued answer.
+
+        Like the real transport, ``stop_when`` truncates a 200 body to the
+        number of bytes it reports as enough.
+        """
         self.requests.append(
             {
                 "method": method,
@@ -272,6 +277,7 @@ class FakeTransport:
                 "headers": dict(headers or {}),
                 "timeout": timeout,
                 "max_bytes": max_bytes,
+                "stop_when": stop_when,
             }
         )
         if self.answers:
@@ -281,6 +287,12 @@ class FakeTransport:
         answer = self._last_answer
         if isinstance(answer, Exception):
             raise answer
+        if stop_when is not None and answer.status_code == 200:
+            enough = stop_when(answer.content)
+            if enough is not None:
+                return HttpResponse(
+                    answer.status_code, answer.content[:enough], answer.headers, answer.url
+                )
         return answer
 
 
